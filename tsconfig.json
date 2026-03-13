@@ -4,12 +4,13 @@
 		"lib": ["esnext"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
-		"types": ["./worker-configuration.d.ts"],
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx",
 		"noEmit": true,
 		"isolatedModules": true,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
 		"strict": true
 	},
-	"include": ["src"]
+	"include": ["src", "worker-configuration.d.ts"]
 }
