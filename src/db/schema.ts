@@ -28,6 +28,7 @@ export interface Asset {
 	model: string | null;
 	photo_url: string | null;
 	battery_level: number | null;
+	uses_battery: number;
 	last_maintenance_at: string | null;
 	notes: string | null;
 	created_at: string;
@@ -39,6 +40,8 @@ export interface Customer {
 	name: string;
 	phone: string | null;
 	email: string | null;
+	cpf: string | null;
+	instagram: string | null;
 	notes: string | null;
 	total_rentals: number;
 	total_spent_cents: number;
@@ -75,7 +78,7 @@ export interface RentalSession {
 	amount_cents: number;
 	overtime_minutes: number;
 	overtime_cents: number;
-	payment_method: "cash" | "credit" | "debit" | "pix" | null;
+	payment_method: "cash" | "credit" | "debit" | "pix" | "mixed" | null;
 	paid: number;
 	notes: string | null;
 	created_at: string;
@@ -176,4 +179,21 @@ export interface CashRegisterDenomination {
 	denomination_cents: number;
 	quantity: number;
 	created_at: string;
+}
+
+export interface Battery {
+	id: number;
+	label: string;
+	asset_id: number | null;
+	status: "charging" | "ready" | "in_use" | "depleted" | "retired";
+	full_charge_minutes: number;
+	estimated_minutes_remaining: number;
+	last_charged_at: string | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface BatteryView extends Battery {
+	asset_name: string | null;
 }

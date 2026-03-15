@@ -49,7 +49,7 @@ customerRoutes.get("/:id/history", requireRole("manager", "owner"), async (c) =>
 });
 
 customerRoutes.post("/", requireRole("manager", "owner"), async (c) => {
-	const body = await c.req.json<{ name: string; phone?: string; email?: string; notes?: string }>();
+	const body = await c.req.json<{ name: string; phone?: string; email?: string; cpf?: string; instagram?: string; notes?: string }>();
 	if (!body.name?.trim()) return c.json({ error: "Nome é obrigatório" }, 400);
 
 	const customer = await createCustomer(c.env.DB, body);
@@ -59,7 +59,7 @@ customerRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 
 customerRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	const id = Number(c.req.param("id"));
-	const body = await c.req.json<{ name?: string; phone?: string; email?: string; notes?: string }>();
+	const body = await c.req.json<{ name?: string; phone?: string; email?: string; cpf?: string; instagram?: string; notes?: string }>();
 
 	const customer = await updateCustomer(c.env.DB, id, body);
 	if (!customer) return c.json({ error: "Customer not found" }, 404);
@@ -70,13 +70,15 @@ customerRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 
 // Quick-create from dashboard (all operators can do this)
 customerRoutes.post("/quick", async (c) => {
-	const body = await c.req.json<{ name: string; phone?: string }>();
+	const body = await c.req.json<{ name: string; phone?: string; cpf?: string; instagram?: string }>();
 	if (!body.name?.trim()) return c.json({ error: "Nome é obrigatório" }, 400);
 
 	// Strip mask characters from phone, store raw digits only
 	const phone = body.phone?.replace(/\D/g, "") || undefined;
+	const cpf = body.cpf?.replace(/\D/g, "") || undefined;
+	const instagram = body.instagram?.replace(/^@/, "").trim() || undefined;
 
-	const customer = await createCustomer(c.env.DB, { name: body.name, phone });
+	const customer = await createCustomer(c.env.DB, { name: body.name, phone, cpf, instagram });
 	await auditLog(c, "customer.create", "customer", customer?.id, { name: body.name });
 	return c.json(customer, 201);
 });

@@ -51,12 +51,69 @@ function clockOut(shiftId) {
 			</div>
 
 			<div class="max-w-md mx-auto">
-				<h2 class="text-xl font-display font-bold text-sk-text mb-4 text-center">Controle de Turno</h2>
+				<h2 class="text-xl font-display font-bold text-sk-text mb-2 text-center">Controle de Turno</h2>
+				<p class="text-sm text-sk-muted font-body text-center mb-6">
+					O turno registra seu periodo de trabalho. Inicie ao chegar e encerre ao sair.
+				</p>
+
+				{/* Workflow steps */}
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 mb-6">
+					<p class="text-xs font-display font-semibold text-sk-muted mb-3 uppercase tracking-wider">Fluxo de trabalho</p>
+					<div class="flex items-start gap-3">
+						<div class="flex flex-col items-center gap-1">
+							<div class={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${shift ? "bg-sk-green text-white" : "bg-sk-orange text-white"}`}>1</div>
+							<div class="w-0.5 h-4 bg-sk-border"></div>
+						</div>
+						<div class="flex-1 pb-3">
+							<p class={`text-sm font-body font-medium ${shift ? "text-sk-green-dark" : "text-sk-text"}`}>
+								Iniciar turno {shift && "✓"}
+							</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-3">
+						<div class="flex flex-col items-center gap-1">
+							<div class={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${register ? "bg-sk-green text-white" : shift ? "bg-sk-orange text-white" : "bg-gray-200 text-sk-muted"}`}>2</div>
+							<div class="w-0.5 h-4 bg-sk-border"></div>
+						</div>
+						<div class="flex-1 pb-3">
+							<p class={`text-sm font-body font-medium ${register ? "text-sk-green-dark" : "text-sk-text"}`}>
+								Abrir caixa {register && "✓"}
+							</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-3">
+						<div class="flex flex-col items-center gap-1">
+							<div class={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${shift && register ? "bg-sk-blue text-white" : "bg-gray-200 text-sk-muted"}`}>3</div>
+							<div class="w-0.5 h-4 bg-sk-border"></div>
+						</div>
+						<div class="flex-1 pb-3">
+							<p class="text-sm font-body font-medium text-sk-text">Operar normalmente</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-3">
+						<div class="flex flex-col items-center gap-1">
+							<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-200 text-sk-muted">4</div>
+							<div class="w-0.5 h-4 bg-sk-border"></div>
+						</div>
+						<div class="flex-1 pb-3">
+							<p class="text-sm font-body font-medium text-sk-text">Fechar caixa</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-3">
+						<div class="flex flex-col items-center">
+							<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-200 text-sk-muted">5</div>
+						</div>
+						<div class="flex-1">
+							<p class="text-sm font-body font-medium text-sk-text">Encerrar turno</p>
+						</div>
+					</div>
+				</div>
 
 				{!shift ? (
 					<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-8 text-center">
-						<div class="text-6xl mb-4">🕐</div>
-						<p class="text-sk-muted font-body mb-6">Nenhum turno ativo</p>
+						<div class="text-5xl mb-4">🕐</div>
+						<p class="text-sk-muted font-body mb-2">Nenhum turno ativo</p>
+						<p class="text-xs text-sk-muted font-body mb-6">Inicie seu turno para comecar a trabalhar.</p>
 						<button
 							id="clock-btn"
 							onclick="clockIn()"
@@ -73,12 +130,32 @@ function clockOut(shiftId) {
 							<p class="text-sm text-sk-muted font-body mt-1">Iniciado em {formatDateTime(shift.started_at)}</p>
 						</div>
 
-						{/* Cash register warning */}
+						{/* Cash register status */}
+						{register ? (
+							<div class="bg-sk-green-light border border-sk-green/30 rounded-sk p-4 mb-4">
+								<div class="flex items-center gap-2">
+									<span class="w-2.5 h-2.5 rounded-full bg-sk-green"></span>
+									<p class="text-sm font-body text-sk-green-dark font-medium">Caixa aberto</p>
+								</div>
+								<a href="/cash" class="inline-block mt-1 text-sm text-sk-blue-dark underline font-body">Ir para o Caixa</a>
+							</div>
+						) : (
+							<div class="bg-sk-yellow-light border border-sk-yellow/50 rounded-sk p-4 mb-4">
+								<p class="text-sm font-body text-sk-text mb-2">Caixa fechado. Abra o caixa para iniciar as operacoes.</p>
+								<a
+									href="/cash"
+									class="btn-touch inline-block px-4 py-2 bg-sk-green text-white rounded-sk font-display font-medium text-sm btn-bounce"
+								>
+									Abrir Caixa
+								</a>
+							</div>
+						)}
+
+						{/* Warning: close register before ending shift */}
 						{register && (
 							<div class="bg-sk-danger-light border border-sk-danger/30 rounded-sk p-4 mb-4">
-								<p class="text-sm font-body text-sk-danger font-medium mb-1">Caixa ainda esta aberto!</p>
-								<p class="text-xs font-body text-sk-danger">Feche o caixa antes de encerrar o turno.</p>
-								<a href="/cash" class="inline-block mt-2 text-sm text-sk-blue-dark underline font-body">Ir para o Caixa</a>
+								<p class="text-sm font-body text-sk-danger font-medium mb-1">Feche o caixa antes de encerrar o turno.</p>
+								<a href="/cash" class="inline-block mt-1 text-sm text-sk-blue-dark underline font-body">Ir para o Caixa</a>
 							</div>
 						)}
 
@@ -99,19 +176,6 @@ function clockOut(shiftId) {
 								ENCERRAR TURNO
 							</button>
 						</div>
-
-						{/* Prompt to open cash register */}
-						{!register && (
-							<div class="bg-sk-yellow-light border border-sk-yellow/50 rounded-sk p-4 mt-4">
-								<p class="text-sm font-body text-sk-text mb-2">Turno iniciado! Deseja abrir o caixa?</p>
-								<a
-									href="/cash"
-									class="btn-touch inline-block px-4 py-2 bg-sk-green text-white rounded-sk font-display font-medium text-sm btn-bounce"
-								>
-									Abrir Caixa
-								</a>
-							</div>
-						)}
 					</div>
 				)}
 			</div>

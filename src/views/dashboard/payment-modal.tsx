@@ -188,6 +188,12 @@ export const PaymentModal: FC = () => (
 					>
 						CREDITO
 					</button>
+					<button
+						onclick="openSplitPayment()"
+						class="btn-touch btn-bounce p-4 bg-gray-100 border-2 border-gray-300/60 rounded-sk font-display font-bold text-sk-text active:bg-gray-200 disabled:opacity-50 col-span-2"
+					>
+						PAGAMENTO MISTO
+					</button>
 				</div>
 
 				{/* Fechar sem cobrar */}
@@ -204,6 +210,62 @@ export const PaymentModal: FC = () => (
 					class="w-full mt-2 py-2 text-sm font-body text-sk-muted hover:underline"
 				>
 					Pagar depois
+				</button>
+			</div>
+
+			{/* ====== TELA 1.3: PAGAMENTO MISTO ====== */}
+			<div id="payment-split" class="hidden">
+				<div class="flex items-center justify-between mb-3">
+					<h2 class="text-xl font-display font-bold text-sk-text">
+						Pagamento Misto
+					</h2>
+					<button
+						onclick="cancelSplitPayment()"
+						class="w-8 h-8 flex items-center justify-center rounded-full text-sk-muted hover:bg-gray-100 text-lg"
+						title="Voltar"
+					>
+						&larr;
+					</button>
+				</div>
+
+				{/* Total */}
+				<div class="bg-sk-blue-light rounded-sk p-3 text-center mb-4">
+					<p class="text-xs text-sk-muted font-body">Total a cobrar</p>
+					<p id="split-total-amount" class="text-2xl font-display font-bold text-sk-blue-dark">R$ 0,00</p>
+				</div>
+
+				{/* Payment rows container */}
+				<div id="split-rows" class="space-y-3 mb-3"></div>
+
+				{/* Add row button */}
+				<button
+					id="split-add-btn"
+					onclick="addSplitRow()"
+					class="w-full py-2 text-sm font-body text-sk-blue-dark hover:underline mb-3"
+				>
+					+ Adicionar forma de pagamento
+				</button>
+
+				{/* Remaining balance */}
+				<div id="split-remaining-box" class="rounded-sk p-3 text-center mb-4 bg-sk-danger-light">
+					<p class="text-xs text-sk-muted font-body">Restante</p>
+					<p id="split-remaining" class="text-xl font-display font-bold text-sk-danger">R$ 0,00</p>
+				</div>
+
+				{/* Confirm */}
+				<button
+					id="split-confirm-btn"
+					onclick="confirmSplitPayment()"
+					disabled
+					class="btn-touch btn-bounce w-full py-4 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					CONFIRMAR PAGAMENTO
+				</button>
+				<button
+					onclick="cancelSplitPayment()"
+					class="btn-touch w-full mt-2 py-3 bg-gray-200 rounded-sk font-display font-medium text-sk-muted active:bg-gray-300"
+				>
+					VOLTAR
 				</button>
 			</div>
 
@@ -307,8 +369,11 @@ export const PaymentModal: FC = () => (
 				</div>
 				<div
 					id="success-detail"
-					class="text-sm text-sk-muted font-body mb-4"
+					class="text-sm text-sk-muted font-body mb-2"
 				></div>
+
+				{/* Split payment breakdown */}
+				<div id="success-split-breakdown" class="hidden mb-4 text-sm font-body text-left max-w-xs mx-auto space-y-1"></div>
 
 				{/* Troco — visível apenas em pagamento dinheiro */}
 				<div id="success-change" class="hidden mb-4">

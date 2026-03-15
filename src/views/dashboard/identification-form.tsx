@@ -27,9 +27,37 @@ export const IdentificationForm: FC = () => (
 					id="id-guardian-name"
 					type="text"
 					placeholder="Nome do responsavel"
-					class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20"
+					class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20 mb-2"
 					autocomplete="off"
 				/>
+				<input
+					id="id-cpf"
+					type="tel"
+					placeholder="CPF (opcional)"
+					maxlength={14}
+					class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20"
+					oninput="onCpfInput(this)"
+					autocomplete="off"
+				/>
+			</div>
+
+			{/* ====== ADVANCED FIELDS (collapsible) ====== */}
+			<div class="mb-4">
+				<button
+					onclick="toggleAdvancedFields()"
+					class="text-sm text-sk-blue-dark font-body hover:underline flex items-center gap-1"
+				>
+					<span id="id-advanced-arrow">&#9656;</span> Campos avancados
+				</button>
+				<div id="id-advanced-fields" class="hidden mt-2 space-y-2">
+					<input
+						id="id-instagram"
+						type="text"
+						placeholder="Instagram @usuario"
+						class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20"
+						autocomplete="off"
+					/>
+				</div>
 			</div>
 
 			{/* ====== KNOWN CHILDREN LIST (returning customer) ====== */}

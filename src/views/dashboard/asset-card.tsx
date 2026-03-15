@@ -1,18 +1,20 @@
 import type { FC } from "hono/jsx";
-import type { Asset, RentalSessionView } from "../../db/schema";
+import type { Asset, Battery, RentalSessionView } from "../../db/schema";
 
 interface AssetCardProps {
 	asset: Asset;
 	session: RentalSessionView | null;
+	battery?: Battery | null;
 }
 
-export const AssetCard: FC<AssetCardProps> = ({ asset, session }) => {
+export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 	const isAvailable = !session && asset.status === "available";
 	const isMaintenance = asset.status === "maintenance";
 	const isRunning = session?.status === "running";
 	const isPaused = session?.status === "paused";
 	const isPendingPayment = session?.status === "completed" && !session?.paid;
 	const hasSession = isRunning || isPaused || isPendingPayment;
+	const usesBattery = !!asset.uses_battery;
 
 	let cardStyle = "bg-sk-green-light border-sk-green";
 	let statusText = "Disponivel";
@@ -36,6 +38,10 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session }) => {
 	return (
 		<div
 			data-asset-id={String(asset.id)}
+			data-uses-battery={usesBattery ? "1" : "0"}
+			data-battery-minutes={battery ? String(battery.estimated_minutes_remaining) : ""}
+			data-battery-full={battery ? String(battery.full_charge_minutes) : ""}
+			data-battery-id={battery ? String(battery.id) : ""}
 			class={`rounded-sk border-2 p-4 shadow-sk-sm transition-all card-wobble ${cardStyle}`}
 		>
 			{/* Header with optional photo */}
@@ -52,6 +58,15 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session }) => {
 					</div>
 				)}
 				<h3 class="font-display font-bold text-sk-text truncate flex-1">{asset.name}</h3>
+				{usesBattery && (
+					<button
+						onclick={`showBatterySwap(${asset.id})`}
+						class="battery-swap-btn text-lg flex-shrink-0 active:scale-90 transition-transform"
+						title="Trocar bateria"
+					>
+						🔋
+					</button>
+				)}
 				<span class={`status-dot w-3 h-3 rounded-full flex-shrink-0 ${
 					isMaintenance ? "bg-gray-400" :
 					isPendingPayment ? "bg-sk-yellow" :
@@ -60,6 +75,31 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session }) => {
 					"bg-sk-green"
 				}`}></span>
 			</div>
+
+			{/* Battery indicator */}
+			{usesBattery && (
+				<div class="battery-indicator mb-1 cursor-pointer active:opacity-70" onclick={`showBatteryLevel(${asset.id})`}>
+					<div class="flex items-center gap-1.5 text-xs">
+						<div class="battery-icon w-6 h-3 border border-current rounded-sm relative flex-shrink-0">
+							<div class={`battery-fill absolute inset-0.5 rounded-sm transition-all ${
+								battery
+									? battery.estimated_minutes_remaining / battery.full_charge_minutes > 0.5 ? "bg-sk-green" :
+									  battery.estimated_minutes_remaining / battery.full_charge_minutes > 0.25 ? "bg-sk-yellow" :
+									  "bg-sk-danger"
+									: "bg-gray-300"
+							}`} style={battery ? `width:${Math.round((battery.estimated_minutes_remaining / battery.full_charge_minutes) * 100)}%` : "width:0%"}></div>
+							<div class="absolute -right-1 top-0.5 w-0.5 h-1.5 bg-current rounded-r-sm"></div>
+						</div>
+						<span class={`battery-minutes font-display font-medium ${
+							battery
+								? battery.estimated_minutes_remaining / battery.full_charge_minutes > 0.5 ? "text-sk-green-dark" :
+								  battery.estimated_minutes_remaining / battery.full_charge_minutes > 0.25 ? "text-sk-yellow-dark" :
+								  "text-sk-danger"
+								: "text-gray-400"
+						}`}>{battery ? `${battery.estimated_minutes_remaining} min` : "Sem bateria"}</span>
+					</div>
+				</div>
+			)}
 
 			{/* Person info (guardian + child) */}
 			<div class={`person-info text-xs mb-2 ${hasSession && session?.child_name ? "" : "hidden"}`}>

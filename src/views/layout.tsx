@@ -28,6 +28,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 			<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 			<meta name="theme-color" content="#FF7043" />
 			<title>{title ?? "SpeedKids"}</title>
+			<link rel="icon" type="image/svg+xml" href="/logo.svg" />
 			<link rel="preconnect" href="https://fonts.googleapis.com" />
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
 			<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -164,7 +165,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 		<body class="bg-sk-bg min-h-screen font-body text-sk-text">
 			<nav class="bg-gradient-to-r from-sk-orange-dark to-sk-orange text-white shadow-lg" aria-label="Navegacao principal">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-2xl font-display font-bold tracking-tight">🏎️ SpeedKids</a>
+					<a href="/" class="flex items-center gap-2">
+						<img src="/logo.svg" alt="SpeedKids" class="h-9" />
+					</a>
 					<div class="flex items-center gap-3">
 						<span id="online-status" class="flex items-center gap-1 text-sm">
 							<span class="w-2 h-2 rounded-full bg-white"></span>
@@ -185,6 +188,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 										{cashStatus.open ? `Caixa: ${formatBadgeCurrency(cashStatus.balance_cents ?? 0)}` : "Sem caixa"}
 									</a>
 								)}
+								<a href="/rentals" class="text-sm text-white hover:text-white/90 font-body">Locacoes</a>
 								<a href="/shift" class="text-sm text-white hover:text-white/90 font-body">Turno</a>
 								<a href="/cash" class="text-sm text-white hover:text-white/90 font-body">Caixa</a>
 								{(user.role === "manager" || user.role === "owner") && (

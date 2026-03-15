@@ -7,9 +7,9 @@ import { getCashStatus } from "../../lib/cash-status";
 import { getInstalledBatteries } from "../../db/queries/batteries";
 import { Dashboard } from "../../views/dashboard";
 
-export const dashboardPages = new Hono<AppEnv>();
+export const rentalPages = new Hono<AppEnv>();
 
-dashboardPages.get("/", async (c) => {
+rentalPages.get("/", async (c) => {
 	const user = c.get("user");
 	const [assets, packages, sessions, cashStatus, batteries] = await Promise.all([
 		getAssets(c.env.DB),
@@ -18,5 +18,15 @@ dashboardPages.get("/", async (c) => {
 		user ? getCashStatus(c.env.DB) : Promise.resolve(null),
 		getInstalledBatteries(c.env.DB),
 	]);
-	return c.html(<Dashboard assets={assets} packages={packages} sessions={sessions} user={user} cashStatus={cashStatus} batteries={batteries} />);
+	return c.html(
+		<Dashboard
+			assets={assets}
+			packages={packages}
+			sessions={sessions}
+			user={user}
+			cashStatus={cashStatus}
+			batteries={batteries}
+			pageTitle="Controle de Locacoes"
+		/>,
+	);
 });

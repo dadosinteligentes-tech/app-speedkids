@@ -12,6 +12,8 @@ import { OperationLogs } from "../../views/admin/operation-logs";
 import { getLogs } from "../../db/queries/logs";
 import { getCustomers } from "../../db/queries/customers";
 import { CustomerList } from "../../views/customers/customer-list";
+import { getBatteries } from "../../db/queries/batteries";
+import { BatteriesList } from "../../views/admin/batteries-list";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -50,6 +52,16 @@ adminPages.get("/customers", async (c) => {
 	const { customers, total } = await getCustomers(c.env.DB, 50, (page - 1) * 50);
 	const user = c.get("user");
 	return c.html(<CustomerList customers={customers} total={total} page={page} user={user ?? null} />);
+});
+
+adminPages.get("/batteries", async (c) => {
+	const [batteries, assets] = await Promise.all([
+		getBatteries(c.env.DB),
+		getAllAssets(c.env.DB),
+	]);
+	const user = c.get("user");
+	const batteryAssets = assets.filter((a) => a.uses_battery && a.status !== "retired");
+	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} />);
 });
 
 // Users page requires owner role

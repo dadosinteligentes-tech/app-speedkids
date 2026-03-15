@@ -10,6 +10,9 @@
 			"database_name": "d1-sppedkids-database"
 		}
 	],
+	"assets": {
+		"directory": "public"
+	},
 	"observability": {
 		"enabled": true
 	}

@@ -43,6 +43,7 @@ function showAssetForm(asset) {
 		document.getElementById('f-type').value = asset.asset_type;
 		document.getElementById('f-model').value = asset.model || '';
 		document.getElementById('f-notes').value = asset.notes || '';
+		document.getElementById('f-battery').checked = !!asset.uses_battery;
 	} else {
 		titleEl.textContent = 'Novo Ativo';
 		delete form.dataset.id;
@@ -63,7 +64,8 @@ document.getElementById('asset-form').addEventListener('submit', function(e) {
 		name: document.getElementById('f-name').value,
 		asset_type: document.getElementById('f-type').value,
 		model: document.getElementById('f-model').value || null,
-		notes: document.getElementById('f-notes').value || null
+		notes: document.getElementById('f-notes').value || null,
+		uses_battery: document.getElementById('f-battery').checked ? 1 : 0
 	};
 
 	var method = id ? 'PUT' : 'POST';
@@ -180,7 +182,7 @@ function deleteType(id, label) {
 								<td class="px-4 py-3">
 									<div class="flex gap-2">
 										<button
-											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes })})`}
+											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery })})`}
 											class="text-sk-blue-dark hover:underline text-xs font-body"
 										>
 											Editar
@@ -283,6 +285,10 @@ function deleteType(id, label) {
 						<div>
 							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observacoes</label>
 							<textarea id="f-notes" rows={2} class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Notas adicionais..."></textarea>
+						</div>
+						<div class="flex items-center gap-2">
+							<input id="f-battery" type="checkbox" class="w-4 h-4 rounded border-sk-border text-sk-orange focus:ring-sk-orange/30" />
+							<label for="f-battery" class="text-sm font-medium text-sk-text font-body">Usa bateria</label>
 						</div>
 						<div class="flex gap-2 pt-2">
 							<button type="submit" class="btn-touch flex-1 py-2 bg-sk-orange text-white rounded-sk font-display font-medium btn-bounce active:bg-sk-orange-dark">Salvar</button>

@@ -18,7 +18,7 @@ assetRoutes.get("/:id", async (c) => {
 });
 
 assetRoutes.post("/", requireRole("manager", "owner"), async (c) => {
-	const body = await c.req.json<{ name: string; asset_type: string; model?: string; photo_url?: string; notes?: string }>();
+	const body = await c.req.json<{ name: string; asset_type: string; model?: string; photo_url?: string; notes?: string; uses_battery?: number }>();
 	if (!body.name || !body.asset_type) {
 		return c.json({ error: "Nome e tipo são obrigatórios" }, 400);
 	}
@@ -32,7 +32,7 @@ assetRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	const existing = await getAssetById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Asset not found" }, 404);
 
-	const body = await c.req.json<{ name?: string; asset_type?: string; model?: string; photo_url?: string; notes?: string }>();
+	const body = await c.req.json<{ name?: string; asset_type?: string; model?: string; photo_url?: string; notes?: string; uses_battery?: number }>();
 	await updateAsset(c.env.DB, id, body);
 	await auditLog(c, "asset.update", "asset", id, body);
 	const updated = await getAssetById(c.env.DB, id);

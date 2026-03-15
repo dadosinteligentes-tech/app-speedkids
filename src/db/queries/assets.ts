@@ -20,22 +20,22 @@ export async function getAssetById(db: D1Database, id: number): Promise<Asset | 
 
 export async function createAsset(
 	db: D1Database,
-	params: { name: string; asset_type: string; model?: string; photo_url?: string; notes?: string },
+	params: { name: string; asset_type: string; model?: string; photo_url?: string; notes?: string; uses_battery?: number },
 ): Promise<Asset | null> {
 	return db
 		.prepare(`
-			INSERT INTO assets (name, asset_type, model, photo_url, notes, status)
-			VALUES (?, ?, ?, ?, ?, 'available')
+			INSERT INTO assets (name, asset_type, model, photo_url, notes, uses_battery, status)
+			VALUES (?, ?, ?, ?, ?, ?, 'available')
 			RETURNING *
 		`)
-		.bind(params.name, params.asset_type, params.model ?? null, params.photo_url ?? null, params.notes ?? null)
+		.bind(params.name, params.asset_type, params.model ?? null, params.photo_url ?? null, params.notes ?? null, params.uses_battery ?? 0)
 		.first<Asset>();
 }
 
 export async function updateAsset(
 	db: D1Database,
 	id: number,
-	params: { name?: string; asset_type?: string; model?: string; photo_url?: string; notes?: string },
+	params: { name?: string; asset_type?: string; model?: string; photo_url?: string; notes?: string; uses_battery?: number },
 ): Promise<void> {
 	const sets: string[] = [];
 	const values: unknown[] = [];
@@ -45,6 +45,7 @@ export async function updateAsset(
 	if (params.model !== undefined) { sets.push("model = ?"); values.push(params.model); }
 	if (params.photo_url !== undefined) { sets.push("photo_url = ?"); values.push(params.photo_url); }
 	if (params.notes !== undefined) { sets.push("notes = ?"); values.push(params.notes); }
+	if (params.uses_battery !== undefined) { sets.push("uses_battery = ?"); values.push(params.uses_battery); }
 
 	if (sets.length === 0) return;
 
