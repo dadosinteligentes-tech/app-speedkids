@@ -45,7 +45,7 @@ export const FinancialSummaryView: FC<Props> = ({
 					</p>
 				</div>
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
-					<p class="text-xs text-sk-muted font-body mb-1">Locacoes</p>
+					<p class="text-xs text-sk-muted font-body mb-1">Locações</p>
 					<p class="text-xl font-display font-bold text-sk-text">
 						{summary.rental_count}
 					</p>
@@ -120,7 +120,7 @@ export const FinancialSummaryView: FC<Props> = ({
 				<div
 					class={`rounded-sk p-3 text-center ${summary.unpaid_count > 0 ? "bg-sk-danger-light" : "bg-sk-green-light"}`}
 				>
-					<p class="text-xs font-body text-sk-muted">Nao Pagos</p>
+					<p class="text-xs font-body text-sk-muted">Não Pagos</p>
 					<p
 						class={`text-lg font-display font-bold ${summary.unpaid_count > 0 ? "text-sk-danger" : "text-sk-green-dark"}`}
 					>
@@ -147,7 +147,7 @@ export const FinancialSummaryView: FC<Props> = ({
 						<thead class="bg-sk-yellow-light/30 text-sk-muted">
 							<tr>
 								<th class="px-4 py-2 text-left font-medium">Data</th>
-								<th class="px-4 py-2 text-right font-medium">Locacoes</th>
+								<th class="px-4 py-2 text-right font-medium">Locações</th>
 								<th class="px-4 py-2 text-right font-medium">Receita</th>
 								<th class="px-4 py-2 font-medium hidden md:table-cell">
 									Grafico
@@ -180,7 +180,7 @@ export const FinancialSummaryView: FC<Props> = ({
 			{trend.length === 0 && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center">
 					<p class="text-sk-muted font-body">
-						Nenhuma locacao encontrada no periodo selecionado.
+						Nenhuma locacao encontrada no período selecionado.
 					</p>
 				</div>
 			)}

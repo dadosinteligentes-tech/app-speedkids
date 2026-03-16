@@ -29,6 +29,10 @@ export interface Asset {
 	photo_url: string | null;
 	battery_level: number | null;
 	uses_battery: number;
+	max_weight_kg: number | null;
+	min_age: number | null;
+	max_age: number | null;
+	sort_order: number;
 	last_maintenance_at: string | null;
 	notes: string | null;
 	created_at: string;
@@ -139,6 +143,7 @@ export interface OperationLog {
 export interface Shift {
 	id: number;
 	user_id: number;
+	name: string | null;
 	started_at: string;
 	ended_at: string | null;
 	notes: string | null;
@@ -187,6 +192,7 @@ export interface Battery {
 	asset_id: number | null;
 	status: "charging" | "ready" | "in_use" | "depleted" | "retired";
 	full_charge_minutes: number;
+	charge_time_minutes: number;
 	estimated_minutes_remaining: number;
 	last_charged_at: string | null;
 	notes: string | null;
@@ -196,4 +202,14 @@ export interface Battery {
 
 export interface BatteryView extends Battery {
 	asset_name: string | null;
+}
+
+export interface BusinessConfig {
+	id: number;
+	name: string;
+	cnpj: string | null;
+	address: string | null;
+	phone: string | null;
+	receipt_footer: string | null;
+	updated_at: string;
 }

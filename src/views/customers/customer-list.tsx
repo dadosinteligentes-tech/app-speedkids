@@ -20,7 +20,9 @@ function openCustomerModal(customer) {
 	document.getElementById('customer-id').value = customer ? customer.id : '';
 	document.getElementById('customer-name').value = customer ? customer.name : '';
 	document.getElementById('customer-phone').value = customer ? (customer.phone || '') : '';
+	document.getElementById('customer-cpf').value = customer ? (customer.cpf || '') : '';
 	document.getElementById('customer-email').value = customer ? (customer.email || '') : '';
+	document.getElementById('customer-instagram').value = customer ? (customer.instagram || '') : '';
 	document.getElementById('customer-notes').value = customer ? (customer.notes || '') : '';
 	document.getElementById('customer-modal').classList.remove('hidden');
 }
@@ -34,7 +36,9 @@ function saveCustomer() {
 	var data = {
 		name: document.getElementById('customer-name').value,
 		phone: document.getElementById('customer-phone').value || null,
+		cpf: document.getElementById('customer-cpf').value || null,
 		email: document.getElementById('customer-email').value || null,
+		instagram: document.getElementById('customer-instagram').value || null,
 		notes: document.getElementById('customer-notes').value || null
 	};
 	if (!data.name.trim()) { alert('Nome é obrigatório'); return; }
@@ -85,7 +89,7 @@ function saveCustomer() {
 								<td class="px-4 py-3 text-right">R$ {(c.total_spent_cents / 100).toFixed(2).replace(".", ",")}</td>
 								<td class="px-4 py-3 text-center">
 									<button
-										onclick={`openCustomerModal(${JSON.stringify({ id: c.id, name: c.name, phone: c.phone, email: c.email, notes: c.notes })})`}
+										onclick={`openCustomerModal(${JSON.stringify({ id: c.id, name: c.name, phone: c.phone, cpf: c.cpf, email: c.email, instagram: c.instagram, notes: c.notes })})`}
 										class="text-sk-blue-dark hover:underline text-xs"
 									>
 										Editar
@@ -123,13 +127,25 @@ function saveCustomer() {
 							<label class="block text-sm font-medium text-sk-text mb-1">Nome *</label>
 							<input id="customer-name" type="text" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
 						</div>
-						<div>
-							<label class="block text-sm font-medium text-sk-text mb-1">Telefone</label>
-							<input id="customer-phone" type="tel" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+						<div class="grid grid-cols-2 gap-3">
+							<div>
+								<label class="block text-sm font-medium text-sk-text mb-1">Telefone</label>
+								<input id="customer-phone" type="tel" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-sk-text mb-1">CPF</label>
+								<input id="customer-cpf" type="text" placeholder="000.000.000-00" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+							</div>
 						</div>
-						<div>
-							<label class="block text-sm font-medium text-sk-text mb-1">Email</label>
-							<input id="customer-email" type="email" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+						<div class="grid grid-cols-2 gap-3">
+							<div>
+								<label class="block text-sm font-medium text-sk-text mb-1">Email</label>
+								<input id="customer-email" type="email" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-sk-text mb-1">Instagram</label>
+								<input id="customer-instagram" type="text" placeholder="@usuario" class="w-full border border-sk-border rounded-sk px-3 py-2 font-body focus:ring-sk-blue/30 focus:border-sk-blue" />
+							</div>
 						</div>
 						<div>
 							<label class="block text-sm font-medium text-sk-text mb-1">Observações</label>

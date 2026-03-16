@@ -127,6 +127,21 @@ export interface CancelledSession {
 	attendant_name: string | null;
 }
 
+export interface ShiftReport {
+	shift_id: number;
+	shift_name: string | null;
+	user_name: string;
+	started_at: string;
+	ended_at: string | null;
+	rental_count: number;
+	revenue_cents: number;
+	cash_cents: number;
+	credit_cents: number;
+	debit_cents: number;
+	pix_cents: number;
+	courtesy_count: number;
+}
+
 // ── Query Functions ──
 
 const EMPTY_FINANCIAL: FinancialSummary = {
@@ -564,6 +579,73 @@ export async function getCustomerAnalysis(
 			avg_spent_cents: Math.round(statsRes?.avg_spent_cents ?? 0),
 		},
 	};
+}
+
+export async function getShiftReport(
+	db: D1Database,
+	from: string,
+	to: string,
+): Promise<ShiftReport[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT
+				s.id as shift_id,
+				s.name as shift_name,
+				u.name as user_name,
+				s.started_at,
+				s.ended_at,
+				COUNT(rs.id) as rental_count,
+				COALESCE(SUM(CASE WHEN rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as revenue_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as cash_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as credit_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as debit_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as pix_cents,
+				COUNT(CASE WHEN rs.payment_method = 'courtesy' THEN 1 END) as courtesy_count
+			FROM shifts s
+			JOIN users u ON s.user_id = u.id
+			LEFT JOIN rental_sessions rs ON rs.attendant_id = s.user_id
+				AND rs.start_time >= s.started_at
+				AND (s.ended_at IS NULL OR rs.start_time <= s.ended_at)
+				AND rs.status = 'completed'
+			WHERE s.started_at >= ? AND s.started_at < date(?, '+1 day')
+			GROUP BY s.id
+			ORDER BY s.started_at DESC
+		`)
+		.bind(from, to)
+		.all<ShiftReport>();
+	return results;
+}
+
+export async function getShiftReportById(
+	db: D1Database,
+	shiftId: number,
+): Promise<ShiftReport | null> {
+	return db
+		.prepare(`
+			SELECT
+				s.id as shift_id,
+				s.name as shift_name,
+				u.name as user_name,
+				s.started_at,
+				s.ended_at,
+				COUNT(rs.id) as rental_count,
+				COALESCE(SUM(CASE WHEN rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as revenue_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as cash_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as credit_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as debit_cents,
+				COALESCE(SUM(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as pix_cents,
+				COUNT(CASE WHEN rs.payment_method = 'courtesy' THEN 1 END) as courtesy_count
+			FROM shifts s
+			JOIN users u ON s.user_id = u.id
+			LEFT JOIN rental_sessions rs ON rs.attendant_id = s.user_id
+				AND rs.start_time >= s.started_at
+				AND (s.ended_at IS NULL OR rs.start_time <= s.ended_at)
+				AND rs.status = 'completed'
+			WHERE s.id = ?
+			GROUP BY s.id
+		`)
+		.bind(shiftId)
+		.first<ShiftReport>();
 }
 
 export async function getUnpaidSessions(

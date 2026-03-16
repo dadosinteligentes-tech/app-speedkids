@@ -45,12 +45,14 @@ function showBatteryForm(battery) {
 		form.dataset.id = battery.id;
 		document.getElementById('bf-label').value = battery.label;
 		document.getElementById('bf-charge').value = battery.full_charge_minutes;
+		document.getElementById('bf-charge-time').value = battery.charge_time_minutes || 480;
 		document.getElementById('bf-notes').value = battery.notes || '';
 	} else {
 		titleEl.textContent = 'Nova Bateria';
 		delete form.dataset.id;
 		form.reset();
 		document.getElementById('bf-charge').value = '90';
+		document.getElementById('bf-charge-time').value = '480';
 	}
 	modal.classList.remove('hidden');
 }
@@ -66,6 +68,7 @@ document.getElementById('battery-form').addEventListener('submit', function(e) {
 	var body = {
 		label: document.getElementById('bf-label').value,
 		full_charge_minutes: parseInt(document.getElementById('bf-charge').value, 10) || 90,
+		charge_time_minutes: parseInt(document.getElementById('bf-charge-time').value, 10) || 480,
 		notes: document.getElementById('bf-notes').value || null
 	};
 
@@ -105,6 +108,8 @@ var __BL_FULL__ = 90;
 function showBatteryLevelAdmin(battery) {
 	__BL_ID__ = battery.id;
 	__BL_FULL__ = battery.full_charge_minutes || 90;
+	__BL_CHARGE_TIME__ = battery.charge_time_minutes || 480;
+	__BL_FULL_CHARGE__ = battery.full_charge_minutes || 90;
 	var subtitle = document.getElementById('bla-subtitle');
 	if (subtitle) subtitle.textContent = battery.label;
 
@@ -113,6 +118,10 @@ function showBatteryLevelAdmin(battery) {
 	var input = document.getElementById('bla-minutes');
 	if (input) { input.value = battery.estimated_minutes_remaining; input.max = __BL_FULL__; }
 	updateLevelPreview();
+	// Reset charging section
+	document.getElementById('bla-charging-section').classList.add('hidden');
+	document.getElementById('bla-charging-minutes').value = '';
+	document.getElementById('bla-charging-preview').textContent = '';
 	document.getElementById('battery-level-admin-modal').classList.remove('hidden');
 }
 
@@ -166,6 +175,63 @@ function saveBatteryLevelAdmin() {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ estimated_minutes_remaining: mins })
+	}).then(function(r) {
+		if (r.ok) location.reload();
+		else r.json().then(function(d) { alert(d.error || 'Erro'); });
+	});
+}
+
+// ── Tab Sorting ──
+function showBatteryTab(tab) {
+	var tabAll = document.getElementById('tab-all');
+	var tabLowest = document.getElementById('tab-lowest');
+	var activeClass = 'px-3 py-1.5 rounded-lg text-xs font-medium font-body bg-sk-orange text-white';
+	var inactiveClass = 'px-3 py-1.5 rounded-lg text-xs font-medium font-body text-sk-muted hover:bg-sk-yellow-light';
+	tabAll.className = tab === 'all' ? activeClass : inactiveClass;
+	tabLowest.className = tab === 'lowest' ? activeClass : inactiveClass;
+
+	var rows = Array.from(document.querySelectorAll('#battery-table tbody tr'));
+	if (tab === 'lowest') {
+		rows.sort(function(a, b) {
+			return (parseInt(a.dataset.remaining, 10) || 0) - (parseInt(b.dataset.remaining, 10) || 0);
+		});
+	} else {
+		rows.sort(function(a, b) {
+			return (a.dataset.label || '').localeCompare(b.dataset.label || '');
+		});
+	}
+	var tbody = document.querySelector('#battery-table tbody');
+	rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+// ── Charging Time Calculator ──
+var __BL_CHARGE_TIME__ = 480;
+var __BL_FULL_CHARGE__ = 90;
+
+function toggleChargingTime() {
+	var section = document.getElementById('bla-charging-section');
+	section.classList.toggle('hidden');
+}
+
+function previewChargingTime() {
+	var mins = parseInt(document.getElementById('bla-charging-minutes').value, 10) || 0;
+	var additional = Math.round((mins / __BL_CHARGE_TIME__) * __BL_FULL_CHARGE__);
+	var preview = document.getElementById('bla-charging-preview');
+	if (mins > 0) {
+		preview.textContent = '+' + additional + ' min de autonomia adicional';
+	} else {
+		preview.textContent = '';
+	}
+}
+
+function applyChargingTime() {
+	if (!__BL_ID__) return;
+	var mins = parseInt(document.getElementById('bla-charging-minutes').value, 10) || 0;
+	if (mins <= 0) { alert('Informe um tempo valido'); return; }
+	fetch('/api/batteries/' + __BL_ID__ + '/charge-time', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ charging_minutes: mins })
 	}).then(function(r) {
 		if (r.ok) location.reload();
 		else r.json().then(function(d) { alert(d.error || 'Erro'); });
@@ -234,8 +300,13 @@ function uninstallBattery(id, label) {
 				</button>
 			</div>
 
+			<div class="flex gap-2 mb-4">
+				<button onclick="showBatteryTab('all')" id="tab-all" class="px-3 py-1.5 rounded-lg text-xs font-medium font-body bg-sk-orange text-white">Todas</button>
+				<button onclick="showBatteryTab('lowest')" id="tab-lowest" class="px-3 py-1.5 rounded-lg text-xs font-medium font-body text-sk-muted hover:bg-sk-yellow-light">Menor Carga</button>
+			</div>
+
 			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
-				<table class="w-full text-sm">
+				<table id="battery-table" class="w-full text-sm">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>
 							<th class="px-4 py-3 font-medium font-body">Label</th>
@@ -251,7 +322,7 @@ function uninstallBattery(id, label) {
 							const pct = bat.full_charge_minutes > 0 ? Math.round((bat.estimated_minutes_remaining / bat.full_charge_minutes) * 100) : 0;
 							const barColor = pct > 50 ? "bg-sk-green" : pct > 25 ? "bg-sk-yellow" : "bg-sk-danger";
 							return (
-								<tr class="hover:bg-sk-yellow-light">
+								<tr class="hover:bg-sk-yellow-light" data-remaining={String(bat.estimated_minutes_remaining)} data-label={bat.label}>
 									<td class="px-4 py-3 font-display font-bold text-sk-text">{bat.label}</td>
 									<td class="px-4 py-3">
 										<span class={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[bat.status] ?? ""}`}>
@@ -295,14 +366,14 @@ function uninstallBattery(id, label) {
 									<td class="px-4 py-3">
 										<div class="flex gap-2 flex-wrap">
 											<button
-												onclick={`showBatteryForm(${JSON.stringify({ id: bat.id, label: bat.label, full_charge_minutes: bat.full_charge_minutes, notes: bat.notes })})`}
+												onclick={`showBatteryForm(${JSON.stringify({ id: bat.id, label: bat.label, full_charge_minutes: bat.full_charge_minutes, charge_time_minutes: bat.charge_time_minutes, notes: bat.notes })})`}
 												class="text-sk-blue-dark hover:underline text-xs font-body"
 											>
 												Editar
 											</button>
 											{bat.status !== "retired" && (
 												<button
-													onclick={`showBatteryLevelAdmin(${JSON.stringify({ id: bat.id, label: bat.label, full_charge_minutes: bat.full_charge_minutes, estimated_minutes_remaining: bat.estimated_minutes_remaining })})`}
+													onclick={`showBatteryLevelAdmin(${JSON.stringify({ id: bat.id, label: bat.label, full_charge_minutes: bat.full_charge_minutes, charge_time_minutes: bat.charge_time_minutes, estimated_minutes_remaining: bat.estimated_minutes_remaining })})`}
 													class="text-sk-orange-dark hover:underline text-xs font-body"
 												>
 													Ajustar
@@ -352,7 +423,12 @@ function uninstallBattery(id, label) {
 							<input id="bf-charge" type="number" min="1" value="90" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" />
 						</div>
 						<div>
-							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observacoes</label>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Tempo de Carregamento (min)</label>
+							<input id="bf-charge-time" type="number" min="1" value="480" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" />
+							<p class="text-xs text-sk-muted font-body mt-1">Tempo para recarregar 0% a 100% (padrao 480 = 8h)</p>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observações</label>
 							<textarea id="bf-notes" rows={2} class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Notas adicionais..."></textarea>
 						</div>
 						<div class="flex gap-2 pt-2">
@@ -401,6 +477,22 @@ function uninstallBattery(id, label) {
 					<div class="flex gap-2">
 						<button type="button" onclick="saveBatteryLevelAdmin()" class="btn-touch flex-1 py-2 bg-sk-orange text-white rounded-sk font-display font-medium btn-bounce active:bg-sk-orange-dark">Salvar</button>
 						<button type="button" onclick="closeBatteryLevelAdmin()" class="btn-touch flex-1 py-2 bg-gray-200 text-sk-text rounded-sk font-body font-medium active:bg-gray-300">Cancelar</button>
+					</div>
+
+					<div class="border-t border-sk-border pt-3 mt-3">
+						<button type="button" onclick="toggleChargingTime()" class="text-sm text-sk-blue-dark font-body hover:underline mb-2">
+							Calcular por tempo de carga
+						</button>
+						<div id="bla-charging-section" class="hidden">
+							<div class="flex items-center gap-2 mb-1">
+								<label class="text-sm font-medium text-sk-text font-body whitespace-nowrap">Tempo na carga:</label>
+								<input id="bla-charging-minutes" type="number" min="0" class="flex-1 px-3 py-2 border border-sk-border rounded-sk font-body text-center" placeholder="min" oninput="previewChargingTime()" />
+							</div>
+							<p id="bla-charging-preview" class="text-xs text-sk-muted font-body mb-2"></p>
+							<button type="button" onclick="applyChargingTime()" class="btn-touch w-full py-2 bg-sk-blue text-white rounded-sk font-display font-medium text-sm btn-bounce">
+								Adicionar Carga
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>

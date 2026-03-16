@@ -13,6 +13,7 @@ import {
 	getCustomerAnalysis,
 	getUnpaidSessions,
 	getCancelledSessions,
+	getShiftReport,
 } from "../../db/queries/reports";
 import { FinancialSummaryView } from "../../views/reports/financial-summary";
 import { PackageRevenueView } from "../../views/reports/package-revenue";
@@ -23,6 +24,7 @@ import { CashReconciliationView } from "../../views/reports/cash-reconciliation"
 import { CustomerAnalysisView } from "../../views/reports/customer-analysis";
 import { UnpaidReportView } from "../../views/reports/unpaid";
 import { CancelledReportView } from "../../views/reports/cancelled";
+import { ShiftReportView } from "../../views/reports/shift-report";
 
 export const reportPages = new Hono<AppEnv>();
 
@@ -169,6 +171,19 @@ reportPages.get("/cancelled", async (c) => {
 	return c.html(
 		<CancelledReportView
 			sessions={sessions}
+			from={from}
+			to={to}
+			user={c.get("user")}
+		/>,
+	);
+});
+
+reportPages.get("/shifts", async (c) => {
+	const { from, to } = getDateRange(c);
+	const shifts = await getShiftReport(c.env.DB, from, to);
+	return c.html(
+		<ShiftReportView
+			shifts={shifts}
 			from={from}
 			to={to}
 			user={c.get("user")}

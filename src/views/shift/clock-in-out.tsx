@@ -20,10 +20,19 @@ function formatDateTime(iso: string): string {
 export const ClockInOut: FC<ClockInOutProps> = ({ shift, register, user, cashStatus }) => {
 	const script = html`<script>
 ${raw(`
+function setShiftName(name) {
+	document.getElementById('shift-name').value = name;
+}
+
 function clockIn() {
 	var btn = document.getElementById('clock-btn');
 	btn.disabled = true;
-	fetch('/api/shifts/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+	var shiftName = document.getElementById('shift-name').value.trim() || null;
+	fetch('/api/shifts/start', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ name: shiftName })
+	})
 		.then(function(r) {
 			if (r.ok) location.reload();
 			else r.json().then(function(d) { alert(d.error || 'Erro'); btn.disabled = false; });
@@ -53,7 +62,7 @@ function clockOut(shiftId) {
 			<div class="max-w-md mx-auto">
 				<h2 class="text-xl font-display font-bold text-sk-text mb-2 text-center">Controle de Turno</h2>
 				<p class="text-sm text-sk-muted font-body text-center mb-6">
-					O turno registra seu periodo de trabalho. Inicie ao chegar e encerre ao sair.
+					O turno registra seu período de trabalho. Inicie ao chegar e encerre ao sair.
 				</p>
 
 				{/* Workflow steps */}
@@ -114,6 +123,15 @@ function clockOut(shiftId) {
 						<div class="text-5xl mb-4">🕐</div>
 						<p class="text-sk-muted font-body mb-2">Nenhum turno ativo</p>
 						<p class="text-xs text-sk-muted font-body mb-6">Inicie seu turno para comecar a trabalhar.</p>
+						<div class="mb-4">
+							<label class="block text-sm font-medium text-sk-text font-body mb-2">Nome do turno</label>
+							<div class="grid grid-cols-3 gap-2 mb-2">
+								<button type="button" onclick="setShiftName('Manha')" class="py-2 bg-sk-yellow-light rounded-sk text-sm font-body text-sk-text active:bg-sk-yellow">Manha</button>
+								<button type="button" onclick="setShiftName('Tarde')" class="py-2 bg-sk-orange-light rounded-sk text-sm font-body text-sk-text active:bg-sk-orange/20">Tarde</button>
+								<button type="button" onclick="setShiftName('Noite')" class="py-2 bg-sk-blue-light rounded-sk text-sm font-body text-sk-text active:bg-sk-blue/20">Noite</button>
+							</div>
+							<input id="shift-name" type="text" placeholder="Ou digite um nome personalizado..." class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm" />
+						</div>
 						<button
 							id="clock-btn"
 							onclick="clockIn()"
@@ -126,7 +144,7 @@ function clockOut(shiftId) {
 					<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-6">
 						<div class="text-center mb-6">
 							<div class="text-4xl mb-2">✅</div>
-							<p class="text-lg font-display font-bold text-sk-green-dark">Turno Ativo</p>
+							<p class="text-lg font-display font-bold text-sk-green-dark">Turno Ativo{shift.name ? ` — ${shift.name}` : ''}</p>
 							<p class="text-sm text-sk-muted font-body mt-1">Iniciado em {formatDateTime(shift.started_at)}</p>
 						</div>
 
@@ -161,12 +179,12 @@ function clockOut(shiftId) {
 
 						<div class="space-y-3">
 							<div>
-								<label class="block text-sm font-medium text-sk-text font-body mb-1">Observacoes do turno</label>
+								<label class="block text-sm font-medium text-sk-text font-body mb-1">Observações do turno</label>
 								<textarea
 									id="shift-notes"
 									rows={3}
 									class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm"
-									placeholder="Observacoes opcionais..."
+									placeholder="Observações opcionais..."
 								></textarea>
 							</div>
 							<button

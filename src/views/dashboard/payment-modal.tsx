@@ -387,12 +387,21 @@ export const PaymentModal: FC = () => (
 					</div>
 				</div>
 
-				<button
-					onclick="dismissPayment()"
-					class="btn-touch btn-bounce px-8 py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm"
-				>
-					OK
-				</button>
+				<div class="flex gap-2 justify-center">
+					<button
+						onclick="dismissPayment()"
+						class="btn-touch btn-bounce px-8 py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm"
+					>
+						OK
+					</button>
+					<button
+						id="print-receipt-btn"
+						onclick="printReceipt()"
+						class="btn-touch btn-bounce px-6 py-3 bg-sk-blue text-white rounded-sk font-display font-bold text-sm active:bg-sk-blue-dark shadow-sk-sm hidden"
+					>
+						Imprimir Cupom
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

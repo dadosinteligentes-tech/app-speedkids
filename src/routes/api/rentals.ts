@@ -32,6 +32,7 @@ rentalRoutes.post("/start", async (c) => {
 		child_id?: number;
 		payment_method?: string;
 		paid?: boolean;
+		discount_cents?: number;
 		payment_denominations?: Record<string, number>;
 		change_denominations?: Record<string, number>;
 		payments?: Array<{
@@ -84,9 +85,11 @@ rentalRoutes.post("/start", async (c) => {
 		}
 	}
 
+	const prepaidDiscount = Math.min(body.discount_cents ?? 0, pkg.price_cents);
+
 	// Handle prepaid split payment (multiple methods)
 	if (body.payments && body.payments.length >= 2 && body.paid) {
-		const amount = pkg.price_cents;
+		const amount = Math.max(0, pkg.price_cents - prepaidDiscount);
 		await paySession(c.env.DB, sessionId, "mixed", amount, null);
 
 		if (register && amount > 0) {
@@ -135,7 +138,7 @@ rentalRoutes.post("/start", async (c) => {
 	// Handle prepaid single payment
 	else if (body.payment_method && body.paid) {
 		const isCourtesy = body.payment_method === "courtesy";
-		const amount = isCourtesy ? 0 : pkg.price_cents;
+		const amount = isCourtesy ? 0 : Math.max(0, pkg.price_cents - prepaidDiscount);
 
 		await paySession(c.env.DB, sessionId, body.payment_method, amount, null);
 
@@ -187,6 +190,7 @@ rentalRoutes.post("/start", async (c) => {
 		child_id: body.child_id,
 		prepaid: body.paid ?? false,
 		payment_method: body.payments ? "mixed" : (body.payment_method ?? null),
+		discount_cents: prepaidDiscount > 0 ? prepaidDiscount : undefined,
 	});
 
 	const session = await getSessionById(c.env.DB, sessionId);
@@ -262,10 +266,16 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	const user = c.get("user");
 	const register = await getOpenRegister(c.env.DB);
 
+	// For prepaid sessions with overtime, the base was already paid — only overtime is due now
+	const isOvertimeOnly = session.paid === 1 && session.overtime_cents > 0;
+	const amountDue = isOvertimeOnly
+		? Math.max(0, session.overtime_cents - discount)
+		: finalAmount;
+
 	// Split payment: multiple methods
 	if (body.payments && body.payments.length >= 2) {
 		const paymentsTotal = body.payments.reduce((sum, p) => sum + p.amount_cents, 0);
-		if (paymentsTotal !== finalAmount) {
+		if (paymentsTotal !== amountDue) {
 			return c.json({ error: "Soma dos pagamentos nao confere com o total" }, 400);
 		}
 
@@ -314,12 +324,12 @@ rentalRoutes.post("/:id/pay", async (c) => {
 		const isCourtesy = body.payment_method === "courtesy";
 		await paySession(c.env.DB, id, body.payment_method, finalAmount, body.notes ?? null);
 
-		if (register && finalAmount > 0 && !isCourtesy) {
+		if (register && amountDue > 0 && !isCourtesy) {
 			const tx = await addTransaction(c.env.DB, {
 				cash_register_id: register.id,
 				rental_session_id: id,
 				type: "rental_payment",
-				amount_cents: finalAmount,
+				amount_cents: amountDue,
 				payment_method: body.payment_method,
 				recorded_by: user?.id ?? null,
 			});
@@ -351,9 +361,9 @@ rentalRoutes.post("/:id/pay", async (c) => {
 		}
 	}
 
-	// Update customer stats with final amount
+	// Update customer stats — only count what's paid now (avoid double-counting prepaid base)
 	if (session.customer_id) {
-		await updateCustomerStats(c.env.DB, session.customer_id, finalAmount);
+		await updateCustomerStats(c.env.DB, session.customer_id, amountDue);
 	}
 
 	await auditLog(c, "rental.pay", "rental", id, {
@@ -361,6 +371,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 		original_amount_cents: originalAmount,
 		discount_cents: discount,
 		final_amount_cents: finalAmount,
+		amount_due: amountDue,
 		notes: body.notes,
 	});
 

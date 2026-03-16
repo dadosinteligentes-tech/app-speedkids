@@ -22,11 +22,13 @@ shiftRoutes.post("/start", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 
+	const body = await c.req.json<{ name?: string }>().catch((): { name?: string } => ({}));
+
 	const existing = await getActiveShift(c.env.DB, user.id);
 	if (existing) return c.json({ error: "Já existe um turno ativo" }, 400);
 
-	const shift = await startShift(c.env.DB, user.id);
-	await auditLog(c, "shift.start", "shift", shift?.id);
+	const shift = await startShift(c.env.DB, user.id, body.name);
+	await auditLog(c, "shift.start", "shift", shift?.id, { name: body.name });
 	return c.json(shift, 201);
 });
 

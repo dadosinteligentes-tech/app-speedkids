@@ -27,7 +27,9 @@ export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, to
 				<h3 class="text-lg font-display font-bold text-sk-text mb-3">{customer.name}</h3>
 				<div class="space-y-2 text-sm font-body">
 					<div><span class="text-sk-muted">Telefone:</span> <span class="font-medium">{customer.phone ?? "-"}</span></div>
+					{customer.cpf && <div><span class="text-sk-muted">CPF:</span> <span class="font-medium">{customer.cpf}</span></div>}
 					<div><span class="text-sk-muted">Email:</span> <span class="font-medium">{customer.email ?? "-"}</span></div>
+					{customer.instagram && <div><span class="text-sk-muted">Instagram:</span> <span class="font-medium">{customer.instagram}</span></div>}
 					{customer.notes && <div><span class="text-sk-muted">Notas:</span> <span class="font-medium">{customer.notes}</span></div>}
 					<div class="text-xs text-sk-muted pt-2">Cadastrado em {new Date(customer.created_at).toLocaleDateString("pt-BR")}</div>
 				</div>

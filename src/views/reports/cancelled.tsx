@@ -89,7 +89,7 @@ export const CancelledReportView: FC<Props> = ({ sessions, from, to, user }) => 
 			{sessions.length === 0 && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center mt-4">
 					<p class="text-sk-muted font-body">
-						Nenhum cancelamento no periodo.
+						Nenhum cancelamento no período.
 					</p>
 				</div>
 			)}

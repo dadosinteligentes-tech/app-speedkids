@@ -14,6 +14,8 @@ import { getCustomers } from "../../db/queries/customers";
 import { CustomerList } from "../../views/customers/customer-list";
 import { getBatteries } from "../../db/queries/batteries";
 import { BatteriesList } from "../../views/admin/batteries-list";
+import { getBusinessConfig } from "../../db/queries/business-config";
+import { BusinessSettings } from "../../views/admin/business-settings";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -70,4 +72,11 @@ adminPages.get("/users", requireRole("owner"), async (c) => {
 	const user = c.get("user");
 	const safeUsers = users.map(({ password_hash, salt, ...rest }) => rest);
 	return c.html(<UsersList users={safeUsers} user={user} />);
+});
+
+// Business settings requires owner role
+adminPages.get("/settings", requireRole("owner"), async (c) => {
+	const config = await getBusinessConfig(c.env.DB);
+	const user = c.get("user");
+	return c.html(<BusinessSettings config={config} user={user} />);
 });

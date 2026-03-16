@@ -52,7 +52,7 @@ export const PeakHoursView: FC<Props> = ({
 			{!hasData && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center">
 					<p class="text-sk-muted font-body">
-						Nenhuma locacao encontrada no periodo selecionado.
+						Nenhuma locacao encontrada no período selecionado.
 					</p>
 				</div>
 			)}

@@ -4,7 +4,7 @@ import {
 	getBatteries, getBatteryById, getInstalledBatteries, getReadyBatteries,
 	createBattery, updateBattery, markBatteryCharged, updateBatteryStatus,
 	swapBattery, retireBattery, getBatteryByAssetId, setBatteryLevel,
-	uninstallBattery, installBattery,
+	uninstallBattery, installBattery, addBatteryChargingTime, getBatteriesByLowestCharge,
 } from "../../db/queries/batteries";
 import { requireRole } from "../../middleware/require-role";
 import { auditLog } from "../../lib/logger";
@@ -26,6 +26,11 @@ batteryRoutes.get("/ready", async (c) => {
 	return c.json(batteries);
 });
 
+batteryRoutes.get("/sorted/lowest-charge", async (c) => {
+	const batteries = await getBatteriesByLowestCharge(c.env.DB);
+	return c.json(batteries);
+});
+
 batteryRoutes.get("/:id", async (c) => {
 	const battery = await getBatteryById(c.env.DB, Number(c.req.param("id")));
 	if (!battery) return c.json({ error: "Battery not found" }, 404);
@@ -33,7 +38,7 @@ batteryRoutes.get("/:id", async (c) => {
 });
 
 batteryRoutes.post("/", requireRole("manager", "owner"), async (c) => {
-	const body = await c.req.json<{ label: string; full_charge_minutes?: number; notes?: string }>();
+	const body = await c.req.json<{ label: string; full_charge_minutes?: number; charge_time_minutes?: number; notes?: string }>();
 	if (!body.label) return c.json({ error: "Label e obrigatorio" }, 400);
 	const battery = await createBattery(c.env.DB, body);
 	await auditLog(c, "battery.create", "battery", battery?.id, { label: body.label });
@@ -45,7 +50,7 @@ batteryRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	const existing = await getBatteryById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Battery not found" }, 404);
 
-	const body = await c.req.json<{ label?: string; full_charge_minutes?: number; notes?: string }>();
+	const body = await c.req.json<{ label?: string; full_charge_minutes?: number; charge_time_minutes?: number; notes?: string }>();
 	await updateBattery(c.env.DB, id, body);
 	await auditLog(c, "battery.update", "battery", id, body);
 	const updated = await getBatteryById(c.env.DB, id);
@@ -135,6 +140,25 @@ batteryRoutes.post("/:id/level", async (c) => {
 		label: existing.label,
 		from: existing.estimated_minutes_remaining,
 		to: minutes,
+	});
+	const updated = await getBatteryById(c.env.DB, id);
+	return c.json(updated);
+});
+
+batteryRoutes.post("/:id/charge-time", async (c) => {
+	const id = Number(c.req.param("id"));
+	const existing = await getBatteryById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Battery not found" }, 404);
+	if (existing.status === "retired") return c.json({ error: "Bateria aposentada" }, 400);
+
+	const body = await c.req.json<{ charging_minutes: number }>();
+	const chargingMinutes = Math.max(0, body.charging_minutes ?? 0);
+	if (chargingMinutes <= 0) return c.json({ error: "Tempo de carga invalido" }, 400);
+
+	await addBatteryChargingTime(c.env.DB, id, chargingMinutes);
+	await auditLog(c, "battery.charge_time", "battery", id, {
+		label: existing.label,
+		charging_minutes: chargingMinutes,
 	});
 	const updated = await getBatteryById(c.env.DB, id);
 	return c.json(updated);

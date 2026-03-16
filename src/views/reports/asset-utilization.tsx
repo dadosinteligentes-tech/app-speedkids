@@ -44,7 +44,7 @@ export const AssetUtilizationView: FC<Props> = ({
 					</p>
 				</div>
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
-					<p class="text-xs text-sk-muted font-body mb-1">Total Locacoes</p>
+					<p class="text-xs text-sk-muted font-body mb-1">Total Locações</p>
 					<p class="text-xl font-display font-bold text-sk-blue-dark">
 						{totalRentals}
 					</p>
@@ -64,7 +64,7 @@ export const AssetUtilizationView: FC<Props> = ({
 						<tr>
 							<th class="px-4 py-3 font-medium">Ativo</th>
 							<th class="px-4 py-3 font-medium hidden sm:table-cell">Tipo</th>
-							<th class="px-4 py-3 font-medium text-right">Locacoes</th>
+							<th class="px-4 py-3 font-medium text-right">Locações</th>
 							<th class="px-4 py-3 font-medium text-right hidden sm:table-cell">
 								Minutos
 							</th>

@@ -13,6 +13,7 @@ import { customerRoutes } from "./routes/api/customers";
 import { reportApiRoutes } from "./routes/api/reports";
 import { assetTypeRoutes } from "./routes/api/asset-types";
 import { batteryRoutes } from "./routes/api/batteries";
+import { businessConfigRoutes } from "./routes/api/business-config";
 import { loginPages } from "./routes/pages/login";
 import { dashboardPages } from "./routes/pages/dashboard";
 import { adminPages } from "./routes/pages/admin";
@@ -22,6 +23,7 @@ import { cashRegisterPages } from "./routes/pages/cash-register";
 import { customerPages } from "./routes/pages/customers";
 import { rentalPages } from "./routes/pages/rentals";
 import { reportPages } from "./routes/pages/reports";
+import { receiptPages } from "./routes/pages/receipts";
 
 const app = new Hono<AppEnv>();
 
@@ -40,6 +42,7 @@ app.route("/api/customers", customerRoutes);
 app.route("/api/reports", reportApiRoutes);
 app.route("/api/asset-types", assetTypeRoutes);
 app.route("/api/batteries", batteryRoutes);
+app.route("/api/business-config", businessConfigRoutes);
 
 // Page routes
 app.route("/", loginPages);
@@ -51,5 +54,6 @@ app.route("/rentals", rentalPages);
 app.route("/shift", shiftPages);
 app.route("/cash", cashRegisterPages);
 app.route("/customers", customerPages);
+app.route("/receipts", receiptPages);
 
 export default app;

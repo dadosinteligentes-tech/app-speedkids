@@ -4,10 +4,10 @@ export interface ShiftView extends Shift {
 	user_name: string;
 }
 
-export async function startShift(db: D1Database, userId: number): Promise<Shift | null> {
+export async function startShift(db: D1Database, userId: number, name?: string): Promise<Shift | null> {
 	return db
-		.prepare("INSERT INTO shifts (user_id) VALUES (?) RETURNING *")
-		.bind(userId)
+		.prepare("INSERT INTO shifts (user_id, name) VALUES (?, ?) RETURNING *")
+		.bind(userId, name ?? null)
 		.first<Shift>();
 }
 

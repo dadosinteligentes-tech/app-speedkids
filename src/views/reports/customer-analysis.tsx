@@ -118,7 +118,7 @@ export const CustomerAnalysisView: FC<Props> = ({
 					</table>
 					{topByRevenue.length === 0 && (
 						<p class="p-4 text-center text-sk-muted text-xs">
-							Sem dados no periodo.
+							Sem dados no período.
 						</p>
 					)}
 				</div>
@@ -164,7 +164,7 @@ export const CustomerAnalysisView: FC<Props> = ({
 					</table>
 					{topByFrequency.length === 0 && (
 						<p class="p-4 text-center text-sk-muted text-xs">
-							Sem dados no periodo.
+							Sem dados no período.
 						</p>
 					)}
 				</div>

@@ -149,7 +149,7 @@ export const CashReconciliationView: FC<Props> = ({
 			{registers.length === 0 && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center mt-4">
 					<p class="text-sk-muted font-body">
-						Nenhum caixa encontrado no periodo.
+						Nenhum caixa encontrado no período.
 					</p>
 				</div>
 			)}

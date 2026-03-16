@@ -152,6 +152,20 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 						}
 					}
 
+					/* === Sort buttons === */
+					.sort-btn {
+						background: #f3f4f6;
+						color: #6b7280;
+						border: 1px solid #e5e7eb;
+					}
+					.sort-btn:active { transform: scale(0.95); }
+					.sort-btn-active {
+						background: #0288D1;
+						color: white;
+						border-color: #0288D1;
+						box-shadow: 0 1px 3px rgba(2,136,209,0.3);
+					}
+
 					/* === Print === */
 					@media print {
 						nav, .wave-separator, .print\:hidden { display: none !important; }
@@ -188,7 +202,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 										{cashStatus.open ? `Caixa: ${formatBadgeCurrency(cashStatus.balance_cents ?? 0)}` : "Sem caixa"}
 									</a>
 								)}
-								<a href="/rentals" class="text-sm text-white hover:text-white/90 font-body">Locacoes</a>
+								<a href="/rentals" class="text-sm text-white hover:text-white/90 font-body">Locações</a>
 								<a href="/shift" class="text-sm text-white hover:text-white/90 font-body">Turno</a>
 								<a href="/cash" class="text-sm text-white hover:text-white/90 font-body">Caixa</a>
 								{(user.role === "manager" || user.role === "owner") && (

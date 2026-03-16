@@ -13,6 +13,7 @@ import {
 	getCustomerAnalysis,
 	getUnpaidSessions,
 	getCancelledSessions,
+	getShiftReport,
 } from "../../db/queries/reports";
 
 export const reportApiRoutes = new Hono<AppEnv>();
@@ -117,13 +118,13 @@ reportApiRoutes.get("/financial/export", async (c) => {
 			title: `RESUMO FINANCEIRO (${fmtDate(from)} a ${fmtDate(to)})`,
 			headers: [
 				"Receita Total",
-				"Locacoes",
+				"Locações",
 				"Ticket Medio",
 				"Dinheiro",
 				"Credito",
 				"Debito",
 				"Pix",
-				"Nao Pagos",
+				"Não Pagos",
 				"Cancelados",
 				"Minutos Totais",
 			],
@@ -144,7 +145,7 @@ reportApiRoutes.get("/financial/export", async (c) => {
 		},
 		{
 			title: "TENDENCIA DIARIA",
-			headers: ["Data", "Locacoes", "Receita"],
+			headers: ["Data", "Locações", "Receita"],
 			rows: trend.map((t) => [fmtDate(t.day), t.rental_count, fmtMoney(t.revenue_cents)]),
 		},
 	]);
@@ -157,7 +158,7 @@ reportApiRoutes.get("/packages/export", async (c) => {
 	const packages = await getPackageRevenue(c.env.DB, from, to);
 
 	const csv = toCSV(
-		["Pacote", "Duracao (min)", "Preco Unitario", "Locacoes", "Receita", "Participacao %"],
+		["Pacote", "Duracao (min)", "Preco Unitario", "Locações", "Receita", "Participacao %"],
 		packages.map((p) => [
 			p.package_name,
 			p.duration_minutes,
@@ -176,7 +177,7 @@ reportApiRoutes.get("/assets/export", async (c) => {
 	const assets = await getAssetUtilization(c.env.DB, from, to);
 
 	const csv = toCSV(
-		["Ativo", "Tipo", "Locacoes", "Minutos", "Receita", "Utilizacao %"],
+		["Ativo", "Tipo", "Locações", "Minutos", "Receita", "Utilizacao %"],
 		assets.map((a) => [
 			a.asset_name,
 			a.asset_type,
@@ -197,7 +198,7 @@ reportApiRoutes.get("/peak-hours/export", async (c) => {
 	const csv = toCSVMultiSection([
 		{
 			title: `HORARIOS DE PICO (${fmtDate(from)} a ${fmtDate(to)})`,
-			headers: ["Hora", "Locacoes", "Receita"],
+			headers: ["Hora", "Locações", "Receita"],
 			rows: data.byHour.map((h) => [
 				`${String(h.hour).padStart(2, "0")}:00`,
 				h.rental_count,
@@ -206,7 +207,7 @@ reportApiRoutes.get("/peak-hours/export", async (c) => {
 		},
 		{
 			title: "POR DIA DA SEMANA",
-			headers: ["Dia", "Locacoes", "Receita"],
+			headers: ["Dia", "Locações", "Receita"],
 			rows: data.byDay.map((d) => [
 				DAY_NAMES[d.dow] ?? String(d.dow),
 				d.rental_count,
@@ -226,7 +227,7 @@ reportApiRoutes.get("/operators/export", requireRole("owner"), async (c) => {
 		[
 			"Operador",
 			"Cargo",
-			"Locacoes Iniciadas",
+			"Locações Iniciadas",
 			"Receita",
 			"Turnos",
 			"Horas Trabalhadas",
@@ -291,7 +292,7 @@ reportApiRoutes.get("/customers/export", async (c) => {
 	const csv = toCSVMultiSection([
 		{
 			title: `CLIENTES (${fmtDate(from)} a ${fmtDate(to)})`,
-			headers: ["Cliente", "Telefone", "Locacoes", "Receita"],
+			headers: ["Cliente", "Telefone", "Locações", "Receita"],
 			rows: data.topByRevenue.map((t) => [
 				t.customer_name,
 				t.phone ?? "",
@@ -301,7 +302,7 @@ reportApiRoutes.get("/customers/export", async (c) => {
 		},
 		{
 			title: "TOP CLIENTES POR FREQUENCIA",
-			headers: ["Cliente", "Telefone", "Locacoes", "Receita"],
+			headers: ["Cliente", "Telefone", "Locações", "Receita"],
 			rows: data.topByFrequency.map((t) => [
 				t.customer_name,
 				t.phone ?? "",
@@ -339,6 +340,30 @@ reportApiRoutes.get("/unpaid/export", async (c) => {
 	);
 
 	return csvResponse(c, `nao-pagos-${from}-a-${to}.csv`, csv);
+});
+
+reportApiRoutes.get("/shifts/export", async (c) => {
+	const { from, to } = getDateRange(c);
+	const shifts = await getShiftReport(c.env.DB, from, to);
+
+	const csv = toCSV(
+		["Turno", "Operador", "Inicio", "Fim", "Locações", "Receita", "Dinheiro", "Credito", "Debito", "PIX", "Cortesias"],
+		shifts.map((s) => [
+			s.shift_name ?? "—",
+			s.user_name,
+			fmtDateTime(s.started_at),
+			s.ended_at ? fmtDateTime(s.ended_at) : "Ativo",
+			s.rental_count,
+			fmtMoney(s.revenue_cents),
+			fmtMoney(s.cash_cents),
+			fmtMoney(s.credit_cents),
+			fmtMoney(s.debit_cents),
+			fmtMoney(s.pix_cents),
+			s.courtesy_count,
+		]),
+	);
+
+	return csvResponse(c, `turnos-${from}-a-${to}.csv`, csv);
 });
 
 reportApiRoutes.get("/cancelled/export", async (c) => {

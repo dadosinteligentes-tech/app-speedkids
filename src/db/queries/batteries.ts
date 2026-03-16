@@ -60,29 +60,31 @@ export async function getReadyBatteries(db: D1Database): Promise<Battery[]> {
 
 export async function createBattery(
 	db: D1Database,
-	params: { label: string; full_charge_minutes?: number; notes?: string },
+	params: { label: string; full_charge_minutes?: number; charge_time_minutes?: number; notes?: string },
 ): Promise<Battery | null> {
 	const fullCharge = params.full_charge_minutes ?? 90;
+	const chargeTime = params.charge_time_minutes ?? 480;
 	return db
 		.prepare(`
-			INSERT INTO batteries (label, full_charge_minutes, estimated_minutes_remaining, notes)
-			VALUES (?, ?, ?, ?)
+			INSERT INTO batteries (label, full_charge_minutes, charge_time_minutes, estimated_minutes_remaining, notes)
+			VALUES (?, ?, ?, ?, ?)
 			RETURNING *
 		`)
-		.bind(params.label, fullCharge, fullCharge, params.notes ?? null)
+		.bind(params.label, fullCharge, chargeTime, fullCharge, params.notes ?? null)
 		.first<Battery>();
 }
 
 export async function updateBattery(
 	db: D1Database,
 	id: number,
-	params: { label?: string; full_charge_minutes?: number; notes?: string },
+	params: { label?: string; full_charge_minutes?: number; charge_time_minutes?: number; notes?: string },
 ): Promise<void> {
 	const sets: string[] = [];
 	const values: unknown[] = [];
 
 	if (params.label !== undefined) { sets.push("label = ?"); values.push(params.label); }
 	if (params.full_charge_minutes !== undefined) { sets.push("full_charge_minutes = ?"); values.push(params.full_charge_minutes); }
+	if (params.charge_time_minutes !== undefined) { sets.push("charge_time_minutes = ?"); values.push(params.charge_time_minutes); }
 	if (params.notes !== undefined) { sets.push("notes = ?"); values.push(params.notes); }
 
 	if (sets.length === 0) return;
@@ -186,6 +188,42 @@ export async function installBattery(db: D1Database, batteryId: number, assetId:
 		.prepare("UPDATE batteries SET asset_id = ?, status = 'in_use', updated_at = datetime('now') WHERE id = ?")
 		.bind(assetId, batteryId)
 		.run();
+}
+
+export async function addBatteryChargingTime(db: D1Database, id: number, chargingMinutes: number): Promise<void> {
+	await db
+		.prepare(`
+			UPDATE batteries
+			SET estimated_minutes_remaining = MIN(
+					full_charge_minutes,
+					estimated_minutes_remaining + CAST(
+						(? * 1.0 / charge_time_minutes) * full_charge_minutes AS INTEGER
+					)
+				),
+				status = CASE
+					WHEN estimated_minutes_remaining + CAST((? * 1.0 / charge_time_minutes) * full_charge_minutes AS INTEGER) > 0
+						AND status = 'depleted' THEN 'ready'
+					ELSE status
+				END,
+				last_charged_at = datetime('now'),
+				updated_at = datetime('now')
+			WHERE id = ?
+		`)
+		.bind(chargingMinutes, chargingMinutes, id)
+		.run();
+}
+
+export async function getBatteriesByLowestCharge(db: D1Database): Promise<BatteryView[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT b.*, a.name as asset_name
+			FROM batteries b
+			LEFT JOIN assets a ON b.asset_id = a.id
+			WHERE b.status != 'retired'
+			ORDER BY b.estimated_minutes_remaining ASC
+		`)
+		.all<BatteryView>();
+	return results;
 }
 
 export async function retireBattery(db: D1Database, id: number): Promise<void> {

@@ -17,7 +17,7 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 	const usesBattery = !!asset.uses_battery;
 
 	let cardStyle = "bg-sk-green-light border-sk-green";
-	let statusText = "Disponivel";
+	let statusText = "Disponível";
 
 	if (isMaintenance) {
 		cardStyle = "bg-gray-100 border-gray-300";
@@ -35,9 +35,19 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 
 	const photoUrl = asset.photo_url;
 
+	const cardStatus = isMaintenance ? "maintenance"
+		: isPendingPayment ? "pending_payment"
+		: isRunning ? "running"
+		: isPaused ? "paused"
+		: "available";
+
 	return (
 		<div
 			data-asset-id={String(asset.id)}
+			data-asset-name={asset.name}
+			data-sort-order={String(asset.sort_order)}
+			data-asset-type={asset.asset_type}
+			data-card-status={cardStatus}
 			data-uses-battery={usesBattery ? "1" : "0"}
 			data-battery-minutes={battery ? String(battery.estimated_minutes_remaining) : ""}
 			data-battery-full={battery ? String(battery.full_charge_minutes) : ""}
@@ -75,6 +85,16 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 					"bg-sk-green"
 				}`}></span>
 			</div>
+
+			{/* Asset restrictions info */}
+			{(asset.max_weight_kg || asset.min_age || asset.max_age) && (
+				<div class="text-xs text-sk-muted font-body mb-1 flex gap-2 flex-wrap">
+					{asset.max_weight_kg ? <span>Max {asset.max_weight_kg}kg</span> : null}
+					{(asset.min_age || asset.max_age) ? (
+						<span>{asset.min_age ?? "?"}-{asset.max_age ?? "?"} anos</span>
+					) : null}
+				</div>
+			)}
 
 			{/* Battery indicator */}
 			{usesBattery && (
@@ -167,6 +187,15 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 						>
 							PARAR
 						</button>
+						{session.paid ? (
+							<button
+								onclick={`window.open('/receipts/rental/${session.id}','_blank','width=350,height=600')`}
+								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
+								title="Imprimir comprovante"
+							>
+								&#128424;
+							</button>
+						) : null}
 					</>
 				) : isRunning && session ? (
 					<>
@@ -184,6 +213,15 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 						>
 							PARAR
 						</button>
+						{session.paid ? (
+							<button
+								onclick={`window.open('/receipts/rental/${session.id}','_blank','width=350,height=600')`}
+								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
+								title="Imprimir comprovante"
+							>
+								&#128424;
+							</button>
+						) : null}
 					</>
 				) : null}
 			</div>

@@ -18,9 +18,10 @@ interface DashboardProps {
 	cashStatus?: CashStatusBadge | null;
 	batteries?: Battery[];
 	pageTitle?: string;
+	receiptEnabled?: boolean;
 }
 
-export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle }) => {
+export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle, receiptEnabled }) => {
 	const sessionMap = new Map(sessions.map((s) => [s.asset_id, s]));
 	const batteryMap = new Map((batteries ?? []).map((b) => [b.asset_id!, b]));
 
@@ -30,7 +31,8 @@ window.__SK_DATA__ = {
 	packages: ${raw(JSON.stringify(packages))},
 	sessions: ${raw(JSON.stringify(sessions))},
 	batteries: ${raw(JSON.stringify(batteries ?? []))},
-	userRole: ${raw(JSON.stringify(user?.role ?? "operator"))}
+	userRole: ${raw(JSON.stringify(user?.role ?? "operator"))},
+	receiptEnabled: ${raw(JSON.stringify(!!receiptEnabled))}
 };
 </script>`;
 
@@ -50,6 +52,18 @@ ${raw(dashboardControllerScript)}
 				>
 					Atualizar
 				</button>
+			</div>
+
+			{/* Sort bar */}
+			<div id="sort-bar" class="flex items-center gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+				<span class="text-xs font-body text-sk-muted flex-shrink-0">Ordenar:</span>
+				<button onclick="sortCards('default')" class="sort-btn active sort-btn-active flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="default">Padrao</button>
+				<button onclick="sortCards('name-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-asc">Nome A-Z</button>
+				<button onclick="sortCards('name-desc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-desc">Nome Z-A</button>
+				<button onclick="sortCards('status')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="status">Status</button>
+				<button onclick="sortCards('time-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="time-asc">Tempo (menor)</button>
+				<button onclick="sortCards('battery-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="battery-asc">Bateria (menor)</button>
+				<button onclick="sortCards('type')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="type">Tipo</button>
 			</div>
 
 			<div id="assets-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -101,6 +115,22 @@ ${raw(dashboardControllerScript)}
 					<div class="flex gap-2">
 						<button onclick="saveBatteryLevel()" class="btn-touch flex-1 py-2.5 bg-sk-orange text-white rounded-sk font-display font-bold btn-bounce active:bg-sk-orange-dark">Salvar</button>
 						<button onclick="closeBatteryLevel()" class="btn-touch flex-1 py-2.5 bg-gray-200 text-sk-text rounded-sk font-body font-medium active:bg-gray-300">Cancelar</button>
+					</div>
+
+					<div class="border-t border-sk-border pt-3 mt-3">
+						<button type="button" onclick="toggleDashChargingTime()" class="text-sm text-sk-blue-dark font-body hover:underline mb-2">
+							Calcular por tempo de carga
+						</button>
+						<div id="bl-charging-section" class="hidden">
+							<div class="flex items-center gap-2 mb-1">
+								<label class="text-sm font-medium text-sk-text font-body whitespace-nowrap">Tempo na carga:</label>
+								<input id="bl-charging-minutes" type="number" min="0" class="flex-1 px-3 py-2 border border-sk-border rounded-sk font-body text-center" placeholder="min" oninput="previewDashChargingTime()" />
+							</div>
+							<p id="bl-charging-preview" class="text-xs text-sk-muted font-body mb-2"></p>
+							<button type="button" onclick="applyDashChargingTime()" class="btn-touch w-full py-2 bg-sk-blue text-white rounded-sk font-display font-medium text-sm btn-bounce">
+								Adicionar Carga
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -310,11 +340,89 @@ const dashboardControllerScript = `
 		window.__SK_SESSIONS__[s.asset_id] = s;
 	});
 
+	// Track last paid session per asset for receipt printing
+	window.__SK_LAST_RECEIPTS__ = {};
+
 	// Save to localStorage for offline resilience
 	function saveLocal() {
 		try { localStorage.setItem('sk_sessions', JSON.stringify(window.__SK_SESSIONS__)); } catch(e) {}
 	}
 	saveLocal();
+
+	// ---- Card sorting ----
+	var STATUS_ORDER = { pending_payment: 0, running: 1, paused: 2, available: 3, maintenance: 4 };
+
+	function getCardStatus(card) {
+		return card.dataset.cardStatus || 'available';
+	}
+
+	function getCardRemaining(card) {
+		var assetId = Number(card.dataset.assetId);
+		var session = window.__SK_SESSIONS__[assetId];
+		if (!session || (session.status !== 'running' && session.status !== 'paused')) return Infinity;
+		var rem = calcRemaining(session);
+		return rem !== null ? rem : Infinity;
+	}
+
+	window.sortCards = function(criteria) {
+		var grid = document.getElementById('assets-grid');
+		if (!grid) return;
+		var cards = Array.prototype.slice.call(grid.children);
+
+		cards.sort(function(a, b) {
+			switch (criteria) {
+				case 'name-asc':
+					return (a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+				case 'name-desc':
+					return (b.dataset.assetName || '').localeCompare(a.dataset.assetName || '', 'pt-BR');
+				case 'status':
+					var sa = STATUS_ORDER[getCardStatus(a)] ?? 9;
+					var sb = STATUS_ORDER[getCardStatus(b)] ?? 9;
+					if (sa !== sb) return sa - sb;
+					return (a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+				case 'time-asc':
+					var ra = getCardRemaining(a);
+					var rb = getCardRemaining(b);
+					if (ra !== rb) return ra - rb;
+					return (a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+				case 'battery-asc':
+					var ba = a.dataset.batteryMinutes !== '' ? Number(a.dataset.batteryMinutes) : Infinity;
+					var bb = b.dataset.batteryMinutes !== '' ? Number(b.dataset.batteryMinutes) : Infinity;
+					if (ba !== bb) return ba - bb;
+					return (a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+				case 'type':
+					var ta = (a.dataset.assetType || '').localeCompare(b.dataset.assetType || '', 'pt-BR');
+					if (ta !== 0) return ta;
+					return (a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+				default: // 'default' — original sort_order
+					return (parseInt(a.dataset.sortOrder) || 0) - (parseInt(b.dataset.sortOrder) || 0) ||
+						(a.dataset.assetName || '').localeCompare(b.dataset.assetName || '', 'pt-BR');
+			}
+		});
+
+		for (var i = 0; i < cards.length; i++) {
+			grid.appendChild(cards[i]);
+		}
+
+		// Update active button
+		var btns = document.querySelectorAll('.sort-btn');
+		btns.forEach(function(btn) {
+			if (btn.dataset.sort === criteria) {
+				btn.classList.add('active', 'sort-btn-active');
+			} else {
+				btn.classList.remove('active', 'sort-btn-active');
+			}
+		});
+
+		// Persist preference
+		try { localStorage.setItem('sk_sort', criteria); } catch(e) {}
+	};
+
+	// Restore sort preference
+	try {
+		var savedSort = localStorage.getItem('sk_sort');
+		if (savedSort && savedSort !== 'default') sortCards(savedSort);
+	} catch(e) {}
 
 	// API helper — rejects on non-2xx so error objects never get stored as data
 	function api(method, path, body) {
@@ -375,9 +483,11 @@ const dashboardControllerScript = `
 		var otEl = document.getElementById('payment-overtime-breakdown');
 		if (otEl) otEl.classList.add('hidden');
 
-		// Hide discount fields
+		// Reset discount fields (keep visible for prepaid)
 		var discFields = document.getElementById('discount-fields');
 		if (discFields) discFields.classList.add('hidden');
+		var discValue = document.getElementById('discount-value');
+		if (discValue) discValue.value = '';
 		var discRemove = document.getElementById('discount-remove-btn');
 		if (discRemove) discRemove.classList.add('hidden');
 
@@ -410,6 +520,7 @@ const dashboardControllerScript = `
 		if (childId) body.child_id = childId;
 		if (paymentData) {
 			body.paid = true;
+			if (paymentData.discount_cents) body.discount_cents = paymentData.discount_cents;
 			if (paymentData.payments) {
 				body.payments = paymentData.payments;
 			} else {
@@ -421,9 +532,11 @@ const dashboardControllerScript = `
 
 		api('POST', '/rentals/start', body)
 			.then(function(session) {
+				delete window.__SK_LAST_RECEIPTS__[assetId];
 				window.__SK_SESSIONS__[assetId] = session;
 				saveLocal();
 				updateCard(assetId, session);
+				if (paymentData) window.__SK_LAST_RECEIPTS__[assetId] = session.id;
 				if (typeof triggerConfetti === 'function') triggerConfetti();
 			})
 			.catch(function(err) {
@@ -470,8 +583,21 @@ const dashboardControllerScript = `
 		if (screen === 'success') {
 			var splitBreak = document.getElementById('success-split-breakdown');
 			if (splitBreak) splitBreak.classList.add('hidden');
+			// Show print button if session has id
+			var printBtn = document.getElementById('print-receipt-btn');
+			if (printBtn) {
+				var sess = window.__SK_PAYING_SESSION__;
+				printBtn.classList.toggle('hidden', !(sess && sess.id));
+			}
 		}
 	}
+
+	window.printReceipt = function() {
+		var sess = window.__SK_PAYING_SESSION__;
+		if (sess && sess.id) {
+			window.open('/receipts/rental/' + sess.id, '_blank', 'width=350,height=600');
+		}
+	};
 
 	function setPaymentButtonsEnabled(enabled) {
 		var btns = document.querySelectorAll('#payment-buttons button');
@@ -585,6 +711,7 @@ const dashboardControllerScript = `
 				if (session.prepaid && session.overtime_cents === 0) {
 					delete window.__SK_SESSIONS__[pending.assetId];
 					saveLocal();
+					window.__SK_LAST_RECEIPTS__[pending.assetId] = session.id;
 					updateCard(pending.assetId, null);
 					window.__SK_STOP_PENDING__ = null;
 					document.getElementById('payment-modal').classList.add('hidden');
@@ -634,8 +761,9 @@ const dashboardControllerScript = `
 
 		// Prepaid mode: start rental with payment
 		if (session._prepaid) {
+			var prepaidDiscount = window.__SK_DISCOUNT__ || 0;
 			if (method === 'cash') {
-				var amountDue = session.amount_cents;
+				var amountDue = session.amount_cents - prepaidDiscount;
 				window.__SK_CASH_AMOUNT_DUE__ = amountDue;
 				document.getElementById('cash-amount-due').textContent = fmtBRL(amountDue);
 				clearDenomInputs('pay');
@@ -650,10 +778,13 @@ const dashboardControllerScript = `
 			var prepaid = window.__SK_PREPAID__;
 			window.__SK_SELECTED_ASSET__ = prepaid.assetId;
 			window.__SK_SELECTED_PACKAGE__ = prepaid.packageId;
-			startRental(prepaid.customerId, prepaid.childId, { payment_method: method });
+			var prepaidPayData = { payment_method: method };
+			if (prepaidDiscount > 0) prepaidPayData.discount_cents = prepaidDiscount;
+			startRental(prepaid.customerId, prepaid.childId, prepaidPayData);
 			// Show success
+			var finalPrepaidAmount = session.amount_cents - prepaidDiscount;
 			var labels = { cash:'Dinheiro', pix:'PIX', debit:'Debito', credit:'Credito' };
-			document.getElementById('success-amount').textContent = fmtBRL(session.amount_cents);
+			document.getElementById('success-amount').textContent = fmtBRL(finalPrepaidAmount);
 			document.getElementById('success-method').textContent = labels[method] || method;
 			document.getElementById('success-detail').textContent = session.asset_name || '';
 			var successChange = document.getElementById('success-change');
@@ -686,6 +817,7 @@ const dashboardControllerScript = `
 			.then(function() {
 				delete window.__SK_SESSIONS__[session.asset_id];
 				saveLocal();
+				window.__SK_LAST_RECEIPTS__[session.asset_id] = session.id;
 				updateCard(session.asset_id, null);
 				var finalAmount = session.amount_cents - discount;
 				var labels = { cash:'Dinheiro', pix:'PIX', debit:'Debito', credit:'Credito' };
@@ -1051,13 +1183,16 @@ const dashboardControllerScript = `
 			var prepaid = window.__SK_PREPAID__;
 			window.__SK_SELECTED_ASSET__ = prepaid.assetId;
 			window.__SK_SELECTED_PACKAGE__ = prepaid.packageId;
-			startRental(prepaid.customerId, prepaid.childId, {
+			var cashPrepaidPayData = {
 				payment_method: 'cash',
 				payment_denominations: payDenoms,
 				change_denominations: changeDenoms
-			});
+			};
+			if (discount > 0) cashPrepaidPayData.discount_cents = discount;
+			startRental(prepaid.customerId, prepaid.childId, cashPrepaidPayData);
 
-			document.getElementById('success-amount').textContent = fmtBRL(session.amount_cents);
+			var cashPrepaidFinal = session.amount_cents - discount;
+			document.getElementById('success-amount').textContent = fmtBRL(cashPrepaidFinal);
 			document.getElementById('success-method').textContent = 'Dinheiro';
 			document.getElementById('success-detail').textContent = session.asset_name || '';
 
@@ -1091,6 +1226,7 @@ const dashboardControllerScript = `
 			.then(function() {
 				delete window.__SK_SESSIONS__[session.asset_id];
 				saveLocal();
+				window.__SK_LAST_RECEIPTS__[session.asset_id] = session.id;
 				updateCard(session.asset_id, null);
 				var finalAmount = session.amount_cents - discount;
 				document.getElementById('success-amount').textContent = fmtBRL(finalAmount);
@@ -1383,7 +1519,9 @@ const dashboardControllerScript = `
 			var prepaid = window.__SK_PREPAID__;
 			window.__SK_SELECTED_ASSET__ = prepaid.assetId;
 			window.__SK_SELECTED_PACKAGE__ = prepaid.packageId;
-			startRental(prepaid.customerId, prepaid.childId, { payments: payments });
+			var splitPrepaidPayData = { payments: payments };
+			if (discount > 0) splitPrepaidPayData.discount_cents = discount;
+			startRental(prepaid.customerId, prepaid.childId, splitPrepaidPayData);
 			showSplitSuccess(payments, session);
 			window.__SK_SPLIT_DATA__ = null;
 			return;
@@ -1397,6 +1535,7 @@ const dashboardControllerScript = `
 			.then(function() {
 				delete window.__SK_SESSIONS__[session.asset_id];
 				saveLocal();
+				window.__SK_LAST_RECEIPTS__[session.asset_id] = session.id;
 				updateCard(session.asset_id, null);
 				showSplitSuccess(payments, session);
 				window.__SK_SPLIT_DATA__ = null;
@@ -1665,6 +1804,55 @@ const dashboardControllerScript = `
 			birthDateISO = parts[2] + '-' + parts[1] + '-' + parts[0];
 		}
 
+		// === PRE-START WARNINGS ===
+		var __warnings = [];
+
+		// Age warning
+		var __selectedAsset = null;
+		for (var wi = 0; wi < window.__SK_DATA__.assets.length; wi++) {
+			if (window.__SK_DATA__.assets[wi].id === window.__SK_SELECTED_ASSET__) {
+				__selectedAsset = window.__SK_DATA__.assets[wi];
+				break;
+			}
+		}
+		if (__selectedAsset && childAge) {
+			if (__selectedAsset.min_age && childAge < __selectedAsset.min_age) {
+				__warnings.push('Idade da crianca (' + childAge + ' anos) abaixo da minima recomendada (' + __selectedAsset.min_age + ' anos)');
+			}
+			if (__selectedAsset.max_age && childAge > __selectedAsset.max_age) {
+				__warnings.push('Idade da crianca (' + childAge + ' anos) acima da maxima recomendada (' + __selectedAsset.max_age + ' anos)');
+			}
+			if (__selectedAsset.max_weight_kg) {
+				__warnings.push('Peso maximo do ativo: ' + __selectedAsset.max_weight_kg + ' kg');
+			}
+		}
+
+		// Battery prediction
+		if (__selectedAsset && __selectedAsset.uses_battery) {
+			var __bat = window.__SK_BATTERIES__[__selectedAsset.id];
+			var __pkg = null;
+			for (var pi = 0; pi < window.__SK_DATA__.packages.length; pi++) {
+				if (window.__SK_DATA__.packages[pi].id === window.__SK_SELECTED_PACKAGE__) {
+					__pkg = window.__SK_DATA__.packages[pi];
+					break;
+				}
+			}
+			if (__bat && __pkg) {
+				var __remainAfter = __bat.estimated_minutes_remaining - __pkg.duration_minutes;
+				var __threshold = __bat.full_charge_minutes * 0.2;
+				if (__remainAfter < __threshold) {
+					var __pctAfter = Math.max(0, Math.round((__remainAfter / __bat.full_charge_minutes) * 100));
+					__warnings.push('BATERIA: nivel estimado ao final da locacao: ' + __pctAfter + '% (' + Math.max(0, Math.round(__remainAfter)) + ' min). Recomenda-se trocar a bateria antes de iniciar.');
+				}
+			}
+		}
+
+		if (__warnings.length > 0) {
+			if (!confirm('ATENCAO:\\n\\n' + __warnings.join('\\n\\n') + '\\n\\nDeseja continuar mesmo assim?')) {
+				return;
+			}
+		}
+
 		var btn = document.getElementById('id-start-btn');
 		btn.disabled = true;
 		btn.textContent = 'INICIANDO...';
@@ -1760,6 +1948,7 @@ const dashboardControllerScript = `
 		}
 
 		if (isPendingPayment) {
+			card.dataset.cardStatus = 'pending_payment';
 			card.className = 'rounded-sk border-2 p-4 shadow-sk-sm transition-all card-wobble ' + CARD_STYLES.pending_payment;
 			actionsEl.innerHTML = '<button onclick="reopenPayment(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce w-full py-3 bg-sk-yellow text-sk-text rounded-sk font-display font-bold text-lg active:bg-sk-yellow-dark shadow-sk-sm" aria-label="Registrar pagamento">PAGAR</button>';
 			var timerEl = card.querySelector('.timer-display');
@@ -1771,23 +1960,35 @@ const dashboardControllerScript = `
 			var pkgName = card.querySelector('.package-name');
 			if (pkgName) pkgName.textContent = session.package_name || '';
 		} else if (!session || session.status === 'completed' || session.status === 'cancelled') {
+			card.dataset.cardStatus = 'available';
 			card.className = 'rounded-sk border-2 p-4 shadow-sk-sm transition-all card-wobble ' + CARD_STYLES.available;
-			actionsEl.innerHTML = '<button onclick="showPackageSelector(' + assetId + ')" class="btn-touch btn-bounce w-full py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm" aria-label="Iniciar locacao">INICIAR</button>';
+			var receiptId = window.__SK_LAST_RECEIPTS__[assetId];
+			if (receiptId) {
+				actionsEl.innerHTML = '<div class="flex gap-2">'
+					+ '<button onclick="showPackageSelector(' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm" aria-label="Iniciar locacao">INICIAR</button>'
+					+ '<button onclick="window.open(\\'/receipts/rental/' + receiptId + '\\',\\'_blank\\',\\'width=350,height=600\\')" class="btn-touch px-3 py-3 bg-sk-blue text-white rounded-sk text-lg active:bg-sk-blue-dark shadow-sk-sm" title="Imprimir comprovante">\\u{1F5A8}</button>'
+					+ '</div>';
+			} else {
+				actionsEl.innerHTML = '<button onclick="showPackageSelector(' + assetId + ')" class="btn-touch btn-bounce w-full py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm" aria-label="Iniciar locacao">INICIAR</button>';
+			}
 			var timerEl = card.querySelector('.timer-display');
 			if (timerEl) timerEl.textContent = '';
 			var statusText = card.querySelector('.status-text');
-			if (statusText) statusText.textContent = 'Disponivel';
+			if (statusText) statusText.textContent = 'Disponível';
 			var pkgName = card.querySelector('.package-name');
 			if (pkgName) pkgName.textContent = '';
 		} else if (session.status === 'running' || session.status === 'paused') {
+			card.dataset.cardStatus = session.status === 'paused' ? 'paused' : 'running';
 			var isPaused = session.status === 'paused';
 			var canExtend = window.__SK_DATA__.userRole === 'manager' || window.__SK_DATA__.userRole === 'owner';
+			var hasPaidReceipt = session.paid;
 			actionsEl.innerHTML =
 				'<div class="flex gap-1">'
 				+ (isPaused
 					? '<button onclick="resumeRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-blue text-white rounded-sk font-display font-bold active:bg-sk-blue-dark" aria-label="Retomar">RETOMAR</button>'
 					: '<button onclick="pauseRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-yellow text-sk-text rounded-sk font-display font-bold active:bg-sk-yellow-dark" aria-label="Pausar">PAUSAR</button>')
 				+ '<button onclick="stopRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-danger text-white rounded-sk font-display font-bold active:bg-red-700" aria-label="Parar">PARAR</button>'
+				+ (hasPaidReceipt ? '<button onclick="window.open(\\'/receipts/rental/' + session.id + '\\',\\'_blank\\',\\'width=350,height=600\\')" class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white" title="Imprimir comprovante">&#128424;</button>' : '')
 				+ '</div>'
 				+ (canExtend ? '<button onclick="showExtendModal(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce w-full mt-1 py-2 bg-sk-purple-light text-sk-purple rounded-sk text-xs font-display font-medium active:bg-purple-200">+ Estender</button>' : '');
 			var pkgName = card.querySelector('.package-name');
@@ -1967,6 +2168,7 @@ const dashboardControllerScript = `
 		window.__SK_LEVEL_ASSET_ID__ = assetId;
 		window.__SK_LEVEL_BATTERY_ID__ = bat.id;
 		window.__SK_LEVEL_FULL__ = bat.full_charge_minutes || 90;
+		window.__BL_ASSET_ID__ = assetId;
 
 		var subtitle = document.getElementById('bl-subtitle');
 		if (subtitle) subtitle.textContent = (asset ? asset.name : '') + ' \\u2014 ' + bat.label;
@@ -1976,6 +2178,9 @@ const dashboardControllerScript = `
 		var input = document.getElementById('bl-minutes');
 		if (input) { input.value = Math.round(bat.estimated_minutes_remaining); input.max = window.__SK_LEVEL_FULL__; }
 		syncLevelPreview();
+		document.getElementById('bl-charging-section').classList.add('hidden');
+		document.getElementById('bl-charging-minutes').value = '';
+		document.getElementById('bl-charging-preview').textContent = '';
 		document.getElementById('battery-level-modal').classList.remove('hidden');
 	};
 
@@ -2043,6 +2248,47 @@ const dashboardControllerScript = `
 
 	window.closeBatteryLevel = function() {
 		document.getElementById('battery-level-modal').classList.add('hidden');
+	};
+
+	// ---- Charging time calculator ----
+	window.toggleDashChargingTime = function() {
+		document.getElementById('bl-charging-section').classList.toggle('hidden');
+	};
+
+	window.previewDashChargingTime = function() {
+		var bat = window.__SK_BATTERIES__[window.__BL_ASSET_ID__];
+		if (!bat) return;
+		var mins = parseInt(document.getElementById('bl-charging-minutes').value, 10) || 0;
+		var chargeTime = bat.charge_time_minutes || 480;
+		var additional = Math.round((mins / chargeTime) * bat.full_charge_minutes);
+		var preview = document.getElementById('bl-charging-preview');
+		if (mins > 0) {
+			preview.textContent = '+' + additional + ' min de autonomia adicional';
+		} else {
+			preview.textContent = '';
+		}
+	};
+
+	window.applyDashChargingTime = function() {
+		var bat = window.__SK_BATTERIES__[window.__BL_ASSET_ID__];
+		if (!bat) return;
+		var mins = parseInt(document.getElementById('bl-charging-minutes').value, 10) || 0;
+		if (mins <= 0) { alert('Informe um tempo valido'); return; }
+		fetch('/api/batteries/' + bat.id + '/charge-time', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ charging_minutes: mins })
+		}).then(function(r) {
+			return r.json();
+		}).then(function(updated) {
+			if (updated.id) {
+				window.__SK_BATTERIES__[window.__BL_ASSET_ID__] = updated;
+				closeBatteryLevel();
+				updateTimerDisplays();
+			} else {
+				alert(updated.error || 'Erro');
+			}
+		});
 	};
 
 	// Online/offline detection

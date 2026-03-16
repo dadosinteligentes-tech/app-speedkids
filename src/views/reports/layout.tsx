@@ -18,7 +18,8 @@ const REPORT_NAV = [
 	{ href: "/admin/reports/operators", label: "Operadores", roles: ["owner"] },
 	{ href: "/admin/reports/cash", label: "Caixa", roles: ["manager", "owner"] },
 	{ href: "/admin/reports/customers", label: "Clientes", roles: ["manager", "owner"] },
-	{ href: "/admin/reports/unpaid", label: "Nao Pagos", roles: ["manager", "owner"] },
+	{ href: "/admin/reports/unpaid", label: "Não Pagos", roles: ["manager", "owner"] },
+	{ href: "/admin/reports/shifts", label: "Turnos", roles: ["manager", "owner"] },
 	{ href: "/admin/reports/cancelled", label: "Cancelados", roles: ["manager", "owner"] },
 ];
 

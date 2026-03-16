@@ -17,7 +17,7 @@ export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user }) => {
 
 	return (
 		<ReportLayout
-			title="Nao Pagos / Cortesias"
+			title="Não Pagos / Cortesias"
 			user={user}
 			activeReport="/admin/reports/unpaid"
 			from={from}
@@ -111,7 +111,7 @@ export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user }) => {
 			{sessions.length === 0 && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center mt-4">
 					<p class="text-sk-muted font-body">
-						Nenhuma cortesia ou pagamento pendente no periodo.
+						Nenhuma cortesia ou pagamento pendente no período.
 					</p>
 				</div>
 			)}

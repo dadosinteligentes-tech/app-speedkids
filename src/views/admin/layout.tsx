@@ -18,6 +18,7 @@ const NAV_ITEMS = [
 	{ href: "/admin/batteries", label: "Baterias", icon: "🔋", roles: ["manager", "owner"] },
 	{ href: "/admin/logs", label: "Logs", icon: "📋", roles: ["manager", "owner"] },
 	{ href: "/admin/users", label: "Usuários", icon: "👤", roles: ["owner"] },
+	{ href: "/admin/settings", label: "Configurações", icon: "⚙️", roles: ["owner"] },
 ];
 
 export const AdminLayout: FC<PropsWithChildren<AdminLayoutProps>> = ({ title, user, activeTab, children, bodyScripts }) => (

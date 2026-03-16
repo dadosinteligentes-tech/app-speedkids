@@ -59,9 +59,14 @@ export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactio
 		<Layout title="SpeedKids - Resumo de Caixa" user={user} bodyScripts={script} cashStatus={cashStatus}>
 			<div class="mb-4 flex items-center justify-between print:hidden">
 				<a href="/cash" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Caixa</a>
-				<button onclick="printSummary()" class="btn-touch px-4 py-2 bg-sk-blue text-white rounded-sk font-display font-medium text-sm btn-bounce">
-					Imprimir
-				</button>
+				<div class="flex gap-2">
+					<button onclick={`window.open('/receipts/cash/${register.id}','_blank','width=350,height=600')`} class="btn-touch px-4 py-2 bg-sk-green text-white rounded-sk font-display font-medium text-sm btn-bounce">
+						Imprimir Cupom
+					</button>
+					<button onclick="printSummary()" class="btn-touch px-4 py-2 bg-sk-blue text-white rounded-sk font-display font-medium text-sm btn-bounce">
+						Imprimir
+					</button>
+				</div>
 			</div>
 
 			<div class="max-w-2xl mx-auto">

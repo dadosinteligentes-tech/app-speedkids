@@ -42,12 +42,17 @@ function showAssetForm(asset) {
 		document.getElementById('f-name').value = asset.name;
 		document.getElementById('f-type').value = asset.asset_type;
 		document.getElementById('f-model').value = asset.model || '';
+		document.getElementById('f-max-weight').value = asset.max_weight_kg != null ? asset.max_weight_kg : '';
+		document.getElementById('f-min-age').value = asset.min_age != null ? asset.min_age : '';
+		document.getElementById('f-max-age').value = asset.max_age != null ? asset.max_age : '';
+		document.getElementById('f-sort-order').value = asset.sort_order != null ? asset.sort_order : 0;
 		document.getElementById('f-notes').value = asset.notes || '';
 		document.getElementById('f-battery').checked = !!asset.uses_battery;
 	} else {
 		titleEl.textContent = 'Novo Ativo';
 		delete form.dataset.id;
 		form.reset();
+		document.getElementById('f-sort-order').value = 0;
 	}
 	modal.classList.remove('hidden');
 }
@@ -65,7 +70,11 @@ document.getElementById('asset-form').addEventListener('submit', function(e) {
 		asset_type: document.getElementById('f-type').value,
 		model: document.getElementById('f-model').value || null,
 		notes: document.getElementById('f-notes').value || null,
-		uses_battery: document.getElementById('f-battery').checked ? 1 : 0
+		uses_battery: document.getElementById('f-battery').checked ? 1 : 0,
+		max_weight_kg: parseFloat(document.getElementById('f-max-weight').value) || null,
+		min_age: parseInt(document.getElementById('f-min-age').value) || null,
+		max_age: parseInt(document.getElementById('f-max-age').value) || null,
+		sort_order: parseInt(document.getElementById('f-sort-order').value) || 0
 	};
 
 	var method = id ? 'PUT' : 'POST';
@@ -164,6 +173,8 @@ function deleteType(id, label) {
 							<th class="px-4 py-3 font-medium font-body">Nome</th>
 							<th class="px-4 py-3 font-medium font-body">Tipo</th>
 							<th class="px-4 py-3 font-medium font-body hidden md:table-cell">Modelo</th>
+							<th class="px-4 py-3 font-medium font-body hidden md:table-cell">Peso</th>
+							<th class="px-4 py-3 font-medium font-body hidden md:table-cell">Idade</th>
 							<th class="px-4 py-3 font-medium font-body">Status</th>
 							<th class="px-4 py-3 font-medium font-body">Acoes</th>
 						</tr>
@@ -174,6 +185,8 @@ function deleteType(id, label) {
 								<td class="px-4 py-3 font-medium font-body">{asset.name}</td>
 								<td class="px-4 py-3 text-sk-muted font-body">{typeMap[asset.asset_type] ?? asset.asset_type}</td>
 								<td class="px-4 py-3 text-sk-muted font-body hidden md:table-cell">{asset.model ?? "—"}</td>
+								<td class="px-4 py-3 text-sk-muted font-body hidden md:table-cell">{asset.max_weight_kg != null ? `${asset.max_weight_kg} kg` : "—"}</td>
+								<td class="px-4 py-3 text-sk-muted font-body hidden md:table-cell">{asset.min_age != null || asset.max_age != null ? `${asset.min_age ?? "?"}–${asset.max_age ?? "?"} anos` : "—"}</td>
 								<td class="px-4 py-3">
 									<span class={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[asset.status] ?? ""}`}>
 										{STATUS_LABELS[asset.status] ?? asset.status}
@@ -182,7 +195,7 @@ function deleteType(id, label) {
 								<td class="px-4 py-3">
 									<div class="flex gap-2">
 										<button
-											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery })})`}
+											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery, max_weight_kg: asset.max_weight_kg, min_age: asset.min_age, max_age: asset.max_age, sort_order: asset.sort_order })})`}
 											class="text-sk-blue-dark hover:underline text-xs font-body"
 										>
 											Editar
@@ -201,7 +214,7 @@ function deleteType(id, label) {
 						))}
 						{assets.length === 0 && (
 							<tr>
-								<td colspan={5} class="px-4 py-8 text-center text-gray-400 font-body">Nenhum ativo cadastrado</td>
+								<td colspan={7} class="px-4 py-8 text-center text-gray-400 font-body">Nenhum ativo cadastrado</td>
 							</tr>
 						)}
 					</tbody>
@@ -283,7 +296,28 @@ function deleteType(id, label) {
 							<input id="f-model" type="text" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Ex: Modelo XYZ" />
 						</div>
 						<div>
-							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observacoes</label>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Peso maximo (kg)</label>
+							<input id="f-max-weight" type="number" step="0.1" min="0" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Ex: 30" />
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Idade recomendada</label>
+							<div class="grid grid-cols-2 gap-2">
+								<div>
+									<label class="block text-xs text-sk-muted mb-1 font-body">Idade minima</label>
+									<input id="f-min-age" type="number" min="1" max="17" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Ex: 3" />
+								</div>
+								<div>
+									<label class="block text-xs text-sk-muted mb-1 font-body">Idade maxima</label>
+									<input id="f-max-age" type="number" min="1" max="17" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Ex: 10" />
+								</div>
+							</div>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Ordem de exibicao</label>
+							<input id="f-sort-order" type="number" min="0" value="0" class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" />
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observações</label>
 							<textarea id="f-notes" rows={2} class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Notas adicionais..."></textarea>
 						</div>
 						<div class="flex items-center gap-2">
