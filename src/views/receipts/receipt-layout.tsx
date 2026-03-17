@@ -22,27 +22,29 @@ export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title
 				@page { margin: 0; size: 58mm auto; }
 				* { margin: 0; padding: 0; box-sizing: border-box; }
 				body {
-					width: 48mm;
-					max-width: 48mm;
+					width: 52mm;
+					max-width: 52mm;
 					margin: 0 auto;
-					padding: 2mm 0;
+					padding: 1mm 0;
 					font-family: 'Courier New', Courier, monospace;
-					font-size: 10px;
-					line-height: 1.3;
+					font-size: 12px;
+					font-weight: 500;
+					line-height: 1.35;
 					color: #000;
 				}
 				.center { text-align: center; }
 				.right { text-align: right; }
 				.bold { font-weight: bold; }
-				.big { font-size: 12px; }
-				.small { font-size: 8px; }
-				.sep { border-top: 1px dashed #000; margin: 3px 0; }
+				.big { font-size: 14px; font-weight: bold; }
+				.sub { font-size: 11px; }
+				.small { font-size: 10px; }
+				.sep { border-top: 1px dashed #000; margin: 2px 0; }
 				.row { display: flex; justify-content: space-between; }
 				.row-label { flex: 1; }
 				.row-value { text-align: right; white-space: nowrap; }
 				.indent { padding-left: 6px; }
-				.mt { margin-top: 4px; }
-				.mb { margin-bottom: 4px; }
+				.mt { margin-top: 3px; }
+				.mb { margin-bottom: 3px; }
 				@media screen {
 					body { padding: 12px; border: 1px dashed #ccc; margin: 20px auto; }
 				}
@@ -51,9 +53,9 @@ export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title
 		<body>
 			{/* Header */}
 			<div class="center bold big mb">{config.name}</div>
-			{config.address && <div class="center small">{config.address}</div>}
-			{config.cnpj && <div class="center small">CNPJ: {config.cnpj}</div>}
-			{config.phone && <div class="center small">Tel: {config.phone}</div>}
+			{config.address && <div class="center sub">{config.address}</div>}
+			{config.cnpj && <div class="center sub">CNPJ: {config.cnpj}</div>}
+			{config.phone && <div class="center sub">Tel: {config.phone}</div>}
 			<div class="sep"></div>
 
 			{/* Content */}
@@ -61,7 +63,7 @@ export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title
 
 			{/* Footer */}
 			<div class="sep"></div>
-			{config.receipt_footer && <div class="center small mt">{config.receipt_footer}</div>}
+			{config.receipt_footer && <div class="center sub mt">{config.receipt_footer}</div>}
 			<div class="center small mt">Impresso em {fmtDateTime(new Date().toISOString())}</div>
 
 			{raw(`<script>window.onload=function(){window.print();}</script>`)}

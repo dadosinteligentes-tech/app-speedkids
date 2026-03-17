@@ -24,8 +24,8 @@ export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, 
 	return (
 		<ReceiptLayout title="Comprovante de Locacao" config={config}>
 			<div class="center bold mt">COMPROVANTE DE LOCACAO</div>
-			<div class="center small mb">{fmtDateTime(session.start_time)}</div>
-			{attendantName && <div class="center small mb">Operador: {attendantName}</div>}
+			<div class="center sub mb">{fmtDateTime(session.start_time)}</div>
+			{attendantName && <div class="center sub mb">Operador: {attendantName}</div>}
 			<div class="sep"></div>
 
 			<div class="mt">
@@ -43,7 +43,7 @@ export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, 
 						<div>Responsavel: {session.customer_name}</div>
 					)}
 					{session.customer_phone && (
-						<div class="small">Tel: {session.customer_phone}</div>
+						<div class="sub">Tel: {session.customer_phone}</div>
 					)}
 				</div>
 			)}
@@ -78,7 +78,7 @@ export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, 
 
 			<div class="sep"></div>
 
-			<div class="mt small">
+			<div class="mt sub">
 				<div>Inicio: {fmtTime(session.start_time)}</div>
 				{session.end_time && <div>Fim: {fmtTime(session.end_time)}</div>}
 			</div>

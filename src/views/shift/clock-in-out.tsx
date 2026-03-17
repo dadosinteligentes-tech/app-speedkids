@@ -41,7 +41,8 @@ function clockIn() {
 
 function clockOut(shiftId) {
 	if (!confirm('Deseja encerrar o turno?')) return;
-	var notes = document.getElementById('shift-notes')?.value || '';
+	var notesEl = document.getElementById('shift-notes');
+	var notes = notesEl ? notesEl.value : '';
 	fetch('/api/shifts/' + shiftId + '/end', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -64,7 +65,7 @@ function showShiftEndScreen(shiftId) {
 		+ '<p class="text-lg font-display font-bold text-sk-green-dark mb-2">Turno Encerrado</p>'
 		+ '<p class="text-sm text-sk-muted font-body mb-6">O turno foi encerrado com sucesso.</p>'
 		+ '<div class="space-y-3">'
-		+ '<button onclick="window.open(\'/receipts/shift/' + shiftId + '\',\'_blank\')" class="btn-touch w-full py-4 bg-sk-blue text-white rounded-sk font-display font-bold text-lg btn-bounce active:bg-sk-blue-dark shadow-sk-sm">IMPRIMIR CUPOM DO TURNO</button>'
+		+ '<button onclick="window.open(\\'/receipts/shift/' + shiftId + '\\',\\'_blank\\')" class="btn-touch w-full py-4 bg-sk-blue text-white rounded-sk font-display font-bold text-lg btn-bounce active:bg-sk-blue-dark shadow-sk-sm">IMPRIMIR CUPOM DO TURNO</button>'
 		+ '<a href="/shift" class="btn-touch block w-full py-3 bg-sk-surface border border-sk-border text-sk-text rounded-sk font-display font-medium text-sm">Voltar</a>'
 		+ '</div>'
 		+ '</div>';

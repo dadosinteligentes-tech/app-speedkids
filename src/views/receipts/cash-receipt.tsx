@@ -10,15 +10,17 @@ interface CashReceiptProps {
 }
 
 export const CashReceipt: FC<CashReceiptProps> = ({ register, summary, config }) => {
+	const isOpen = register.status === "open";
+	const titleText = isOpen ? "CONFERÊNCIA DE CAIXA" : "FECHAMENTO DE CAIXA";
 	const declared = register.closing_balance_cents ?? 0;
 	const expected = register.expected_balance_cents ?? summary.expected_cash_cents;
 	const discrepancy = declared - expected;
 
 	return (
-		<ReceiptLayout title="Fechamento de Caixa" config={config}>
-			<div class="center bold mt">FECHAMENTO DE CAIXA</div>
-			<div class="center small">Caixa #{register.id} - {register.opened_by_name}</div>
-			<div class="center small mb">{fmtDate(register.opened_at)}</div>
+		<ReceiptLayout title={titleText} config={config}>
+			<div class="center bold mt">{titleText}</div>
+			<div class="center sub">Caixa #{register.id} - {register.opened_by_name}</div>
+			<div class="center sub mb">{fmtDate(register.opened_at)}</div>
 			<div class="sep"></div>
 
 			<div class="mt">
@@ -86,24 +88,35 @@ export const CashReceipt: FC<CashReceiptProps> = ({ register, summary, config })
 
 			<div class="sep"></div>
 
-			<div class="mt">
-				<div class="row">
-					<span class="row-label">Esperado (caixa):</span>
-					<span class="row-value">{fmtMoney(expected)}</span>
+			{!isOpen && (
+				<div class="mt">
+					<div class="row">
+						<span class="row-label">Esperado (caixa):</span>
+						<span class="row-value">{fmtMoney(expected)}</span>
+					</div>
+					<div class="row">
+						<span class="row-label">Declarado:</span>
+						<span class="row-value">{fmtMoney(declared)}</span>
+					</div>
+					<div class="row bold">
+						<span class="row-label">Diferenca:</span>
+						<span class="row-value">{discrepancy >= 0 ? "+" : ""}{fmtMoney(discrepancy)}</span>
+					</div>
+					<div class="sep"></div>
 				</div>
-				<div class="row">
-					<span class="row-label">Declarado:</span>
-					<span class="row-value">{fmtMoney(declared)}</span>
-				</div>
-				<div class="row bold">
-					<span class="row-label">Diferenca:</span>
-					<span class="row-value">{discrepancy >= 0 ? "+" : ""}{fmtMoney(discrepancy)}</span>
-				</div>
-			</div>
+			)}
 
-			<div class="sep"></div>
+			{isOpen && (
+				<div class="mt">
+					<div class="row bold">
+						<span class="row-label">Saldo Atual:</span>
+						<span class="row-value">{fmtMoney(summary.expected_cash_cents)}</span>
+					</div>
+					<div class="sep"></div>
+				</div>
+			)}
 
-			<div class="mt small">
+			<div class="mt sub">
 				<div class="row">
 					<span class="row-label">Locações:</span>
 					<span class="row-value">{summary.rental_count}</span>
