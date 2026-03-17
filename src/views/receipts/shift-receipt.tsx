@@ -36,34 +36,35 @@ export const ShiftReceipt: FC<ShiftReceiptProps> = ({ shift, config }) => (
 		<div class="sep"></div>
 
 		<div class="mt">
-			{shift.cash_cents > 0 && (
+			<div class="center bold mb">VENDAS POR PAGAMENTO</div>
+			{shift.cash_count > 0 && (
 				<div class="row indent">
-					<span class="row-label">Dinheiro:</span>
+					<span class="row-label">Dinheiro ({shift.cash_count}x):</span>
 					<span class="row-value">{fmtMoney(shift.cash_cents)}</span>
 				</div>
 			)}
-			{shift.pix_cents > 0 && (
+			{shift.credit_count > 0 && (
 				<div class="row indent">
-					<span class="row-label">PIX:</span>
-					<span class="row-value">{fmtMoney(shift.pix_cents)}</span>
+					<span class="row-label">Credito ({shift.credit_count}x):</span>
+					<span class="row-value">{fmtMoney(shift.credit_cents)}</span>
 				</div>
 			)}
-			{shift.debit_cents > 0 && (
+			{shift.debit_count > 0 && (
 				<div class="row indent">
-					<span class="row-label">Debito:</span>
+					<span class="row-label">Debito ({shift.debit_count}x):</span>
 					<span class="row-value">{fmtMoney(shift.debit_cents)}</span>
 				</div>
 			)}
-			{shift.credit_cents > 0 && (
+			{shift.pix_count > 0 && (
 				<div class="row indent">
-					<span class="row-label">Credito:</span>
-					<span class="row-value">{fmtMoney(shift.credit_cents)}</span>
+					<span class="row-label">PIX ({shift.pix_count}x):</span>
+					<span class="row-value">{fmtMoney(shift.pix_cents)}</span>
 				</div>
 			)}
 			{shift.courtesy_count > 0 && (
 				<div class="row indent">
-					<span class="row-label">Cortesias:</span>
-					<span class="row-value">{shift.courtesy_count}</span>
+					<span class="row-label">Cortesias ({shift.courtesy_count}x):</span>
+					<span class="row-value">R$ 0,00</span>
 				</div>
 			)}
 		</div>

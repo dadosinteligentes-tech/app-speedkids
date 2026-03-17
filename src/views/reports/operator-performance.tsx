@@ -95,8 +95,10 @@ export const OperatorPerformanceView: FC<Props> = ({
 					</thead>
 					<tbody class="divide-y divide-gray-100">
 						{operators.map((o) => (
-							<tr class="hover:bg-sk-yellow-light">
-								<td class="px-4 py-3 font-medium">{o.user_name}</td>
+							<tr class={`hover:bg-sk-yellow-light ${o.rentals_started > 0 ? "cursor-pointer" : ""}`}
+								onclick={o.rentals_started > 0 ? `window.location='/admin/reports/detail?filter=operator&id=${o.user_id}&from=${from}&to=${to}'` : undefined}
+							>
+								<td class="px-4 py-3 font-medium">{o.user_name} {o.rentals_started > 0 && <span class="text-sk-muted text-xs">&#8250;</span>}</td>
 								<td class="px-4 py-3 hidden sm:table-cell">
 									<span
 										class={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[o.role] ?? "bg-gray-100 text-sk-muted"}`}

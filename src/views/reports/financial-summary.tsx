@@ -38,18 +38,18 @@ export const FinancialSummaryView: FC<Props> = ({
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
+				<a href={`/admin/reports/detail?filter=all&from=${from}&to=${to}`} class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center block hover:opacity-80">
 					<p class="text-xs text-sk-muted font-body mb-1">Receita Total</p>
 					<p class="text-xl font-display font-bold text-sk-orange">
 						{formatCurrency(summary.total_revenue_cents)}
 					</p>
-				</div>
-				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
+				</a>
+				<a href={`/admin/reports/detail?filter=all&from=${from}&to=${to}`} class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center block hover:opacity-80">
 					<p class="text-xs text-sk-muted font-body mb-1">Locações</p>
 					<p class="text-xl font-display font-bold text-sk-text">
 						{summary.rental_count}
 					</p>
-				</div>
+				</a>
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
 					<p class="text-xs text-sk-muted font-body mb-1">Ticket Medio</p>
 					<p class="text-xl font-display font-bold text-sk-blue-dark">
@@ -69,56 +69,65 @@ export const FinancialSummaryView: FC<Props> = ({
 				<h3 class="text-sm font-display font-bold text-sk-text mb-3">
 					Formas de Pagamento
 				</h3>
-				<HBar
-					label="Dinheiro"
-					value={summary.cash_cents}
-					pct={
-						paymentTotal > 0
-							? Math.round((summary.cash_cents / paymentTotal) * 100)
-							: 0
-					}
-					display={formatCurrency(summary.cash_cents)}
-					color="bg-sk-green"
-				/>
-				<HBar
-					label="Credito"
-					value={summary.credit_cents}
-					pct={
-						paymentTotal > 0
-							? Math.round((summary.credit_cents / paymentTotal) * 100)
-							: 0
-					}
-					display={formatCurrency(summary.credit_cents)}
-					color="bg-sk-yellow-dark"
-				/>
-				<HBar
-					label="Debito"
-					value={summary.debit_cents}
-					pct={
-						paymentTotal > 0
-							? Math.round((summary.debit_cents / paymentTotal) * 100)
-							: 0
-					}
-					display={formatCurrency(summary.debit_cents)}
-					color="bg-sk-blue"
-				/>
-				<HBar
-					label="Pix"
-					value={summary.pix_cents}
-					pct={
-						paymentTotal > 0
-							? Math.round((summary.pix_cents / paymentTotal) * 100)
-							: 0
-					}
-					display={formatCurrency(summary.pix_cents)}
-					color="bg-sk-purple"
-				/>
+				<a href={`/admin/reports/detail?filter=payment_method&method=cash&from=${from}&to=${to}`} class="block hover:opacity-80">
+					<HBar
+						label="Dinheiro"
+						value={summary.cash_cents}
+						pct={
+							paymentTotal > 0
+								? Math.round((summary.cash_cents / paymentTotal) * 100)
+								: 0
+						}
+						display={formatCurrency(summary.cash_cents)}
+						color="bg-sk-green"
+					/>
+				</a>
+				<a href={`/admin/reports/detail?filter=payment_method&method=credit&from=${from}&to=${to}`} class="block hover:opacity-80">
+					<HBar
+						label="Credito"
+						value={summary.credit_cents}
+						pct={
+							paymentTotal > 0
+								? Math.round((summary.credit_cents / paymentTotal) * 100)
+								: 0
+						}
+						display={formatCurrency(summary.credit_cents)}
+						color="bg-sk-yellow-dark"
+					/>
+				</a>
+				<a href={`/admin/reports/detail?filter=payment_method&method=debit&from=${from}&to=${to}`} class="block hover:opacity-80">
+					<HBar
+						label="Debito"
+						value={summary.debit_cents}
+						pct={
+							paymentTotal > 0
+								? Math.round((summary.debit_cents / paymentTotal) * 100)
+								: 0
+						}
+						display={formatCurrency(summary.debit_cents)}
+						color="bg-sk-blue"
+					/>
+				</a>
+				<a href={`/admin/reports/detail?filter=payment_method&method=pix&from=${from}&to=${to}`} class="block hover:opacity-80">
+					<HBar
+						label="Pix"
+						value={summary.pix_cents}
+						pct={
+							paymentTotal > 0
+								? Math.round((summary.pix_cents / paymentTotal) * 100)
+								: 0
+						}
+						display={formatCurrency(summary.pix_cents)}
+						color="bg-sk-purple"
+					/>
+				</a>
 			</div>
 
 			{/* Alerts row */}
 			<div class="grid grid-cols-2 gap-4 mb-6">
-				<div
-					class={`rounded-sk p-3 text-center ${summary.unpaid_count > 0 ? "bg-sk-danger-light" : "bg-sk-green-light"}`}
+				<a
+					href={`/admin/reports/unpaid?from=${from}&to=${to}`}
+					class={`rounded-sk p-3 text-center block hover:opacity-80 ${summary.unpaid_count > 0 ? "bg-sk-danger-light" : "bg-sk-green-light"}`}
 				>
 					<p class="text-xs font-body text-sk-muted">Não Pagos</p>
 					<p
@@ -126,13 +135,16 @@ export const FinancialSummaryView: FC<Props> = ({
 					>
 						{summary.unpaid_count}
 					</p>
-				</div>
-				<div class="bg-sk-yellow-light rounded-sk p-3 text-center">
+				</a>
+				<a
+					href={`/admin/reports/cancelled?from=${from}&to=${to}`}
+					class="bg-sk-yellow-light rounded-sk p-3 text-center block hover:opacity-80"
+				>
 					<p class="text-xs font-body text-sk-muted">Cancelamentos</p>
 					<p class="text-lg font-display font-bold text-sk-yellow-dark">
 						{summary.cancelled_count}
 					</p>
-				</div>
+				</a>
 			</div>
 
 			{/* Daily trend table */}
@@ -156,8 +168,8 @@ export const FinancialSummaryView: FC<Props> = ({
 						</thead>
 						<tbody class="divide-y divide-gray-100">
 							{trend.map((d) => (
-								<tr class="hover:bg-sk-yellow-light">
-									<td class="px-4 py-2">{formatDate(d.day)}</td>
+								<tr class="hover:bg-sk-yellow-light cursor-pointer" onclick={`window.location='/admin/reports/detail?filter=day&day=${d.day}&from=${from}&to=${to}'`}>
+									<td class="px-4 py-2">{formatDate(d.day)} <span class="text-sk-muted text-xs">&#8250;</span></td>
 									<td class="px-4 py-2 text-right">{d.rental_count}</td>
 									<td class="px-4 py-2 text-right font-medium">
 										{formatCurrency(d.revenue_cents)}

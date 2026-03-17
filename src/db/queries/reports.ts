@@ -104,6 +104,7 @@ export interface UnpaidSession {
 	id: number;
 	child_name: string | null;
 	customer_name: string | null;
+	customer_id: number | null;
 	asset_name: string;
 	package_name: string;
 	start_time: string;
@@ -118,6 +119,7 @@ export interface CancelledSession {
 	id: number;
 	child_name: string | null;
 	customer_name: string | null;
+	customer_id: number | null;
 	asset_name: string;
 	package_name: string;
 	start_time: string;
@@ -136,9 +138,13 @@ export interface ShiftReport {
 	rental_count: number;
 	revenue_cents: number;
 	cash_cents: number;
+	cash_count: number;
 	credit_cents: number;
+	credit_count: number;
 	debit_cents: number;
+	debit_count: number;
 	pix_cents: number;
+	pix_count: number;
 	courtesy_count: number;
 }
 
@@ -597,9 +603,13 @@ export async function getShiftReport(
 				COUNT(rs.id) as rental_count,
 				COALESCE(SUM(CASE WHEN rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as revenue_cents,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as cash_cents,
+				COUNT(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN 1 END) as cash_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as credit_cents,
+				COUNT(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN 1 END) as credit_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as debit_cents,
+				COUNT(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN 1 END) as debit_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as pix_cents,
+				COUNT(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN 1 END) as pix_count,
 				COUNT(CASE WHEN rs.payment_method = 'courtesy' THEN 1 END) as courtesy_count
 			FROM shifts s
 			JOIN users u ON s.user_id = u.id
@@ -631,9 +641,13 @@ export async function getShiftReportById(
 				COUNT(rs.id) as rental_count,
 				COALESCE(SUM(CASE WHEN rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as revenue_cents,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as cash_cents,
+				COUNT(CASE WHEN rs.payment_method = 'cash' AND rs.paid = 1 THEN 1 END) as cash_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as credit_cents,
+				COUNT(CASE WHEN rs.payment_method = 'credit' AND rs.paid = 1 THEN 1 END) as credit_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as debit_cents,
+				COUNT(CASE WHEN rs.payment_method = 'debit' AND rs.paid = 1 THEN 1 END) as debit_count,
 				COALESCE(SUM(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as pix_cents,
+				COUNT(CASE WHEN rs.payment_method = 'pix' AND rs.paid = 1 THEN 1 END) as pix_count,
 				COUNT(CASE WHEN rs.payment_method = 'courtesy' THEN 1 END) as courtesy_count
 			FROM shifts s
 			JOIN users u ON s.user_id = u.id
@@ -655,7 +669,7 @@ export async function getUnpaidSessions(
 ): Promise<UnpaidSession[]> {
 	const { results } = await db
 		.prepare(
-			`SELECT rs.id, ch.name AS child_name, cu.name AS customer_name,
+			`SELECT rs.id, ch.name AS child_name, cu.name AS customer_name, cu.id AS customer_id,
 				a.name AS asset_name, p.name AS package_name,
 				rs.start_time, rs.end_time, rs.amount_cents,
 				rs.payment_method, rs.notes, u.name AS attendant_name
@@ -682,7 +696,7 @@ export async function getCancelledSessions(
 ): Promise<CancelledSession[]> {
 	const { results } = await db
 		.prepare(
-			`SELECT rs.id, ch.name AS child_name, cu.name AS customer_name,
+			`SELECT rs.id, ch.name AS child_name, cu.name AS customer_name, cu.id AS customer_id,
 				a.name AS asset_name, p.name AS package_name,
 				rs.start_time, rs.end_time, rs.amount_cents,
 				rs.notes, u.name AS attendant_name
@@ -699,4 +713,174 @@ export async function getCancelledSessions(
 		.bind(from, to)
 		.all<CancelledSession>();
 	return results;
+}
+
+// ── Detail Drill-Down ──
+
+export interface DetailSession {
+	id: string;
+	child_name: string | null;
+	customer_name: string | null;
+	customer_id: number | null;
+	asset_name: string;
+	asset_type: string;
+	package_name: string;
+	duration_minutes: number;
+	start_time: string;
+	end_time: string | null;
+	amount_cents: number;
+	overtime_cents: number;
+	payment_method: string | null;
+	paid: number;
+	status: string;
+	notes: string | null;
+	attendant_name: string | null;
+}
+
+export type DetailFilter =
+	| { type: "package"; id: number }
+	| { type: "asset"; id: number }
+	| { type: "operator"; id: number }
+	| { type: "shift"; id: number }
+	| { type: "day"; day: string }
+	| { type: "payment_method"; method: string }
+	| { type: "hour"; hour: number }
+	| { type: "dow"; dow: number }
+	| { type: "all" };
+
+export interface DetailContext {
+	label: string;
+	subLabel: string;
+}
+
+export async function getDetailSessions(
+	db: D1Database,
+	filter: DetailFilter,
+	from: string,
+	to: string,
+	limit = 50,
+	offset = 0,
+): Promise<{ sessions: DetailSession[]; total: number; context: DetailContext }> {
+	const baseWhere = "rs.start_time >= ? AND rs.start_time < date(?, '+1 day') AND rs.status = 'completed'";
+	let extraWhere = "";
+	let bindings: (string | number)[] = [from, to];
+	const context: DetailContext = { label: "", subLabel: "" };
+
+	switch (filter.type) {
+		case "package":
+			extraWhere = "AND rs.package_id = ?";
+			bindings.push(filter.id);
+			break;
+		case "asset":
+			extraWhere = "AND rs.asset_id = ?";
+			bindings.push(filter.id);
+			break;
+		case "operator":
+			extraWhere = "AND rs.attendant_id = ?";
+			bindings.push(filter.id);
+			break;
+		case "day":
+			extraWhere = "AND date(rs.start_time) = ?";
+			bindings.push(filter.day);
+			break;
+		case "shift": {
+			const shift = await db
+				.prepare("SELECT id, user_id, started_at, ended_at FROM shifts WHERE id = ?")
+				.bind(filter.id)
+				.first<{ id: number; user_id: number; started_at: string; ended_at: string | null }>();
+			if (!shift) return { sessions: [], total: 0, context: { label: "Turno não encontrado", subLabel: "" } };
+			bindings = [from, to, shift.user_id, shift.started_at];
+			extraWhere = "AND rs.attendant_id = ? AND rs.start_time >= ?";
+			if (shift.ended_at) {
+				extraWhere += " AND rs.start_time <= ?";
+				bindings.push(shift.ended_at);
+			}
+			break;
+		}
+		case "payment_method":
+			extraWhere = "AND rs.payment_method = ? AND rs.paid = 1";
+			bindings.push(filter.method);
+			break;
+		case "hour":
+			extraWhere = "AND CAST(strftime('%H', rs.start_time) AS INTEGER) = ?";
+			bindings.push(filter.hour);
+			break;
+		case "dow":
+			extraWhere = "AND CAST(strftime('%w', rs.start_time) AS INTEGER) = ?";
+			bindings.push(filter.dow);
+			break;
+		case "all":
+			break;
+	}
+
+	// Context label
+	switch (filter.type) {
+		case "package": {
+			const row = await db.prepare("SELECT name FROM packages WHERE id = ?").bind(filter.id).first<{ name: string }>();
+			context.label = `Pacote: ${row?.name ?? "ID " + filter.id}`;
+			break;
+		}
+		case "asset": {
+			const row = await db.prepare("SELECT name FROM assets WHERE id = ?").bind(filter.id).first<{ name: string }>();
+			context.label = `Ativo: ${row?.name ?? "ID " + filter.id}`;
+			break;
+		}
+		case "operator": {
+			const row = await db.prepare("SELECT name FROM users WHERE id = ?").bind(filter.id).first<{ name: string }>();
+			context.label = `Operador: ${row?.name ?? "ID " + filter.id}`;
+			break;
+		}
+		case "shift":
+			context.label = `Turno #${filter.id}`;
+			break;
+		case "day": {
+			const d = new Date(filter.day + "T12:00:00");
+			context.label = `Dia: ${d.toLocaleDateString("pt-BR")}`;
+			break;
+		}
+		case "payment_method": {
+			const methodLabels: Record<string, string> = { cash: "Dinheiro", credit: "Crédito", debit: "Débito", pix: "Pix" };
+			context.label = `Pagamento: ${methodLabels[filter.method] ?? filter.method}`;
+			break;
+		}
+		case "hour":
+			context.label = `Hora: ${String(filter.hour).padStart(2, "0")}h`;
+			break;
+		case "dow": {
+			const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+			context.label = `Dia da Semana: ${dayNames[filter.dow] ?? filter.dow}`;
+			break;
+		}
+		case "all":
+			context.label = "Todas as Locações";
+			break;
+	}
+
+	const countRow = await db
+		.prepare(`SELECT COUNT(*) AS total FROM rental_sessions rs WHERE ${baseWhere} ${extraWhere}`)
+		.bind(...bindings)
+		.first<{ total: number }>();
+
+	const { results } = await db
+		.prepare(`
+			SELECT rs.id, ch.name AS child_name, cu.name AS customer_name, cu.id AS customer_id,
+				a.name AS asset_name, a.asset_type,
+				p.name AS package_name, p.duration_minutes,
+				rs.start_time, rs.end_time, rs.amount_cents, rs.overtime_cents,
+				rs.payment_method, rs.paid, rs.status, rs.notes,
+				u.name AS attendant_name
+			FROM rental_sessions rs
+			JOIN assets a ON rs.asset_id = a.id
+			JOIN packages p ON rs.package_id = p.id
+			LEFT JOIN customers cu ON rs.customer_id = cu.id
+			LEFT JOIN children ch ON rs.child_id = ch.id
+			LEFT JOIN users u ON rs.attendant_id = u.id
+			WHERE ${baseWhere} ${extraWhere}
+			ORDER BY rs.start_time DESC
+			LIMIT ? OFFSET ?
+		`)
+		.bind(...bindings, limit, offset)
+		.all<DetailSession>();
+
+	return { sessions: results, total: countRow?.total ?? 0, context };
 }

@@ -437,6 +437,12 @@ function addTx(registerId) {
 								+ Movimento
 							</button>
 							<button
+								onclick={`window.open('/receipts/cash/${register.id}','_blank')`}
+								class="btn-touch flex-1 py-3 bg-sk-purple text-white rounded-sk font-display btn-bounce font-medium active:bg-purple-700"
+							>
+								Imprimir
+							</button>
+							<button
 								onclick="startCloseFlow()"
 								class="btn-touch flex-1 py-3 bg-sk-danger text-white rounded-sk font-display btn-bounce font-medium active:bg-red-700"
 							>

@@ -98,9 +98,11 @@ export const CashReconciliationView: FC<Props> = ({
 						</thead>
 						<tbody class="divide-y divide-gray-100">
 							{registers.map((r) => (
-								<tr class="hover:bg-sk-yellow-light">
+								<tr class={`hover:bg-sk-yellow-light ${r.status === "closed" ? "cursor-pointer" : ""}`}
+									onclick={r.status === "closed" ? `window.location='/cash/closed/${r.id}'` : undefined}
+								>
 									<td class="px-3 py-2 whitespace-nowrap text-xs">
-										{formatDateTime(r.opened_at)}
+										{formatDateTime(r.opened_at)} {r.status === "closed" && <span class="text-sk-muted">&#8250;</span>}
 									</td>
 									<td class="px-3 py-2 hidden sm:table-cell">
 										{r.opened_by_name}

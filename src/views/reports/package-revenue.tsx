@@ -72,9 +72,10 @@ export const PackageRevenueView: FC<Props> = ({
 					<tbody class="divide-y divide-gray-100">
 						{packages.map((p) => (
 							<tr
-								class={`hover:bg-sk-yellow-light ${p.rental_count === 0 ? "opacity-40" : ""}`}
+								class={`hover:bg-sk-yellow-light ${p.rental_count === 0 ? "opacity-40" : "cursor-pointer"}`}
+								onclick={p.rental_count > 0 ? `window.location='/admin/reports/detail?filter=package&id=${p.package_id}&from=${from}&to=${to}'` : undefined}
 							>
-								<td class="px-4 py-3 font-medium">{p.package_name}</td>
+								<td class="px-4 py-3 font-medium">{p.package_name} {p.rental_count > 0 && <span class="text-sk-muted text-xs">&#8250;</span>}</td>
 								<td class="px-4 py-3 text-right text-sk-muted hidden sm:table-cell">
 									{p.duration_minutes} min
 								</td>

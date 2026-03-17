@@ -74,19 +74,29 @@ export const PeakHoursView: FC<Props> = ({
 										: 0;
 								const isPeak =
 									h.rental_count === maxHourCount && h.rental_count > 0;
-								return (
-									<div class="flex items-center gap-2 py-0.5">
+								return h.rental_count > 0 ? (
+									<a href={`/admin/reports/detail?filter=hour&hour=${h.hour}&from=${from}&to=${to}`} class="flex items-center gap-2 py-0.5 hover:opacity-80 cursor-pointer">
 										<span class="w-8 text-xs font-body text-sk-muted text-right">
 											{String(h.hour).padStart(2, "0")}h
 										</span>
 										<div class="flex-1 bg-sk-yellow-light rounded-full h-3 overflow-hidden">
 											<div
 												class={`h-full rounded-full ${isPeak ? "bg-sk-orange" : "bg-sk-blue"}`}
-												style={`width:${Math.max(pct, h.rental_count > 0 ? 2 : 0)}%`}
+												style={`width:${Math.max(pct, 2)}%`}
 											/>
 										</div>
 										<span class="w-6 text-xs font-body text-sk-text text-right">
-											{h.rental_count}
+											{h.rental_count} <span class="text-sk-muted">&#8250;</span>
+										</span>
+									</a>
+								) : (
+									<div class="flex items-center gap-2 py-0.5">
+										<span class="w-8 text-xs font-body text-sk-muted text-right">
+											{String(h.hour).padStart(2, "0")}h
+										</span>
+										<div class="flex-1 bg-sk-yellow-light rounded-full h-3 overflow-hidden" />
+										<span class="w-6 text-xs font-body text-sk-text text-right">
+											0
 										</span>
 									</div>
 								);
@@ -109,8 +119,12 @@ export const PeakHoursView: FC<Props> = ({
 										: 0;
 								const isPeak =
 									d.rental_count === maxDayCount && d.rental_count > 0;
+								const Wrapper = d.rental_count > 0 ? "a" : "div";
+								const wrapperProps = d.rental_count > 0
+									? { href: `/admin/reports/detail?filter=dow&dow=${d.dow}&from=${from}&to=${to}`, class: "flex items-center gap-3 py-1 hover:opacity-80 cursor-pointer" }
+									: { class: "flex items-center gap-3 py-1" };
 								return (
-									<div class="flex items-center gap-3 py-1">
+									<Wrapper {...wrapperProps}>
 										<span class="w-8 text-xs font-body text-sk-muted font-medium">
 											{DAY_NAMES[d.dow]}
 										</span>
@@ -127,8 +141,9 @@ export const PeakHoursView: FC<Props> = ({
 											<span class="text-xs font-body text-sk-muted ml-1">
 												{formatCurrency(d.revenue_cents)}
 											</span>
+											{d.rental_count > 0 && <span class="text-sk-muted text-xs ml-1">&#8250;</span>}
 										</div>
-									</div>
+									</Wrapper>
 								);
 							})}
 						</div>

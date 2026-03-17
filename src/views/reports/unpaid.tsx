@@ -73,7 +73,9 @@ export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user }) => {
 										{s.child_name ?? "—"}
 									</td>
 									<td class="px-4 py-3 hidden md:table-cell text-sk-muted">
-										{s.customer_name ?? "—"}
+										{s.customer_id ? (
+											<a href={`/customers/${s.customer_id}`} class="text-sk-blue-dark hover:underline">{s.customer_name}</a>
+										) : (s.customer_name ?? "—")}
 									</td>
 									<td class="px-4 py-3 hidden sm:table-cell text-sk-muted">
 										{s.asset_name}

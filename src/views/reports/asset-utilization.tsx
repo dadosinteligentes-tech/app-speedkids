@@ -77,9 +77,10 @@ export const AssetUtilizationView: FC<Props> = ({
 					<tbody class="divide-y divide-gray-100">
 						{assets.map((a) => (
 							<tr
-								class={`hover:bg-sk-yellow-light ${a.rental_count === 0 ? "opacity-40" : ""}`}
+								class={`hover:bg-sk-yellow-light ${a.rental_count === 0 ? "opacity-40" : "cursor-pointer"}`}
+								onclick={a.rental_count > 0 ? `window.location='/admin/reports/detail?filter=asset&id=${a.asset_id}&from=${from}&to=${to}'` : undefined}
 							>
-								<td class="px-4 py-3 font-medium">{a.asset_name}</td>
+								<td class="px-4 py-3 font-medium">{a.asset_name} {a.rental_count > 0 && <span class="text-sk-muted text-xs">&#8250;</span>}</td>
 								<td class="px-4 py-3 hidden sm:table-cell">
 									<span
 										class={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_BADGE}`}

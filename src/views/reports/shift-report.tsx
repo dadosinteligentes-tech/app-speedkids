@@ -69,7 +69,9 @@ export const ShiftReportView: FC<Props> = ({ shifts, from, to, user }) => {
 							{shifts.map((s) => (
 								<tr class="hover:bg-sk-yellow-light">
 									<td class="px-4 py-3 font-medium">
-										{s.shift_name ?? "\u2014"}
+										<a href={`/admin/reports/detail?filter=shift&id=${s.shift_id}&from=${from}&to=${to}`} class="text-sk-blue-dark hover:underline">
+											{s.shift_name ?? `Turno #${s.shift_id}`}
+										</a>
 									</td>
 									<td class="px-4 py-3">{s.user_name}</td>
 									<td class="px-4 py-3 text-sk-muted whitespace-nowrap">
@@ -103,7 +105,7 @@ export const ShiftReportView: FC<Props> = ({ shifts, from, to, user }) => {
 									</td>
 									<td class="px-4 py-3 text-center">
 										<button
-											onclick={`window.open('/receipts/shift/${s.shift_id}','_blank','width=350,height=600')`}
+											onclick={`window.open('/receipts/shift/${s.shift_id}','_blank')`}
 											class="text-sk-blue-dark hover:underline text-xs font-medium"
 										>
 											Imprimir

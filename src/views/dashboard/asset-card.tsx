@@ -189,7 +189,7 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 						</button>
 						{session.paid ? (
 							<button
-								onclick={`window.open('/receipts/rental/${session.id}','_blank','width=350,height=600')`}
+								onclick={`window.open('/receipts/rental/${session.id}','_blank')`}
 								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
 								title="Imprimir comprovante"
 							>
@@ -215,7 +215,7 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 						</button>
 						{session.paid ? (
 							<button
-								onclick={`window.open('/receipts/rental/${session.id}','_blank','width=350,height=600')`}
+								onclick={`window.open('/receipts/rental/${session.id}','_blank')`}
 								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
 								title="Imprimir comprovante"
 							>

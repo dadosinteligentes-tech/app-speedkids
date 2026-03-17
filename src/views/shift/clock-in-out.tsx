@@ -40,15 +40,34 @@ function clockIn() {
 }
 
 function clockOut(shiftId) {
+	if (!confirm('Deseja encerrar o turno?')) return;
 	var notes = document.getElementById('shift-notes')?.value || '';
 	fetch('/api/shifts/' + shiftId + '/end', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ notes: notes })
 	}).then(function(r) {
-		if (r.ok) location.reload();
-		else r.json().then(function(d) { alert(d.error || 'Erro'); });
+		if (r.ok) {
+			showShiftEndScreen(shiftId);
+		} else {
+			r.json().then(function(d) { alert(d.error || 'Erro'); });
+		}
 	});
+}
+
+function showShiftEndScreen(shiftId) {
+	var container = document.querySelector('.max-w-md');
+	if (!container) { location.reload(); return; }
+	container.innerHTML =
+		'<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-8 text-center">'
+		+ '<div class="text-5xl mb-4">&#9989;</div>'
+		+ '<p class="text-lg font-display font-bold text-sk-green-dark mb-2">Turno Encerrado</p>'
+		+ '<p class="text-sm text-sk-muted font-body mb-6">O turno foi encerrado com sucesso.</p>'
+		+ '<div class="space-y-3">'
+		+ '<button onclick="window.open(\'/receipts/shift/' + shiftId + '\',\'_blank\')" class="btn-touch w-full py-4 bg-sk-blue text-white rounded-sk font-display font-bold text-lg btn-bounce active:bg-sk-blue-dark shadow-sk-sm">IMPRIMIR CUPOM DO TURNO</button>'
+		+ '<a href="/shift" class="btn-touch block w-full py-3 bg-sk-surface border border-sk-border text-sk-text rounded-sk font-display font-medium text-sm">Voltar</a>'
+		+ '</div>'
+		+ '</div>';
 }
 `)}
 </script>`;

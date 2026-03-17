@@ -595,7 +595,7 @@ const dashboardControllerScript = `
 	window.printReceipt = function() {
 		var sess = window.__SK_PAYING_SESSION__;
 		if (sess && sess.id) {
-			window.open('/receipts/rental/' + sess.id, '_blank', 'width=350,height=600');
+			window.open('/receipts/rental/' + sess.id, '_blank');
 		}
 	};
 
@@ -1966,7 +1966,7 @@ const dashboardControllerScript = `
 			if (receiptId) {
 				actionsEl.innerHTML = '<div class="flex gap-2">'
 					+ '<button onclick="showPackageSelector(' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm" aria-label="Iniciar locacao">INICIAR</button>'
-					+ '<button onclick="window.open(\\'/receipts/rental/' + receiptId + '\\',\\'_blank\\',\\'width=350,height=600\\')" class="btn-touch px-3 py-3 bg-sk-blue text-white rounded-sk text-lg active:bg-sk-blue-dark shadow-sk-sm" title="Imprimir comprovante">\\u{1F5A8}</button>'
+					+ '<button onclick="window.open(\\'/receipts/rental/' + receiptId + '\\',\\'_blank\\')" class="btn-touch px-3 py-3 bg-sk-blue text-white rounded-sk text-lg active:bg-sk-blue-dark shadow-sk-sm" title="Imprimir comprovante">\\u{1F5A8}</button>'
 					+ '</div>';
 			} else {
 				actionsEl.innerHTML = '<button onclick="showPackageSelector(' + assetId + ')" class="btn-touch btn-bounce w-full py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm" aria-label="Iniciar locacao">INICIAR</button>';
@@ -1988,7 +1988,7 @@ const dashboardControllerScript = `
 					? '<button onclick="resumeRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-blue text-white rounded-sk font-display font-bold active:bg-sk-blue-dark" aria-label="Retomar">RETOMAR</button>'
 					: '<button onclick="pauseRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-yellow text-sk-text rounded-sk font-display font-bold active:bg-sk-yellow-dark" aria-label="Pausar">PAUSAR</button>')
 				+ '<button onclick="stopRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-danger text-white rounded-sk font-display font-bold active:bg-red-700" aria-label="Parar">PARAR</button>'
-				+ (hasPaidReceipt ? '<button onclick="window.open(\\'/receipts/rental/' + session.id + '\\',\\'_blank\\',\\'width=350,height=600\\')" class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white" title="Imprimir comprovante">&#128424;</button>' : '')
+				+ (hasPaidReceipt ? '<button onclick="window.open(\\'/receipts/rental/' + session.id + '\\',\\'_blank\\')" class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white" title="Imprimir comprovante">&#128424;</button>' : '')
 				+ '</div>'
 				+ (canExtend ? '<button onclick="showExtendModal(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce w-full mt-1 py-2 bg-sk-purple-light text-sk-purple rounded-sk text-xs font-display font-medium active:bg-purple-200">+ Estender</button>' : '');
 			var pkgName = card.querySelector('.package-name');
