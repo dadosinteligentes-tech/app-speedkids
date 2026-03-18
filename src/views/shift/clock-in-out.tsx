@@ -4,6 +4,7 @@ import type { Shift } from "../../db/schema";
 import type { CashRegisterView } from "../../db/queries/cash-registers";
 import type { CashStatusBadge } from "../../lib/cash-status";
 import { Layout } from "../layout";
+import { toBrazilDateTime } from "../../lib/timezone";
 
 interface ClockInOutProps {
 	shift: Shift | null;
@@ -13,8 +14,7 @@ interface ClockInOutProps {
 }
 
 function formatDateTime(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilDateTime(iso);
 }
 
 export const ClockInOut: FC<ClockInOutProps> = ({ shift, register, user, cashStatus }) => {

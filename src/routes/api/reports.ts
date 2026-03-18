@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { requireRole } from "../../middleware/require-role";
 import { todayISO, daysAgoISO } from "../../lib/report-utils";
+import { toBrazilDate, toBrazilDateTime } from "../../lib/timezone";
 import {
 	getFinancialSummary,
 	getDailyRevenueTrend,
@@ -69,22 +70,14 @@ function fmtDate(iso: string | null): string {
 	if (!iso) return "";
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return iso;
-	const dd = String(d.getUTCDate()).padStart(2, "0");
-	const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-	const yyyy = d.getUTCFullYear();
-	return `${dd}/${mm}/${yyyy}`;
+	return toBrazilDate(iso);
 }
 
 function fmtDateTime(iso: string | null): string {
 	if (!iso) return "";
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return iso;
-	const dd = String(d.getUTCDate()).padStart(2, "0");
-	const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-	const yyyy = d.getUTCFullYear();
-	const hh = String(d.getUTCHours()).padStart(2, "0");
-	const min = String(d.getUTCMinutes()).padStart(2, "0");
-	return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+	return toBrazilDateTime(iso);
 }
 
 function getDateRange(c: { req: { query: (k: string) => string | undefined } }): {

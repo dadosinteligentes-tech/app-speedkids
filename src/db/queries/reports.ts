@@ -1,3 +1,8 @@
+import { toBrazilDate } from "../../lib/timezone";
+
+/** Brazil UTC offset for SQL datetime adjustments. Fixed at -3 (no DST since 2019). */
+const BZ = "-3 hours";
+
 // ── Report Query Interfaces ──
 
 export interface FinancialSummary {
@@ -198,13 +203,13 @@ export async function getDailyRevenueTrend(
 	const { results } = await db
 		.prepare(
 			`SELECT
-				date(start_time) AS day,
+				date(start_time, '${BZ}') AS day,
 				COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents,
 				COUNT(*) AS rental_count
 			FROM rental_sessions
 			WHERE start_time >= ? AND start_time < date(?, '+1 day')
 				AND status = 'completed'
-			GROUP BY date(start_time)
+			GROUP BY date(start_time, '${BZ}')
 			ORDER BY day ASC`,
 		)
 		.bind(from, to)
@@ -298,7 +303,7 @@ export async function getPeakHours(
 		db
 			.prepare(
 				`SELECT
-					CAST(strftime('%H', start_time) AS INTEGER) AS hour,
+					CAST(strftime('%H', datetime(start_time, '${BZ}')) AS INTEGER) AS hour,
 					COUNT(*) AS rental_count,
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
@@ -313,7 +318,7 @@ export async function getPeakHours(
 		db
 			.prepare(
 				`SELECT
-					CAST(strftime('%w', start_time) AS INTEGER) AS dow,
+					CAST(strftime('%w', datetime(start_time, '${BZ}')) AS INTEGER) AS dow,
 					COUNT(*) AS rental_count,
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
@@ -802,11 +807,11 @@ export async function getDetailSessions(
 			bindings.push(filter.method);
 			break;
 		case "hour":
-			extraWhere = "AND CAST(strftime('%H', rs.start_time) AS INTEGER) = ?";
+			extraWhere = `AND CAST(strftime('%H', datetime(rs.start_time, '${BZ}')) AS INTEGER) = ?`;
 			bindings.push(filter.hour);
 			break;
 		case "dow":
-			extraWhere = "AND CAST(strftime('%w', rs.start_time) AS INTEGER) = ?";
+			extraWhere = `AND CAST(strftime('%w', datetime(rs.start_time, '${BZ}')) AS INTEGER) = ?`;
 			bindings.push(filter.dow);
 			break;
 		case "all":
@@ -834,8 +839,7 @@ export async function getDetailSessions(
 			context.label = `Turno #${filter.id}`;
 			break;
 		case "day": {
-			const d = new Date(filter.day + "T12:00:00");
-			context.label = `Dia: ${d.toLocaleDateString("pt-BR")}`;
+			context.label = `Dia: ${toBrazilDate(filter.day + "T12:00:00")}`;
 			break;
 		}
 		case "payment_method": {

@@ -1,6 +1,7 @@
 import type { FC, PropsWithChildren } from "hono/jsx";
 import { raw } from "hono/html";
 import type { BusinessConfig } from "../../db/schema";
+import { toBrazilDateTime, toBrazilDate, toBrazilTime } from "../../lib/timezone";
 
 interface ReceiptLayoutProps {
 	title: string;
@@ -8,8 +9,7 @@ interface ReceiptLayoutProps {
 }
 
 function fmtDateTime(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilDateTime(iso);
 }
 
 export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title, config, children }) => (
@@ -29,7 +29,7 @@ export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title
 					font-family: 'Courier New', Courier, monospace;
 					font-size: 12px;
 					font-weight: 500;
-					line-height: 1.35;
+					line-height: 1.15;
 					color: #000;
 				}
 				.center { text-align: center; }
@@ -38,13 +38,13 @@ export const ReceiptLayout: FC<PropsWithChildren<ReceiptLayoutProps>> = ({ title
 				.big { font-size: 14px; font-weight: bold; }
 				.sub { font-size: 11px; }
 				.small { font-size: 10px; }
-				.sep { border-top: 1px dashed #000; margin: 2px 0; }
+				.sep { border-top: 1px dashed #000; margin: 1px 0; }
 				.row { display: flex; justify-content: space-between; }
 				.row-label { flex: 1; }
 				.row-value { text-align: right; white-space: nowrap; }
 				.indent { padding-left: 6px; }
-				.mt { margin-top: 3px; }
-				.mb { margin-bottom: 3px; }
+				.mt { margin-top: 2px; }
+				.mb { margin-bottom: 2px; }
 				@media screen {
 					body { padding: 12px; border: 1px dashed #ccc; margin: 20px auto; }
 				}
@@ -76,11 +76,11 @@ export function fmtMoney(cents: number): string {
 }
 
 export function fmtDate(iso: string): string {
-	return new Date(iso).toLocaleDateString("pt-BR");
+	return toBrazilDate(iso);
 }
 
 export function fmtTime(iso: string): string {
-	return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilTime(iso);
 }
 
 export { fmtDateTime };

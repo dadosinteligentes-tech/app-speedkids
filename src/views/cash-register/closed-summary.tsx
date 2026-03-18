@@ -6,6 +6,7 @@ import type { CashStatusBadge } from "../../lib/cash-status";
 import type { DenominationMap } from "../../lib/denominations";
 import { DENOMINATIONS } from "../../lib/denominations";
 import { Layout } from "../layout";
+import { toBrazilDate, toBrazilTime } from "../../lib/timezone";
 
 interface ClosedSummaryProps {
 	register: CashRegisterView;
@@ -29,8 +30,7 @@ function fmt(cents: number): string {
 }
 
 function fmtTime(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilTime(iso);
 }
 
 function buildDenomMap(events: CashRegisterDenomination[], eventType: string): DenominationMap {
@@ -72,8 +72,8 @@ export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactio
 			<div class="max-w-2xl mx-auto">
 				<h2 class="text-xl font-display font-bold text-sk-text mb-1">Resumo de Fechamento</h2>
 				<p class="text-sm text-sk-muted font-body mb-4">
-					Caixa #{register.id} &middot; {register.opened_by_name} &middot; {new Date(register.opened_at).toLocaleDateString("pt-BR")}
-					{register.closed_at && <> &middot; Fechado {new Date(register.closed_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>}
+					Caixa #{register.id} &middot; {register.opened_by_name} &middot; {toBrazilDate(register.opened_at)}
+					{register.closed_at && <> &middot; Fechado {toBrazilTime(register.closed_at)}</>}
 				</p>
 
 				{/* Discrepancy hero */}

@@ -1,4 +1,5 @@
 import type { FC } from "hono/jsx";
+import { toBrazilDateTime, toBrazilDate, todayBrazilISO, daysAgoBrazilISO } from "./timezone";
 
 /** Format integer cents as "R$ 1.234,56" */
 export function formatCurrency(cents: number): string {
@@ -11,31 +12,24 @@ export function formatCurrency(cents: number): string {
 	);
 }
 
-/** Format ISO datetime string as "14/03/2026 09:30" */
+/** Format ISO datetime string as "14/03/2026 09:30" (Brazil timezone) */
 export function formatDateTime(iso: string): string {
-	const d = new Date(iso);
-	return (
-		d.toLocaleDateString("pt-BR") +
-		" " +
-		d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-	);
+	return toBrazilDateTime(iso);
 }
 
-/** Format ISO date string as "14/03/2026" */
+/** Format ISO date string as "14/03/2026" (Brazil timezone) */
 export function formatDate(iso: string): string {
-	return new Date(iso).toLocaleDateString("pt-BR");
+	return toBrazilDate(iso);
 }
 
-/** Returns today's date in YYYY-MM-DD */
+/** Returns today's date in YYYY-MM-DD (Brazil timezone) */
 export function todayISO(): string {
-	return new Date().toISOString().slice(0, 10);
+	return todayBrazilISO();
 }
 
-/** Returns YYYY-MM-DD for N days ago */
+/** Returns YYYY-MM-DD for N days ago (Brazil timezone) */
 export function daysAgoISO(n: number): string {
-	const d = new Date();
-	d.setDate(d.getDate() - n);
-	return d.toISOString().slice(0, 10);
+	return daysAgoBrazilISO(n);
 }
 
 interface HBarProps {

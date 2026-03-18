@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { OperationLogView } from "../../db/queries/logs";
 import { AdminLayout } from "./layout";
+import { toBrazilDateTime } from "../../lib/timezone";
 
 interface OperationLogsProps {
 	logs: OperationLogView[];
@@ -31,8 +32,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function formatDate(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilDateTime(iso);
 }
 
 export const OperationLogs: FC<OperationLogsProps> = ({ logs, total, page, user }) => {

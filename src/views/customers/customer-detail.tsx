@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { Customer, RentalSessionView } from "../../db/schema";
 import { AdminLayout } from "../admin/layout";
+import { toBrazilDate, toBrazilDateTime } from "../../lib/timezone";
 
 interface CustomerDetailProps {
 	customer: Customer;
@@ -31,7 +32,7 @@ export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, to
 					<div><span class="text-sk-muted">Email:</span> <span class="font-medium">{customer.email ?? "-"}</span></div>
 					{customer.instagram && <div><span class="text-sk-muted">Instagram:</span> <span class="font-medium">{customer.instagram}</span></div>}
 					{customer.notes && <div><span class="text-sk-muted">Notas:</span> <span class="font-medium">{customer.notes}</span></div>}
-					<div class="text-xs text-sk-muted pt-2">Cadastrado em {new Date(customer.created_at).toLocaleDateString("pt-BR")}</div>
+					<div class="text-xs text-sk-muted pt-2">Cadastrado em {toBrazilDate(customer.created_at)}</div>
 				</div>
 			</div>
 
@@ -65,7 +66,7 @@ export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, to
 				<tbody class="divide-y divide-gray-100">
 					{sessions.map((s) => (
 						<tr class="hover:bg-sk-yellow-light">
-							<td class="px-4 py-2">{new Date(s.start_time).toLocaleString("pt-BR")}</td>
+							<td class="px-4 py-2">{toBrazilDateTime(s.start_time)}</td>
 							<td class="px-4 py-2">{s.asset_name}</td>
 							<td class="px-4 py-2">{s.package_name}</td>
 							<td class="px-4 py-2 text-right">R$ {(s.amount_cents / 100).toFixed(2).replace(".", ",")}</td>

@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { DetailSession, DetailContext } from "../../db/queries/reports";
 import { ReportLayout } from "./layout";
+import { toBrazilDateTime, toBrazilDate } from "../../lib/timezone";
 
 interface ReportDetailProps {
 	sessions: DetailSession[];
@@ -20,8 +21,7 @@ function formatCurrency(cents: number): string {
 }
 
 function formatDateTime(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilDateTime(iso);
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -56,7 +56,7 @@ export const ReportDetailView: FC<ReportDetailProps> = ({
 			<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 mb-4">
 				<h2 class="text-lg font-display font-bold text-sk-text">{context.label}</h2>
 				<p class="text-sm text-sk-muted font-body">
-					{new Date(from).toLocaleDateString("pt-BR")} — {new Date(to).toLocaleDateString("pt-BR")}
+					{toBrazilDate(from + "T12:00:00")} — {toBrazilDate(to + "T12:00:00")}
 					{" "}&middot; {total} locações
 				</p>
 			</div>

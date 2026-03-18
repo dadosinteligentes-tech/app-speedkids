@@ -5,6 +5,7 @@ import type { CashRegisterView, CashTransactionView, RegisterSummary } from "../
 import type { CashStatusBadge } from "../../lib/cash-status";
 import { Layout } from "../layout";
 import { DenominationInput } from "../components/denomination-input";
+import { toBrazilTime, toBrazilDate } from "../../lib/timezone";
 
 interface CashRegisterPageProps {
 	register: CashRegisterView | null;
@@ -28,8 +29,7 @@ function formatCurrency(cents: number): string {
 }
 
 function formatTime(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+	return toBrazilTime(iso);
 }
 
 export const CashRegisterPage: FC<CashRegisterPageProps> = ({ register, transactions, expectedCents, summary, shift, user, cashStatus }) => {
@@ -376,7 +376,7 @@ function addTx(registerId) {
 									<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-sk-green-light text-sk-green-dark">Aberto</span>
 									<span class="text-sm text-sk-muted font-body ml-2">por {register.opened_by_name}</span>
 								</div>
-								<span class="text-sm text-sk-muted font-body">{new Date(register.opened_at).toLocaleDateString("pt-BR")}</span>
+								<span class="text-sm text-sk-muted font-body">{toBrazilDate(register.opened_at)}</span>
 							</div>
 
 							{/* Main balance */}
