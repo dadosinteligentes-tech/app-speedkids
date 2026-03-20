@@ -8,6 +8,8 @@ import { getRegisterById, getRegisterSummary } from "../../db/queries/cash-regis
 import { RentalReceipt } from "../../views/receipts/rental-receipt";
 import { ShiftReceipt } from "../../views/receipts/shift-receipt";
 import { CashReceipt } from "../../views/receipts/cash-receipt";
+import { ProductSaleReceipt } from "../../views/receipts/product-sale-receipt";
+import { getProductSaleById } from "../../db/queries/product-sales";
 
 export const receiptPages = new Hono<AppEnv>();
 
@@ -73,4 +75,21 @@ receiptPages.get("/cash/:id", async (c) => {
 
 	const summary = await getRegisterSummary(c.env.DB, registerId);
 	return c.html(<CashReceipt register={register} summary={summary} config={config} />);
+});
+
+receiptPages.get("/product-sale/:id", async (c) => {
+	const config = await requireConfig(c.env.DB);
+	if (!config) {
+		return c.html(
+			<html><body style="font-family:monospace;padding:20px;text-align:center">
+				<p>Configure os dados do estabelecimento em<br/><strong>Admin &gt; Configuracoes</strong><br/>antes de imprimir cupons.</p>
+			</body></html>,
+		);
+	}
+
+	const saleId = Number(c.req.param("id"));
+	const sale = await getProductSaleById(c.env.DB, saleId);
+	if (!sale) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Venda nao encontrada.</p></body></html>, 404);
+
+	return c.html(<ProductSaleReceipt sale={sale} config={config} />);
 });

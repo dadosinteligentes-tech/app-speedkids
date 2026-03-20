@@ -205,6 +205,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 								<a href="/rentals" class="text-sm text-white hover:text-white/90 font-body">Locações</a>
 								<a href="/shift" class="text-sm text-white hover:text-white/90 font-body">Turno</a>
 								<a href="/cash" class="text-sm text-white hover:text-white/90 font-body">Caixa</a>
+								<a href="/products" class="text-sm text-white hover:text-white/90 font-body">Produtos</a>
 								{(user.role === "manager" || user.role === "owner") && (
 									<a href="/admin" class="text-sm text-white hover:text-white/90 font-body">Admin</a>
 								)}

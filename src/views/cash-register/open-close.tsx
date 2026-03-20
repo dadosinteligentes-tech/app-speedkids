@@ -19,6 +19,7 @@ interface CashRegisterPageProps {
 
 const TX_TYPE_LABELS: Record<string, string> = {
 	rental_payment: "Pagamento locacao",
+	product_sale: "Venda de produto",
 	adjustment: "Ajuste",
 	withdrawal: "Sangria",
 	deposit: "Suprimento",

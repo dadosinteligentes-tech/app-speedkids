@@ -20,6 +20,7 @@ interface ClosedSummaryProps {
 
 const TX_TYPE_LABELS: Record<string, string> = {
 	rental_payment: "Pagamento locacao",
+	product_sale: "Venda de produto",
 	adjustment: "Ajuste",
 	withdrawal: "Sangria",
 	deposit: "Suprimento",
@@ -53,10 +54,62 @@ export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactio
 			? "bg-sk-yellow-light text-sk-yellow-dark"
 			: "bg-sk-danger-light text-sk-danger";
 
+	const printStyles = html`<style>${raw(`
+		@media print {
+			@page { size: 58mm auto; margin: 0; }
+			html, body {
+				width: 54mm !important;
+				max-width: 54mm !important;
+				margin: 0 !important;
+				padding: 1mm 0 !important;
+				background: white !important;
+				font-family: 'Courier New', Courier, monospace !important;
+				font-size: 11px !important;
+				font-weight: 500 !important;
+				line-height: 1.15 !important;
+				color: #000 !important;
+				-webkit-print-color-adjust: exact;
+			}
+			main { max-width: 100% !important; padding: 0 1mm !important; margin: 0 !important; }
+			.max-w-2xl { max-width: 100% !important; }
+			h2 { font-size: 13px !important; margin-bottom: 1px !important; }
+			h3 { font-size: 11px !important; margin-bottom: 1px !important; }
+			p { margin-bottom: 1px !important; }
+			.text-3xl { font-size: 16px !important; }
+			.text-2xl { font-size: 14px !important; }
+			.text-xl { font-size: 13px !important; }
+			.text-lg { font-size: 12px !important; }
+			.text-sm, .text-xs { font-size: 10px !important; }
+			.rounded-sk, .rounded-sk-xl, .rounded-sk-lg { border-radius: 0 !important; }
+			.shadow-sk-sm, .shadow-sk-md { box-shadow: none !important; }
+			.p-6 { padding: 2px 0 !important; }
+			.p-4 { padding: 2px 0 !important; }
+			.p-3 { padding: 1px 0 !important; }
+			.px-4 { padding-left: 0 !important; padding-right: 0 !important; }
+			.py-3 { padding-top: 1px !important; padding-bottom: 1px !important; }
+			.py-2 { padding-top: 0 !important; padding-bottom: 0 !important; }
+			.mb-6 { margin-bottom: 2px !important; }
+			.mb-4 { margin-bottom: 2px !important; }
+			.mb-3 { margin-bottom: 1px !important; }
+			.mb-1 { margin-bottom: 0 !important; }
+			.mt-3, .mt-4 { margin-top: 1px !important; }
+			.gap-4, .gap-3 { gap: 2px !important; }
+			.space-y-2 > * + * { margin-top: 0 !important; }
+			.divide-y > * + * { border-top-width: 0 !important; }
+			.border-b { border-bottom: 1px dashed #000 !important; }
+			hr { border-top: 1px dashed #000 !important; margin: 1px 0 !important; }
+			[class*="bg-sk-"] { background: transparent !important; }
+			[class*="text-sk-"] { color: #000 !important; }
+			.font-display, .font-body { font-family: 'Courier New', Courier, monospace !important; }
+			table { font-size: 10px !important; }
+			th, td { padding: 0 2px !important; }
+		}
+	`)}</style>`;
+
 	const script = html`<script>${raw(`function printSummary(){window.print();}`)}</script>`;
 
 	return (
-		<Layout title="SpeedKids - Resumo de Caixa" user={user} bodyScripts={script} cashStatus={cashStatus}>
+		<Layout title="SpeedKids - Resumo de Caixa" user={user} headScripts={printStyles} bodyScripts={script} cashStatus={cashStatus}>
 			<div class="mb-4 flex items-center justify-between print:hidden">
 				<a href="/cash" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Caixa</a>
 				<div class="flex gap-2">
@@ -147,6 +200,10 @@ export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactio
 						<div class="flex justify-between font-medium">
 							<span>Total locacoes</span>
 							<span>{summary.rental_count}</span>
+						</div>
+						<div class="flex justify-between font-medium">
+							<span>Vendas de produtos</span>
+							<span>{summary.product_sale_count}</span>
 						</div>
 						<div class="flex justify-between font-medium">
 							<span>Esperado em caixa</span>

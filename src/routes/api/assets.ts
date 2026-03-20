@@ -4,11 +4,29 @@ import { getAssets, getAssetById, createAsset, updateAsset, retireAsset } from "
 import { requireRole } from "../../middleware/require-role";
 import { auditLog } from "../../lib/logger";
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+const EXT_MAP: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
 export const assetRoutes = new Hono<AppEnv>();
 
 assetRoutes.get("/", async (c) => {
 	const assets = await getAssets(c.env.DB);
 	return c.json(assets);
+});
+
+// Serve asset photo from R2
+assetRoutes.get("/photo/*", async (c) => {
+	const key = c.req.path.replace("/api/assets/photo/", "");
+	if (!key) return c.json({ error: "Key obrigatoria" }, 400);
+
+	const object = await c.env.B_BUCKET_SPEEDKIDS.get(key);
+	if (!object) return c.json({ error: "Foto nao encontrada" }, 404);
+
+	const headers = new Headers();
+	headers.set("Content-Type", object.httpMetadata?.contentType ?? "image/jpeg");
+	headers.set("Cache-Control", "public, max-age=86400");
+	return new Response(object.body, { headers });
 });
 
 assetRoutes.get("/:id", async (c) => {
@@ -52,5 +70,57 @@ assetRoutes.delete("/:id", requireRole("manager", "owner"), async (c) => {
 
 	await retireAsset(c.env.DB, id);
 	await auditLog(c, "asset.retire", "asset", id, { name: existing.name });
+	return c.json({ ok: true });
+});
+
+// Upload asset photo to R2
+assetRoutes.post("/:id/photo", requireRole("manager", "owner"), async (c) => {
+	const id = Number(c.req.param("id"));
+	const existing = await getAssetById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);
+
+	const formData = await c.req.formData();
+	const file = formData.get("photo");
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "Arquivo de foto obrigatorio" }, 400);
+	}
+
+	if (!ALLOWED_TYPES.includes(file.type)) {
+		return c.json({ error: "Tipo de arquivo invalido. Use JPEG, PNG ou WebP" }, 400);
+	}
+	if (file.size > MAX_SIZE) {
+		return c.json({ error: "Arquivo muito grande. Maximo 2MB" }, 400);
+	}
+
+	// Delete old photo if exists
+	if (existing.photo_url) {
+		await c.env.B_BUCKET_SPEEDKIDS.delete(existing.photo_url);
+	}
+
+	const ext = EXT_MAP[file.type] ?? "jpg";
+	const key = `assets/${id}/${Date.now()}.${ext}`;
+
+	await c.env.B_BUCKET_SPEEDKIDS.put(key, file.stream(), {
+		httpMetadata: { contentType: file.type },
+	});
+
+	await updateAsset(c.env.DB, id, { photo_url: key });
+	await auditLog(c, "asset.photo.upload", "asset", id, { key });
+
+	return c.json({ photo_url: key }, 200);
+});
+
+// Delete asset photo
+assetRoutes.delete("/:id/photo", requireRole("manager", "owner"), async (c) => {
+	const id = Number(c.req.param("id"));
+	const existing = await getAssetById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);
+
+	if (existing.photo_url) {
+		await c.env.B_BUCKET_SPEEDKIDS.delete(existing.photo_url);
+		await updateAsset(c.env.DB, id, { photo_url: null as unknown as string });
+		await auditLog(c, "asset.photo.delete", "asset", id);
+	}
+
 	return c.json({ ok: true });
 });

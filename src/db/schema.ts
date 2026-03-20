@@ -168,11 +168,49 @@ export interface CashTransaction {
 	id: number;
 	cash_register_id: number;
 	rental_session_id: string | null;
-	type: "rental_payment" | "adjustment" | "withdrawal" | "deposit";
+	product_sale_id: number | null;
+	type: "rental_payment" | "product_sale" | "adjustment" | "withdrawal" | "deposit";
 	amount_cents: number;
 	payment_method: string | null;
 	description: string | null;
 	recorded_by: number | null;
+	created_at: string;
+}
+
+export interface Product {
+	id: number;
+	name: string;
+	description: string | null;
+	price_cents: number;
+	category: string | null;
+	photo_url: string | null;
+	active: number;
+	sort_order: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ProductSale {
+	id: number;
+	cash_register_id: number | null;
+	customer_id: number | null;
+	attendant_id: number | null;
+	total_cents: number;
+	discount_cents: number;
+	payment_method: "cash" | "credit" | "debit" | "pix" | "mixed" | null;
+	paid: number;
+	notes: string | null;
+	created_at: string;
+}
+
+export interface ProductSaleItem {
+	id: number;
+	product_sale_id: number;
+	product_id: number;
+	product_name: string;
+	quantity: number;
+	unit_price_cents: number;
+	total_cents: number;
 	created_at: string;
 }
 

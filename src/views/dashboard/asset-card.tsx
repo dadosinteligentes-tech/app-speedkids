@@ -58,12 +58,12 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 			<div class="flex items-center gap-3 mb-2">
 				{photoUrl ? (
 					<img
-						src={photoUrl}
+						src={`/api/assets/photo/${photoUrl}`}
 						alt={asset.name}
-						class="asset-photo w-10 h-10 rounded-sk object-cover flex-shrink-0"
+						class="asset-photo w-16 h-16 rounded-sk object-cover flex-shrink-0"
 					/>
 				) : (
-					<div class="asset-photo w-10 h-10 rounded-sk bg-sk-yellow-light flex items-center justify-center flex-shrink-0 text-2xl sk-float">
+					<div class="asset-photo w-16 h-16 rounded-sk bg-sk-yellow-light flex items-center justify-center flex-shrink-0 text-3xl sk-float">
 						🎮
 					</div>
 				)}

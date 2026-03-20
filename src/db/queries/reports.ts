@@ -720,6 +720,160 @@ export async function getCancelledSessions(
 	return results;
 }
 
+// ── Product Sales Summary ──
+
+export interface ProductSalesSummary {
+	total_revenue_cents: number;
+	sale_count: number;
+	avg_ticket_cents: number;
+	cash_cents: number;
+	credit_cents: number;
+	debit_cents: number;
+	pix_cents: number;
+}
+
+const EMPTY_PRODUCT_SALES: ProductSalesSummary = {
+	total_revenue_cents: 0,
+	sale_count: 0,
+	avg_ticket_cents: 0,
+	cash_cents: 0,
+	credit_cents: 0,
+	debit_cents: 0,
+	pix_cents: 0,
+};
+
+export async function getProductSalesSummary(
+	db: D1Database,
+	from: string,
+	to: string,
+): Promise<ProductSalesSummary> {
+	const row = await db
+		.prepare(
+			`SELECT
+				COALESCE(SUM(total_cents), 0) AS total_revenue_cents,
+				COUNT(*) AS sale_count,
+				COALESCE(AVG(total_cents), 0) AS avg_ticket_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN total_cents ELSE 0 END), 0) AS cash_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'credit' THEN total_cents ELSE 0 END), 0) AS credit_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'debit' THEN total_cents ELSE 0 END), 0) AS debit_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'pix' THEN total_cents ELSE 0 END), 0) AS pix_cents
+			FROM product_sales
+			WHERE paid = 1
+				AND created_at >= ? AND created_at < date(?, '+1 day')`,
+		)
+		.bind(from, to)
+		.first<ProductSalesSummary>();
+
+	return row ?? EMPTY_PRODUCT_SALES;
+}
+
+export interface ProductRevenueRow {
+	product_id: number;
+	product_name: string;
+	category: string | null;
+	price_cents: number;
+	quantity_sold: number;
+	revenue_cents: number;
+	revenue_pct: number;
+}
+
+export async function getProductRevenue(
+	db: D1Database,
+	from: string,
+	to: string,
+): Promise<ProductRevenueRow[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT
+				p.id AS product_id,
+				p.name AS product_name,
+				p.category,
+				p.price_cents,
+				COALESCE(SUM(psi.quantity), 0) AS quantity_sold,
+				COALESCE(SUM(psi.total_cents), 0) AS revenue_cents
+			FROM products p
+			LEFT JOIN product_sale_items psi ON psi.product_id = p.id
+			LEFT JOIN product_sales ps ON ps.id = psi.product_sale_id
+				AND ps.paid = 1
+				AND ps.created_at >= ?
+				AND ps.created_at < date(?, '+1 day')
+			GROUP BY p.id, p.name, p.category, p.price_cents
+			ORDER BY revenue_cents DESC`,
+		)
+		.bind(from, to)
+		.all<Omit<ProductRevenueRow, "revenue_pct">>();
+
+	const total = results.reduce((s, r) => s + r.revenue_cents, 0);
+	return results.map((r) => ({
+		...r,
+		revenue_pct: total > 0 ? Math.round((r.revenue_cents / total) * 100) : 0,
+	}));
+}
+
+export interface ProductSaleDetailRow {
+	id: number;
+	customer_name: string | null;
+	attendant_name: string | null;
+	total_cents: number;
+	payment_method: string | null;
+	paid: number;
+	created_at: string;
+	item_summary: string;
+}
+
+export async function getProductSaleDetail(
+	db: D1Database,
+	from: string,
+	to: string,
+	productId?: number,
+	limit = 50,
+	offset = 0,
+): Promise<{ sales: ProductSaleDetailRow[]; total: number }> {
+	let extraWhere = "";
+	const bindings: (string | number)[] = [from, to];
+	if (productId) {
+		extraWhere = "AND ps.id IN (SELECT product_sale_id FROM product_sale_items WHERE product_id = ?)";
+		bindings.push(productId);
+	}
+
+	const countRow = await db
+		.prepare(
+			`SELECT COUNT(*) AS total FROM product_sales ps
+			WHERE ps.paid = 1
+				AND ps.created_at >= ? AND ps.created_at < date(?, '+1 day')
+				${extraWhere}`,
+		)
+		.bind(...bindings)
+		.first<{ total: number }>();
+
+	const { results } = await db
+		.prepare(
+			`SELECT
+				ps.id,
+				c.name AS customer_name,
+				u.name AS attendant_name,
+				ps.total_cents,
+				ps.payment_method,
+				ps.paid,
+				ps.created_at,
+				GROUP_CONCAT(psi.quantity || 'x ' || psi.product_name, ', ') AS item_summary
+			FROM product_sales ps
+			LEFT JOIN customers c ON ps.customer_id = c.id
+			LEFT JOIN users u ON ps.attendant_id = u.id
+			LEFT JOIN product_sale_items psi ON psi.product_sale_id = ps.id
+			WHERE ps.paid = 1
+				AND ps.created_at >= ? AND ps.created_at < date(?, '+1 day')
+				${extraWhere}
+			GROUP BY ps.id
+			ORDER BY ps.created_at DESC
+			LIMIT ? OFFSET ?`,
+		)
+		.bind(...bindings, limit, offset)
+		.all<ProductSaleDetailRow>();
+
+	return { sales: results, total: countRow?.total ?? 0 };
+}
+
 // ── Detail Drill-Down ──
 
 export interface DetailSession {

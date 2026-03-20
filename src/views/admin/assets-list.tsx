@@ -30,6 +30,8 @@ export const AssetsList: FC<AssetsListProps> = ({ assets, assetTypes, user }) =>
 	const script = html`<script>
 ${raw(`
 var __ASSET_TYPES__ = ${JSON.stringify(assetTypes)};
+var __AF_PHOTO_FILE__ = null;
+var __AF_PHOTO_REMOVE__ = false;
 
 function showAssetForm(asset) {
 	var modal = document.getElementById('asset-form-modal');
@@ -54,11 +56,68 @@ function showAssetForm(asset) {
 		form.reset();
 		document.getElementById('f-sort-order').value = 0;
 	}
+	// Reset photo state
+	__AF_PHOTO_FILE__ = null;
+	__AF_PHOTO_REMOVE__ = false;
+	var fileInput = document.getElementById('f-photo');
+	if (fileInput) fileInput.value = '';
+	var preview = document.getElementById('f-photo-preview');
+	var addBtn = document.getElementById('f-photo-add-btn');
+	var removeBtn = document.getElementById('f-photo-remove-btn');
+	var photoUrl = asset ? asset.photo_url : '';
+	if (preview) {
+		if (photoUrl) {
+			preview.innerHTML = '<img src="/api/assets/photo/' + photoUrl + '" class="w-20 h-20 object-cover rounded-sk" />';
+			preview.classList.remove('hidden');
+			if (addBtn) addBtn.textContent = 'Trocar foto';
+			if (removeBtn) removeBtn.classList.remove('hidden');
+		} else {
+			preview.innerHTML = '';
+			preview.classList.add('hidden');
+			if (addBtn) addBtn.textContent = 'Adicionar foto';
+			if (removeBtn) removeBtn.classList.add('hidden');
+		}
+	}
 	modal.classList.remove('hidden');
 }
 
 function closeAssetForm() {
 	document.getElementById('asset-form-modal').classList.add('hidden');
+}
+
+function onAssetPhotoSelected(input) {
+	if (!input.files || !input.files[0]) return;
+	var file = input.files[0];
+	if (file.size > 2 * 1024 * 1024) { alert('Arquivo muito grande. Maximo 2MB'); input.value = ''; return; }
+	if (['image/jpeg','image/png','image/webp'].indexOf(file.type) === -1) { alert('Use JPEG, PNG ou WebP'); input.value = ''; return; }
+	__AF_PHOTO_FILE__ = file;
+	__AF_PHOTO_REMOVE__ = false;
+	var preview = document.getElementById('f-photo-preview');
+	var addBtn = document.getElementById('f-photo-add-btn');
+	var removeBtn = document.getElementById('f-photo-remove-btn');
+	if (preview) {
+		var reader = new FileReader();
+		reader.onload = function(e) {
+			preview.innerHTML = '<img src="' + e.target.result + '" class="w-20 h-20 object-cover rounded-sk" />';
+			preview.classList.remove('hidden');
+		};
+		reader.readAsDataURL(file);
+	}
+	if (addBtn) addBtn.textContent = 'Trocar foto';
+	if (removeBtn) removeBtn.classList.remove('hidden');
+}
+
+function removeAssetPhoto() {
+	__AF_PHOTO_FILE__ = null;
+	__AF_PHOTO_REMOVE__ = true;
+	var fileInput = document.getElementById('f-photo');
+	if (fileInput) fileInput.value = '';
+	var preview = document.getElementById('f-photo-preview');
+	if (preview) { preview.innerHTML = ''; preview.classList.add('hidden'); }
+	var addBtn = document.getElementById('f-photo-add-btn');
+	if (addBtn) addBtn.textContent = 'Adicionar foto';
+	var removeBtn = document.getElementById('f-photo-remove-btn');
+	if (removeBtn) removeBtn.classList.add('hidden');
 }
 
 document.getElementById('asset-form').addEventListener('submit', function(e) {
@@ -85,9 +144,23 @@ document.getElementById('asset-form').addEventListener('submit', function(e) {
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)
 	}).then(function(r) {
-		if (r.ok) location.reload();
-		else r.json().then(function(d) { alert(d.error || 'Erro'); });
-	});
+		if (!r.ok) return r.json().then(function(d) { alert(d.error || 'Erro'); return Promise.reject('err'); });
+		return r.json();
+	}).then(function(asset) {
+		var assetId = asset.id || id;
+		if (!assetId) { location.reload(); return; }
+		if (__AF_PHOTO_FILE__) {
+			var fd = new FormData();
+			fd.append('photo', __AF_PHOTO_FILE__);
+			return fetch('/api/assets/' + assetId + '/photo', { method: 'POST', body: fd })
+				.then(function() { location.reload(); });
+		} else if (__AF_PHOTO_REMOVE__ && id) {
+			return fetch('/api/assets/' + assetId + '/photo', { method: 'DELETE' })
+				.then(function() { location.reload(); });
+		} else {
+			location.reload();
+		}
+	}).catch(function(e) { if (e !== 'err') alert('Erro: ' + (e.message || e)); });
 });
 
 function retireAsset(id, name) {
@@ -195,7 +268,7 @@ function deleteType(id, label) {
 								<td class="px-4 py-3">
 									<div class="flex gap-2">
 										<button
-											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery, max_weight_kg: asset.max_weight_kg, min_age: asset.min_age, max_age: asset.max_age, sort_order: asset.sort_order })})`}
+											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery, max_weight_kg: asset.max_weight_kg, min_age: asset.min_age, max_age: asset.max_age, sort_order: asset.sort_order, photo_url: asset.photo_url })})`}
 											class="text-sk-blue-dark hover:underline text-xs font-body"
 										>
 											Editar
@@ -319,6 +392,20 @@ function deleteType(id, label) {
 						<div>
 							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Observações</label>
 							<textarea id="f-notes" rows={2} class="w-full px-3 py-2 border border-sk-border rounded-sk font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="Notas adicionais..."></textarea>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Foto</label>
+							<input type="file" id="f-photo" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="onAssetPhotoSelected(this)" />
+							<div id="f-photo-preview" class="hidden mb-2"></div>
+							<div class="flex gap-2">
+								<button type="button" id="f-photo-add-btn" onclick="document.getElementById('f-photo').click()" class="btn-touch px-3 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium">
+									Adicionar foto
+								</button>
+								<button type="button" id="f-photo-remove-btn" onclick="removeAssetPhoto()" class="hidden btn-touch px-3 py-1.5 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium">
+									Remover foto
+								</button>
+							</div>
+							<p class="text-xs text-sk-muted font-body mt-1">JPEG, PNG ou WebP. Max 2MB.</p>
 						</div>
 						<div class="flex items-center gap-2">
 							<input id="f-battery" type="checkbox" class="w-4 h-4 rounded border-sk-border text-sk-orange focus:ring-sk-orange/30" />

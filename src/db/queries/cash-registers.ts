@@ -91,6 +91,7 @@ export async function addTransaction(
 	params: {
 		cash_register_id: number;
 		rental_session_id?: string | null;
+		product_sale_id?: number | null;
 		type: CashTransaction["type"];
 		amount_cents: number;
 		payment_method?: string | null;
@@ -100,13 +101,14 @@ export async function addTransaction(
 ): Promise<CashTransaction | null> {
 	return db
 		.prepare(`
-			INSERT INTO cash_transactions (cash_register_id, rental_session_id, type, amount_cents, payment_method, description, recorded_by)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO cash_transactions (cash_register_id, rental_session_id, product_sale_id, type, amount_cents, payment_method, description, recorded_by)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			RETURNING *
 		`)
 		.bind(
 			params.cash_register_id,
 			params.rental_session_id ?? null,
+			params.product_sale_id ?? null,
 			params.type,
 			params.amount_cents,
 			params.payment_method ?? null,
@@ -140,7 +142,7 @@ export async function calculateExpected(db: D1Database, registerId: number): Pro
 		.prepare(`
 			SELECT COALESCE(SUM(
 				CASE
-					WHEN type IN ('rental_payment', 'deposit') AND (payment_method = 'cash' OR payment_method IS NULL) THEN amount_cents
+					WHEN type IN ('rental_payment', 'product_sale', 'deposit') AND (payment_method = 'cash' OR payment_method IS NULL) THEN amount_cents
 					WHEN type = 'withdrawal' THEN -amount_cents
 					WHEN type = 'adjustment' THEN amount_cents
 					ELSE 0
@@ -166,6 +168,7 @@ export interface RegisterSummary {
 	total_withdrawals_cents: number;
 	total_adjustments_cents: number;
 	rental_count: number;
+	product_sale_count: number;
 	deposit_count: number;
 	withdrawal_count: number;
 	adjustment_count: number;
@@ -177,15 +180,16 @@ export async function getRegisterSummary(db: D1Database, registerId: number): Pr
 		.prepare(`
 			SELECT
 				cr.opening_balance_cents,
-				COALESCE(SUM(CASE WHEN ct.type='rental_payment' AND ct.payment_method='cash' THEN ct.amount_cents ELSE 0 END), 0) AS cash_payments_cents,
-				COALESCE(SUM(CASE WHEN ct.type='rental_payment' AND ct.payment_method='pix' THEN ct.amount_cents ELSE 0 END), 0) AS pix_payments_cents,
-				COALESCE(SUM(CASE WHEN ct.type='rental_payment' AND ct.payment_method='debit' THEN ct.amount_cents ELSE 0 END), 0) AS debit_payments_cents,
-				COALESCE(SUM(CASE WHEN ct.type='rental_payment' AND ct.payment_method='credit' THEN ct.amount_cents ELSE 0 END), 0) AS credit_payments_cents,
+				COALESCE(SUM(CASE WHEN ct.type IN ('rental_payment','product_sale') AND ct.payment_method='cash' THEN ct.amount_cents ELSE 0 END), 0) AS cash_payments_cents,
+				COALESCE(SUM(CASE WHEN ct.type IN ('rental_payment','product_sale') AND ct.payment_method='pix' THEN ct.amount_cents ELSE 0 END), 0) AS pix_payments_cents,
+				COALESCE(SUM(CASE WHEN ct.type IN ('rental_payment','product_sale') AND ct.payment_method='debit' THEN ct.amount_cents ELSE 0 END), 0) AS debit_payments_cents,
+				COALESCE(SUM(CASE WHEN ct.type IN ('rental_payment','product_sale') AND ct.payment_method='credit' THEN ct.amount_cents ELSE 0 END), 0) AS credit_payments_cents,
 				COUNT(CASE WHEN ct.type='rental_payment' AND ct.payment_method='courtesy' THEN 1 END) AS courtesy_count,
 				COALESCE(SUM(CASE WHEN ct.type='deposit' THEN ct.amount_cents ELSE 0 END), 0) AS total_deposits_cents,
 				COALESCE(SUM(CASE WHEN ct.type='withdrawal' THEN ct.amount_cents ELSE 0 END), 0) AS total_withdrawals_cents,
 				COALESCE(SUM(CASE WHEN ct.type='adjustment' THEN ct.amount_cents ELSE 0 END), 0) AS total_adjustments_cents,
 				COUNT(DISTINCT ct.rental_session_id) AS rental_count,
+				COUNT(DISTINCT ct.product_sale_id) AS product_sale_count,
 				COUNT(CASE WHEN ct.type='deposit' THEN 1 END) AS deposit_count,
 				COUNT(CASE WHEN ct.type='withdrawal' THEN 1 END) AS withdrawal_count,
 				COUNT(CASE WHEN ct.type='adjustment' THEN 1 END) AS adjustment_count
@@ -214,6 +218,7 @@ export async function getRegisterSummary(db: D1Database, registerId: number): Pr
 		total_withdrawals_cents: withdrawals,
 		total_adjustments_cents: adjustments,
 		rental_count: row?.rental_count ?? 0,
+		product_sale_count: row?.product_sale_count ?? 0,
 		deposit_count: row?.deposit_count ?? 0,
 		withdrawal_count: row?.withdrawal_count ?? 0,
 		adjustment_count: row?.adjustment_count ?? 0,

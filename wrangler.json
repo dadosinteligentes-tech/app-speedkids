@@ -10,6 +10,12 @@
 			"database_name": "d1-sppedkids-database"
 		}
 	],
+	"r2_buckets": [
+		{
+			"binding": "B_BUCKET_SPEEDKIDS",
+			"bucket_name": "speed-kids"
+		}
+	],
 	"assets": {
 		"directory": "public"
 	},

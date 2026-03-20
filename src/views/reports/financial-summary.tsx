@@ -4,10 +4,12 @@ import { HBar, formatCurrency, formatDate } from "../../lib/report-utils";
 import type {
 	FinancialSummary,
 	DailyRevenueTrend,
+	ProductSalesSummary,
 } from "../../db/queries/reports";
 
 interface Props {
 	summary: FinancialSummary;
+	productSales: ProductSalesSummary;
 	trend: DailyRevenueTrend[];
 	from: string;
 	to: string;
@@ -16,6 +18,7 @@ interface Props {
 
 export const FinancialSummaryView: FC<Props> = ({
 	summary,
+	productSales,
 	trend,
 	from,
 	to,
@@ -122,6 +125,35 @@ export const FinancialSummaryView: FC<Props> = ({
 					/>
 				</a>
 			</div>
+
+			{/* Product Sales */}
+			{productSales.sale_count > 0 && (
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 mb-6">
+					<h3 class="text-sm font-display font-bold text-sk-text mb-3">
+						Vendas de Produtos
+					</h3>
+					<div class="grid grid-cols-3 gap-4 mb-3">
+						<div class="text-center">
+							<p class="text-xs text-sk-muted font-body">Receita</p>
+							<p class="text-lg font-display font-bold text-sk-purple">{formatCurrency(productSales.total_revenue_cents)}</p>
+						</div>
+						<div class="text-center">
+							<p class="text-xs text-sk-muted font-body">Vendas</p>
+							<p class="text-lg font-display font-bold text-sk-text">{productSales.sale_count}</p>
+						</div>
+						<div class="text-center">
+							<p class="text-xs text-sk-muted font-body">Ticket Medio</p>
+							<p class="text-lg font-display font-bold text-sk-blue-dark">{formatCurrency(Math.round(productSales.avg_ticket_cents))}</p>
+						</div>
+					</div>
+					<div class="text-xs text-sk-muted space-y-1">
+						{productSales.cash_cents > 0 && <div class="flex justify-between"><span>Dinheiro</span><span>{formatCurrency(productSales.cash_cents)}</span></div>}
+						{productSales.credit_cents > 0 && <div class="flex justify-between"><span>Credito</span><span>{formatCurrency(productSales.credit_cents)}</span></div>}
+						{productSales.debit_cents > 0 && <div class="flex justify-between"><span>Debito</span><span>{formatCurrency(productSales.debit_cents)}</span></div>}
+						{productSales.pix_cents > 0 && <div class="flex justify-between"><span>Pix</span><span>{formatCurrency(productSales.pix_cents)}</span></div>}
+					</div>
+				</div>
+			)}
 
 			{/* Alerts row */}
 			<div class="grid grid-cols-2 gap-4 mb-6">

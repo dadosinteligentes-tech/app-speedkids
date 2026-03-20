@@ -5,6 +5,7 @@ import { todayISO, daysAgoISO } from "../../lib/report-utils";
 import {
 	getFinancialSummary,
 	getDailyRevenueTrend,
+	getProductSalesSummary,
 	getPackageRevenue,
 	getAssetUtilization,
 	getPeakHours,
@@ -15,6 +16,8 @@ import {
 	getCancelledSessions,
 	getShiftReport,
 	getDetailSessions,
+	getProductRevenue,
+	getProductSaleDetail,
 	type DetailFilter,
 } from "../../db/queries/reports";
 import { FinancialSummaryView } from "../../views/reports/financial-summary";
@@ -28,6 +31,8 @@ import { UnpaidReportView } from "../../views/reports/unpaid";
 import { CancelledReportView } from "../../views/reports/cancelled";
 import { ShiftReportView } from "../../views/reports/shift-report";
 import { ReportDetailView } from "../../views/reports/detail";
+import { ProductSalesReportView } from "../../views/reports/product-sales";
+import { ProductSaleDetailView } from "../../views/reports/product-sale-detail";
 
 export const reportPages = new Hono<AppEnv>();
 
@@ -50,13 +55,15 @@ reportPages.get("/", (c) => {
 
 reportPages.get("/financial", async (c) => {
 	const { from, to } = getDateRange(c);
-	const [summary, trend] = await Promise.all([
+	const [summary, trend, productSales] = await Promise.all([
 		getFinancialSummary(c.env.DB, from, to),
 		getDailyRevenueTrend(c.env.DB, from, to),
+		getProductSalesSummary(c.env.DB, from, to),
 	]);
 	return c.html(
 		<FinancialSummaryView
 			summary={summary}
+			productSales={productSales}
 			trend={trend}
 			from={from}
 			to={to}
@@ -189,6 +196,53 @@ reportPages.get("/shifts", async (c) => {
 			shifts={shifts}
 			from={from}
 			to={to}
+			user={c.get("user")}
+		/>,
+	);
+});
+
+reportPages.get("/products", async (c) => {
+	const { from, to } = getDateRange(c);
+	const [summary, products] = await Promise.all([
+		getProductSalesSummary(c.env.DB, from, to),
+		getProductRevenue(c.env.DB, from, to),
+	]);
+	return c.html(
+		<ProductSalesReportView
+			summary={summary}
+			products={products}
+			from={from}
+			to={to}
+			user={c.get("user")}
+		/>,
+	);
+});
+
+reportPages.get("/product-detail", async (c) => {
+	const { from, to } = getDateRange(c);
+	const productId = c.req.query("product_id") ? Number(c.req.query("product_id")) : undefined;
+	const page = Number(c.req.query("page")) || 1;
+	const perPage = 50;
+	const { sales, total } = await getProductSaleDetail(
+		c.env.DB, from, to, productId, perPage, (page - 1) * perPage,
+	);
+
+	let productName: string | undefined;
+	if (productId && sales.length > 0) {
+		// Get product name from the first sale's items or query
+		const row = await c.env.DB.prepare("SELECT name FROM products WHERE id = ?").bind(productId).first<{ name: string }>();
+		productName = row?.name;
+	}
+
+	return c.html(
+		<ProductSaleDetailView
+			sales={sales}
+			total={total}
+			page={page}
+			from={from}
+			to={to}
+			productId={productId}
+			productName={productName}
 			user={c.get("user")}
 		/>,
 	);
