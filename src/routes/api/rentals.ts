@@ -3,7 +3,7 @@ import type { AppEnv } from "../../types";
 import { getActiveSessionByAsset, getActiveSessions, getSessionById, createSession, pauseSession, resumeSession, stopSession, paySession, updateSessionDuration, extendSession } from "../../db/queries/rentals";
 import { getPackageById } from "../../db/queries/packages";
 import { getAssetById, updateAssetStatus } from "../../db/queries/assets";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 import { getOpenRegister, addTransaction, saveDenominations } from "../../db/queries/cash-registers";
 import { updateCustomerStats } from "../../db/queries/customers";
@@ -379,7 +379,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	return c.json(updated);
 });
 
-rentalRoutes.post("/:id/extend", requireRole("manager", "owner"), async (c) => {
+rentalRoutes.post("/:id/extend", requirePermission("rentals.extend"), async (c) => {
 	const id = c.req.param("id");
 	const body = await c.req.json<{ package_id?: number; additional_minutes?: number }>();
 

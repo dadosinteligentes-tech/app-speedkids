@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getBusinessConfig, updateBusinessConfig } from "../../db/queries/business-config";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 export const businessConfigRoutes = new Hono<AppEnv>();
@@ -11,7 +11,7 @@ businessConfigRoutes.get("/", async (c) => {
 	return c.json(config);
 });
 
-businessConfigRoutes.put("/", requireRole("owner"), async (c) => {
+businessConfigRoutes.put("/", requirePermission("settings.manage"), async (c) => {
 	const body = await c.req.json<{
 		name?: string;
 		cnpj?: string | null;

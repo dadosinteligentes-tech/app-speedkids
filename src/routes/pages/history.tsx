@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { getAssetById } from "../../db/queries/assets";
 import { getSessionsByAsset } from "../../db/queries/rentals";
 import { AssetHistory } from "../../views/history/asset-history";
 
 export const historyPages = new Hono<AppEnv>();
 
-historyPages.use("*", requireRole("manager", "owner"));
+historyPages.use("*", requirePermission("reports.view"));
 
 historyPages.get("/:assetId", async (c) => {
 	const assetId = Number(c.req.param("assetId"));

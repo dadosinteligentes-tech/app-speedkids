@@ -16,6 +16,7 @@ import { batteryRoutes } from "./routes/api/batteries";
 import { businessConfigRoutes } from "./routes/api/business-config";
 import { productRoutes } from "./routes/api/products";
 import { productSaleRoutes } from "./routes/api/product-sales";
+import { permissionRoutes } from "./routes/api/permissions";
 import { loginPages } from "./routes/pages/login";
 import { dashboardPages } from "./routes/pages/dashboard";
 import { adminPages } from "./routes/pages/admin";
@@ -48,6 +49,7 @@ app.route("/api/batteries", batteryRoutes);
 app.route("/api/business-config", businessConfigRoutes);
 app.route("/api/products", productRoutes);
 app.route("/api/product-sales", productSaleRoutes);
+app.route("/api/permissions", permissionRoutes);
 
 // Page routes
 app.route("/", loginPages);

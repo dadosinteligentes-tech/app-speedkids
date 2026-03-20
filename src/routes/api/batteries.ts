@@ -6,7 +6,7 @@ import {
 	swapBattery, retireBattery, getBatteryByAssetId, setBatteryLevel,
 	uninstallBattery, installBattery, addBatteryChargingTime, getBatteriesByLowestCharge,
 } from "../../db/queries/batteries";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 export const batteryRoutes = new Hono<AppEnv>();
@@ -37,7 +37,7 @@ batteryRoutes.get("/:id", async (c) => {
 	return c.json(battery);
 });
 
-batteryRoutes.post("/", requireRole("manager", "owner"), async (c) => {
+batteryRoutes.post("/", requirePermission("batteries.manage"), async (c) => {
 	const body = await c.req.json<{ label: string; full_charge_minutes?: number; charge_time_minutes?: number; notes?: string }>();
 	if (!body.label) return c.json({ error: "Label e obrigatorio" }, 400);
 	const battery = await createBattery(c.env.DB, body);
@@ -45,7 +45,7 @@ batteryRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 	return c.json(battery, 201);
 });
 
-batteryRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
+batteryRoutes.put("/:id", requirePermission("batteries.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getBatteryById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Battery not found" }, 404);
@@ -178,7 +178,7 @@ batteryRoutes.post("/:id/status", async (c) => {
 	return c.json(updated);
 });
 
-batteryRoutes.delete("/:id", requireRole("manager", "owner"), async (c) => {
+batteryRoutes.delete("/:id", requirePermission("batteries.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getBatteryById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Battery not found" }, 404);

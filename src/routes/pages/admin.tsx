@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { getAllAssets } from "../../db/queries/assets";
 import { getAssetTypes } from "../../db/queries/asset-types";
 import { getAllPackages } from "../../db/queries/packages";
@@ -16,6 +17,8 @@ import { getBatteries } from "../../db/queries/batteries";
 import { BatteriesList } from "../../views/admin/batteries-list";
 import { getBusinessConfig } from "../../db/queries/business-config";
 import { BusinessSettings } from "../../views/admin/business-settings";
+import { getAllPermissions, getAllRolePermissions } from "../../db/queries/permissions";
+import { PermissionsMatrix } from "../../views/admin/permissions-matrix";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -66,16 +69,26 @@ adminPages.get("/batteries", async (c) => {
 	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} />);
 });
 
-// Users page requires owner role
-adminPages.get("/users", requireRole("owner"), async (c) => {
+// Users page requires users.manage permission
+adminPages.get("/users", requirePermission("users.manage"), async (c) => {
 	const users = await listUsers(c.env.DB);
 	const user = c.get("user");
 	const safeUsers = users.map(({ password_hash, salt, ...rest }) => rest);
 	return c.html(<UsersList users={safeUsers} user={user} />);
 });
 
-// Business settings requires owner role
-adminPages.get("/settings", requireRole("owner"), async (c) => {
+// Permissions matrix requires owner role (hardcoded to prevent lock-out)
+adminPages.get("/permissions", requireRole("owner"), async (c) => {
+	const [permissions, rolePermissions] = await Promise.all([
+		getAllPermissions(c.env.DB),
+		getAllRolePermissions(c.env.DB),
+	]);
+	const user = c.get("user");
+	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} />);
+});
+
+// Business settings requires settings.manage permission
+adminPages.get("/settings", requirePermission("settings.manage"), async (c) => {
 	const config = await getBusinessConfig(c.env.DB);
 	const user = c.get("user");
 	return c.html(<BusinessSettings config={config} user={user} />);

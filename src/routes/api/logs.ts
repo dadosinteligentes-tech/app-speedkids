@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getLogs } from "../../db/queries/logs";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 
 export const logRoutes = new Hono<AppEnv>();
 
-logRoutes.use("*", requireRole("manager", "owner"));
+logRoutes.use("*", requirePermission("logs.view"));
 
 logRoutes.get("/", async (c) => {
 	const entity_type = c.req.query("entity_type");

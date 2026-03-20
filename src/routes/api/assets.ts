@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getAssets, getAssetById, createAsset, updateAsset, retireAsset } from "../../db/queries/assets";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -35,7 +35,7 @@ assetRoutes.get("/:id", async (c) => {
 	return c.json(asset);
 });
 
-assetRoutes.post("/", requireRole("manager", "owner"), async (c) => {
+assetRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 	const body = await c.req.json<{
 		name: string; asset_type: string; model?: string; photo_url?: string; notes?: string;
 		uses_battery?: number; max_weight_kg?: number | null; min_age?: number | null; max_age?: number | null; sort_order?: number;
@@ -48,7 +48,7 @@ assetRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 	return c.json(asset, 201);
 });
 
-assetRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
+assetRoutes.put("/:id", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getAssetById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Asset not found" }, 404);
@@ -63,7 +63,7 @@ assetRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	return c.json(updated);
 });
 
-assetRoutes.delete("/:id", requireRole("manager", "owner"), async (c) => {
+assetRoutes.delete("/:id", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getAssetById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Asset not found" }, 404);
@@ -74,7 +74,7 @@ assetRoutes.delete("/:id", requireRole("manager", "owner"), async (c) => {
 });
 
 // Upload asset photo to R2
-assetRoutes.post("/:id/photo", requireRole("manager", "owner"), async (c) => {
+assetRoutes.post("/:id/photo", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getAssetById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);
@@ -111,7 +111,7 @@ assetRoutes.post("/:id/photo", requireRole("manager", "owner"), async (c) => {
 });
 
 // Delete asset photo
-assetRoutes.delete("/:id/photo", requireRole("manager", "owner"), async (c) => {
+assetRoutes.delete("/:id/photo", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getAssetById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);

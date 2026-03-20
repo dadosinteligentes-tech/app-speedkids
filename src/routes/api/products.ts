@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getActiveProducts, getAllProducts, getProductById, createProduct, updateProduct, toggleProductActive } from "../../db/queries/products";
 import { auditLog } from "../../lib/logger";
+import { requirePermission } from "../../middleware/require-permission";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
@@ -35,7 +36,7 @@ productRoutes.get("/:id", async (c) => {
 	return c.json(product);
 });
 
-productRoutes.post("/", async (c) => {
+productRoutes.post("/", requirePermission("products.manage"), async (c) => {
 	const body = await c.req.json<{
 		name: string; price_cents: number; description?: string; category?: string; sort_order?: number;
 	}>();
@@ -47,7 +48,7 @@ productRoutes.post("/", async (c) => {
 	return c.json(product, 201);
 });
 
-productRoutes.put("/:id", async (c) => {
+productRoutes.put("/:id", requirePermission("products.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getProductById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
@@ -60,7 +61,7 @@ productRoutes.put("/:id", async (c) => {
 	return c.json(updated);
 });
 
-productRoutes.patch("/:id/toggle", async (c) => {
+productRoutes.patch("/:id/toggle", requirePermission("products.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getProductById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
@@ -71,7 +72,7 @@ productRoutes.patch("/:id/toggle", async (c) => {
 });
 
 // Upload product photo to R2
-productRoutes.post("/:id/photo", async (c) => {
+productRoutes.post("/:id/photo", requirePermission("products.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getProductById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
@@ -108,7 +109,7 @@ productRoutes.post("/:id/photo", async (c) => {
 });
 
 // Delete product photo
-productRoutes.delete("/:id/photo", async (c) => {
+productRoutes.delete("/:id/photo", requirePermission("products.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getProductById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);

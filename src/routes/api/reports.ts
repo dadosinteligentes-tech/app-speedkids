@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { todayISO, daysAgoISO } from "../../lib/report-utils";
 import { toBrazilDate, toBrazilDateTime } from "../../lib/timezone";
 import {
@@ -19,7 +19,7 @@ import {
 
 export const reportApiRoutes = new Hono<AppEnv>();
 
-reportApiRoutes.use("*", requireRole("manager", "owner"));
+reportApiRoutes.use("*", requirePermission("reports.view"));
 
 // ── CSV Helpers ──
 
@@ -212,7 +212,7 @@ reportApiRoutes.get("/peak-hours/export", async (c) => {
 	return csvResponse(c, `horarios-pico-${from}-a-${to}.csv`, csv);
 });
 
-reportApiRoutes.get("/operators/export", requireRole("owner"), async (c) => {
+reportApiRoutes.get("/operators/export", requirePermission("reports.operators"), async (c) => {
 	const { from, to } = getDateRange(c);
 	const operators = await getOperatorPerformance(c.env.DB, from, to);
 

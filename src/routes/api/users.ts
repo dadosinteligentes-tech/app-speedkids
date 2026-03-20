@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { listUsers, getUserById, createUser, updateUser, deactivateUser } from "../../db/queries/users";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { generateSalt, hashPassword } from "../../lib/crypto";
 import { auditLog } from "../../lib/logger";
 
 export const userRoutes = new Hono<AppEnv>();
 
 // All user management requires owner role
-userRoutes.use("*", requireRole("owner"));
+userRoutes.use("*", requirePermission("users.manage"));
 
 userRoutes.get("/", async (c) => {
 	const users = await listUsers(c.env.DB);

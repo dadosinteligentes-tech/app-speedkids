@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getCustomers, getCustomerById, searchCustomers, searchByPhone, createCustomer, updateCustomer, getCustomerHistory } from "../../db/queries/customers";
 import { getChildrenByCustomer, createChild } from "../../db/queries/children";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 export const customerRoutes = new Hono<AppEnv>();
@@ -25,7 +25,7 @@ customerRoutes.get("/phone/:phone", async (c) => {
 	return c.json({ customer, children });
 });
 
-customerRoutes.get("/", requireRole("manager", "owner"), async (c) => {
+customerRoutes.get("/", requirePermission("customers.view"), async (c) => {
 	const page = Number(c.req.query("page") ?? "1");
 	const limit = 50;
 	const offset = (page - 1) * limit;
@@ -33,13 +33,13 @@ customerRoutes.get("/", requireRole("manager", "owner"), async (c) => {
 	return c.json(result);
 });
 
-customerRoutes.get("/:id", requireRole("manager", "owner"), async (c) => {
+customerRoutes.get("/:id", requirePermission("customers.view"), async (c) => {
 	const customer = await getCustomerById(c.env.DB, Number(c.req.param("id")));
 	if (!customer) return c.json({ error: "Customer not found" }, 404);
 	return c.json(customer);
 });
 
-customerRoutes.get("/:id/history", requireRole("manager", "owner"), async (c) => {
+customerRoutes.get("/:id/history", requirePermission("customers.view"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const page = Number(c.req.query("page") ?? "1");
 	const limit = 20;
@@ -48,7 +48,7 @@ customerRoutes.get("/:id/history", requireRole("manager", "owner"), async (c) =>
 	return c.json(result);
 });
 
-customerRoutes.post("/", requireRole("manager", "owner"), async (c) => {
+customerRoutes.post("/", requirePermission("customers.view"), async (c) => {
 	const body = await c.req.json<{ name: string; phone?: string; email?: string; cpf?: string; instagram?: string; notes?: string }>();
 	if (!body.name?.trim()) return c.json({ error: "Nome é obrigatório" }, 400);
 
@@ -57,7 +57,7 @@ customerRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 	return c.json(customer, 201);
 });
 
-customerRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
+customerRoutes.put("/:id", requirePermission("customers.view"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<{ name?: string; phone?: string; email?: string; cpf?: string; instagram?: string; notes?: string }>();
 

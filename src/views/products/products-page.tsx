@@ -34,6 +34,8 @@ var __PS_SEARCH_TIMER__ = null;
 var __PS_MANAGE_MODE__ = false;
 var __PF_PHOTO_FILE__ = null;
 var __PF_PHOTO_REMOVE__ = false;
+var __USER_ROLE__ = ${raw(JSON.stringify(user?.role ?? "operator"))};
+var __IS_MANAGER__ = __USER_ROLE__ === 'manager' || __USER_ROLE__ === 'owner';
 
 function fmtBRL(cents) {
 	return 'R$ ' + (cents / 100).toFixed(2).replace('.', ',');
@@ -149,6 +151,7 @@ function updateCartItemsList() {
 
 // ── Product CRUD ──────────────────────────────────────────────────
 function showProductForm(product) {
+	if (!__IS_MANAGER__) return;
 	var modal = document.getElementById('product-form-modal');
 	document.getElementById('pf-id').value = product ? product.id : '';
 	document.getElementById('pf-name').value = product ? product.name : '';
@@ -259,6 +262,7 @@ function toggleProduct(id) {
 
 // ── Manage mode toggle ────────────────────────────────────────────
 function toggleManageMode() {
+	if (!__IS_MANAGER__) return;
 	__PS_MANAGE_MODE__ = !__PS_MANAGE_MODE__;
 	var section = document.getElementById('inactive-section');
 	if (section) section.classList.toggle('hidden', !__PS_MANAGE_MODE__);
@@ -832,14 +836,16 @@ function closeSuccess() { closePayment(); }
 		<Layout title="SpeedKids - Produtos" user={user} bodyScripts={script} cashStatus={cashStatus}>
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-xl font-display font-bold text-sk-text">Produtos</h2>
-				<div class="flex gap-2">
-					<button id="manage-toggle-btn" onclick="toggleManageMode()" class="btn-touch px-3 py-2 bg-gray-200 rounded-sk font-display font-medium text-sm">
-						Gerenciar
-					</button>
-					<button onclick="showProductForm(null)" class="btn-touch px-3 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm btn-bounce">
-						+ Novo
-					</button>
-				</div>
+				{(user?.role === "manager" || user?.role === "owner") && (
+					<div class="flex gap-2">
+						<button id="manage-toggle-btn" onclick="toggleManageMode()" class="btn-touch px-3 py-2 bg-gray-200 rounded-sk font-display font-medium text-sm">
+							Gerenciar
+						</button>
+						<button onclick="showProductForm(null)" class="btn-touch px-3 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm btn-bounce">
+							+ Novo
+						</button>
+					</div>
+				)}
 			</div>
 
 			{/* Search & category filter */}
@@ -870,9 +876,11 @@ function closeSuccess() { closePayment(); }
 				<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-8 text-center">
 					<div class="text-4xl mb-2">🛍️</div>
 					<p class="text-sk-muted font-body">Nenhum produto cadastrado</p>
-					<button onclick="showProductForm(null)" class="btn-touch mt-4 px-6 py-3 bg-sk-orange text-white rounded-sk font-display font-bold btn-bounce">
-						Cadastrar Produto
-					</button>
+					{(user?.role === "manager" || user?.role === "owner") && (
+						<button onclick="showProductForm(null)" class="btn-touch mt-4 px-6 py-3 bg-sk-orange text-white rounded-sk font-display font-bold btn-bounce">
+							Cadastrar Produto
+						</button>
+					)}
 				</div>
 			) : (
 				<>
@@ -885,21 +893,23 @@ function closeSuccess() { closePayment(); }
 								data-category={(p.category || "").toLowerCase()}
 								onclick={`addToCart(${p.id})`}
 							>
-								{/* Manage mode overlay */}
-								<div class="manage-actions hidden absolute inset-0 bg-white/90 rounded-sk flex items-center justify-center gap-2 z-10">
-									<button
-										onclick={`event.stopPropagation();showProductForm(${JSON.stringify({ id: p.id, name: p.name, price_cents: p.price_cents, description: p.description, category: p.category, sort_order: p.sort_order, photo_url: p.photo_url })})`}
-										class="btn-touch px-3 py-1.5 bg-sk-blue text-white rounded-sk text-xs font-display font-medium"
-									>
-										Editar
-									</button>
-									<button
-										onclick={`event.stopPropagation();toggleProduct(${p.id})`}
-										class="btn-touch px-3 py-1.5 bg-sk-danger text-white rounded-sk text-xs font-display font-medium"
-									>
-										Desativar
-									</button>
-								</div>
+								{/* Manage mode overlay (manager+ only) */}
+								{(user?.role === "manager" || user?.role === "owner") && (
+									<div class="manage-actions hidden absolute inset-0 bg-white/90 rounded-sk flex items-center justify-center gap-2 z-10">
+										<button
+											onclick={`event.stopPropagation();showProductForm(${JSON.stringify({ id: p.id, name: p.name, price_cents: p.price_cents, description: p.description, category: p.category, sort_order: p.sort_order, photo_url: p.photo_url })})`}
+											class="btn-touch px-3 py-1.5 bg-sk-blue text-white rounded-sk text-xs font-display font-medium"
+										>
+											Editar
+										</button>
+										<button
+											onclick={`event.stopPropagation();toggleProduct(${p.id})`}
+											class="btn-touch px-3 py-1.5 bg-sk-danger text-white rounded-sk text-xs font-display font-medium"
+										>
+											Desativar
+										</button>
+									</div>
+								)}
 								{p.photo_url ? (
 									<img src={`/api/products/photo/${p.photo_url}`} alt={p.name} class="w-12 h-12 object-cover rounded-sk mx-auto mb-1" />
 								) : (
@@ -926,8 +936,8 @@ function closeSuccess() { closePayment(); }
 				</>
 			)}
 
-			{/* Inactive products (hidden by default) */}
-			{inactiveProducts.length > 0 && (
+			{/* Inactive products (manager+ only, hidden by default) */}
+			{(user?.role === "manager" || user?.role === "owner") && inactiveProducts.length > 0 && (
 				<div id="inactive-section" class="hidden mb-4">
 					<h3 class="text-sm font-display font-bold text-sk-muted mb-2">Inativos</h3>
 					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

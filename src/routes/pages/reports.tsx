@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { todayISO, daysAgoISO } from "../../lib/report-utils";
 import {
 	getFinancialSummary,
@@ -36,7 +36,7 @@ import { ProductSaleDetailView } from "../../views/reports/product-sale-detail";
 
 export const reportPages = new Hono<AppEnv>();
 
-reportPages.use("*", requireRole("manager", "owner"));
+reportPages.use("*", requirePermission("reports.view"));
 
 function getDateRange(c: { req: { query: (k: string) => string | undefined } }): {
 	from: string;
@@ -113,7 +113,7 @@ reportPages.get("/peak-hours", async (c) => {
 });
 
 // Owner-only
-reportPages.get("/operators", requireRole("owner"), async (c) => {
+reportPages.get("/operators", requirePermission("reports.operators"), async (c) => {
 	const { from, to } = getDateRange(c);
 	const operators = await getOperatorPerformance(c.env.DB, from, to);
 	return c.html(

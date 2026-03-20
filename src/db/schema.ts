@@ -251,3 +251,19 @@ export interface BusinessConfig {
 	receipt_footer: string | null;
 	updated_at: string;
 }
+
+export interface Permission {
+	id: number;
+	key: string;
+	label: string;
+	description: string | null;
+	category: string;
+	sort_order: number;
+	created_at: string;
+}
+
+export interface RolePermission {
+	role: string;
+	permission_key: string;
+	created_at: string;
+}

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getAssetTypes, createAssetType, updateAssetType, deleteAssetType } from "../../db/queries/asset-types";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 export const assetTypeRoutes = new Hono<AppEnv>();
@@ -11,7 +11,7 @@ assetTypeRoutes.get("/", async (c) => {
 	return c.json(types);
 });
 
-assetTypeRoutes.post("/", requireRole("manager", "owner"), async (c) => {
+assetTypeRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 	const body = await c.req.json<{ name: string; label: string }>();
 	if (!body.name || !body.label) {
 		return c.json({ error: "Nome e label sao obrigatorios" }, 400);
@@ -32,7 +32,7 @@ assetTypeRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 	}
 });
 
-assetTypeRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
+assetTypeRoutes.put("/:id", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<{ label: string }>();
 	if (!body.label) {
@@ -43,7 +43,7 @@ assetTypeRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	return c.json({ ok: true });
 });
 
-assetTypeRoutes.delete("/:id", requireRole("owner"), async (c) => {
+assetTypeRoutes.delete("/:id", requirePermission("assets.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const result = await deleteAssetType(c.env.DB, id);
 	if (!result.ok) {

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { getActivePackages, getAllPackages, getPackageById, createPackage, updatePackage, togglePackageActive } from "../../db/queries/packages";
-import { requireRole } from "../../middleware/require-role";
+import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 
 export const packageRoutes = new Hono<AppEnv>();
@@ -18,7 +18,7 @@ packageRoutes.get("/:id", async (c) => {
 	return c.json(pkg);
 });
 
-packageRoutes.post("/", requireRole("manager", "owner"), async (c) => {
+packageRoutes.post("/", requirePermission("packages.manage"), async (c) => {
 	const body = await c.req.json<{
 		name: string; duration_minutes: number; price_cents: number; sort_order?: number;
 		overtime_block_minutes?: number; overtime_block_price_cents?: number; grace_period_minutes?: number;
@@ -31,7 +31,7 @@ packageRoutes.post("/", requireRole("manager", "owner"), async (c) => {
 	return c.json(pkg, 201);
 });
 
-packageRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
+packageRoutes.put("/:id", requirePermission("packages.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getPackageById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Package not found" }, 404);
@@ -46,7 +46,7 @@ packageRoutes.put("/:id", requireRole("manager", "owner"), async (c) => {
 	return c.json(updated);
 });
 
-packageRoutes.patch("/:id/toggle", requireRole("manager", "owner"), async (c) => {
+packageRoutes.patch("/:id/toggle", requirePermission("packages.manage"), async (c) => {
 	const id = Number(c.req.param("id"));
 	const existing = await getPackageById(c.env.DB, id);
 	if (!existing) return c.json({ error: "Package not found" }, 404);
