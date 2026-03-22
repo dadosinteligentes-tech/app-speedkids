@@ -23,6 +23,7 @@ export interface FinancialSummary {
 	pix_cents: number;
 	mixed_cents: number;
 	courtesy_cents: number;
+	courtesy_count: number;
 	unpaid_count: number;
 	cancelled_count: number;
 	total_minutes: number;
@@ -93,6 +94,7 @@ export interface CashRegisterReport {
 	deposit_cents: number;
 	adjustment_cents: number;
 	rental_count: number;
+	courtesy_count: number;
 }
 
 export interface TopCustomer {
@@ -175,6 +177,7 @@ const EMPTY_FINANCIAL: FinancialSummary = {
 	pix_cents: 0,
 	mixed_cents: 0,
 	courtesy_cents: 0,
+	courtesy_count: 0,
 	unpaid_count: 0,
 	cancelled_count: 0,
 	total_minutes: 0,
@@ -197,6 +200,7 @@ export async function getFinancialSummary(
 				COALESCE(SUM(CASE WHEN payment_method = 'pix'    AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS pix_cents,
 				COALESCE(SUM(CASE WHEN payment_method = 'mixed'    AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS mixed_cents,
 				COALESCE(SUM(CASE WHEN payment_method = 'courtesy' AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS courtesy_cents,
+				COUNT(CASE WHEN payment_method = 'courtesy' THEN 1 END) AS courtesy_count,
 				COUNT(CASE WHEN status = 'completed' AND paid = 0 THEN 1 END) AS unpaid_count,
 				COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled_count,
 				COALESCE(SUM(CASE WHEN status = 'completed' THEN duration_minutes ELSE 0 END), 0) AS total_minutes
@@ -467,7 +471,12 @@ export async function getCashReconciliation(
 				COALESCE(SUM(CASE WHEN ct.type = 'withdrawal' THEN ct.amount_cents ELSE 0 END), 0) AS withdrawal_cents,
 				COALESCE(SUM(CASE WHEN ct.type = 'deposit' THEN ct.amount_cents ELSE 0 END), 0) AS deposit_cents,
 				COALESCE(SUM(CASE WHEN ct.type = 'adjustment' THEN ct.amount_cents ELSE 0 END), 0) AS adjustment_cents,
-				COUNT(DISTINCT ct.rental_session_id) AS rental_count
+				COUNT(DISTINCT ct.rental_session_id) AS rental_count,
+				(SELECT COUNT(*) FROM rental_sessions rs2
+					WHERE rs2.payment_method = 'courtesy'
+					AND rs2.status = 'completed'
+					AND rs2.cash_register_id = cr.id
+				) AS courtesy_count
 			FROM cash_registers cr
 			JOIN users u1 ON cr.opened_by = u1.id
 			LEFT JOIN users u2 ON cr.closed_by = u2.id
@@ -700,7 +709,7 @@ export async function getUnpaidSessions(
 			LEFT JOIN children ch ON rs.child_id = ch.id
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'completed'
-				AND rs.paid = 0
+				AND (rs.paid = 0 OR rs.payment_method = 'courtesy')
 				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)

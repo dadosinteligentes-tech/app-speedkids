@@ -186,7 +186,7 @@ export const FinancialSummaryView: FC<Props> = ({
 			)}
 
 			{/* Alerts row */}
-			<div class="grid grid-cols-2 gap-4 mb-6">
+			<div class="grid grid-cols-3 gap-4 mb-6">
 				<a
 					href={`/admin/reports/unpaid?from=${from}&to=${to}`}
 					class={`rounded-sk p-3 text-center block hover:opacity-80 ${summary.unpaid_count > 0 ? "bg-sk-danger-light" : "bg-sk-green-light"}`}
@@ -196,6 +196,15 @@ export const FinancialSummaryView: FC<Props> = ({
 						class={`text-lg font-display font-bold ${summary.unpaid_count > 0 ? "text-sk-danger" : "text-sk-green-dark"}`}
 					>
 						{summary.unpaid_count}
+					</p>
+				</a>
+				<a
+					href={`/admin/reports/unpaid?from=${from}&to=${to}`}
+					class="bg-sk-purple-light rounded-sk p-3 text-center block hover:opacity-80"
+				>
+					<p class="text-xs font-body text-sk-muted">Cortesias</p>
+					<p class="text-lg font-display font-bold text-sk-purple">
+						{summary.courtesy_count}
 					</p>
 				</a>
 				<a

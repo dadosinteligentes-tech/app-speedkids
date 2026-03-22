@@ -90,6 +90,9 @@ export const CashReconciliationView: FC<Props> = ({
 								<th class="px-3 py-3 font-medium text-right hidden lg:table-cell">
 									Pagamentos
 								</th>
+								<th class="px-3 py-3 font-medium text-center hidden md:table-cell">
+									Cortesias
+								</th>
 								<th class="px-3 py-3 font-medium text-right">Esperado</th>
 								<th class="px-3 py-3 font-medium text-right">Declarado</th>
 								<th class="px-3 py-3 font-medium text-right">Diferenca</th>
@@ -112,6 +115,9 @@ export const CashReconciliationView: FC<Props> = ({
 									</td>
 									<td class="px-3 py-2 text-right text-sk-muted hidden lg:table-cell">
 										{formatCurrency(r.rental_payment_cents)}
+									</td>
+									<td class="px-3 py-2 text-center text-sk-purple hidden md:table-cell">
+										{r.courtesy_count > 0 ? r.courtesy_count : "—"}
 									</td>
 									<td class="px-3 py-2 text-right">
 										{r.expected_balance_cents !== null

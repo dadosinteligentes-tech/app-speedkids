@@ -878,6 +878,9 @@ const dashboardControllerScript = `
 
 	// ---- Cortesia ----
 	window.showWaiveConfirm = function() {
+		var session = window.__SK_PAYING_SESSION__;
+		var waiveAmount = document.getElementById('waive-amount');
+		if (waiveAmount && session) waiveAmount.textContent = fmtBRL(session.amount_cents);
 		showPaymentScreen('waive');
 	};
 
@@ -890,6 +893,13 @@ const dashboardControllerScript = `
 		if (!session) return;
 		var reason = document.getElementById('waive-reason').value.trim();
 		if (!reason) { alert('Informe o motivo da cortesia'); return; }
+
+		// Prepaid session not yet created — just close the modal
+		if (!session.id || session._prepaid) {
+			document.getElementById('payment-modal').classList.add('hidden');
+			window.__SK_PAYING_SESSION__ = null;
+			return;
+		}
 
 		api('POST', '/rentals/' + session.id + '/pay', {
 			payment_method: 'courtesy',
