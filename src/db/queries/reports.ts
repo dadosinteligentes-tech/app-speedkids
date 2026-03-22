@@ -3,6 +3,14 @@ import { toBrazilDate } from "../../lib/timezone";
 /** Brazil UTC offset for SQL datetime adjustments. Fixed at -3 (no DST since 2019). */
 const BZ = "-3 hours";
 
+/**
+ * SQL fragments to convert Brazil-date query params (YYYY-MM-DD) to UTC boundaries.
+ * from='2026-03-22' BRT → '2026-03-22 03:00:00' UTC
+ * to  ='2026-03-22' BRT → '2026-03-23 03:00:00' UTC (exclusive upper bound)
+ */
+const DT_FROM = "datetime(?, '+3 hours')";
+const DT_TO = "datetime(date(?, '+1 day'), '+3 hours')";
+
 // ── Report Query Interfaces ──
 
 export interface FinancialSummary {
@@ -13,6 +21,8 @@ export interface FinancialSummary {
 	credit_cents: number;
 	debit_cents: number;
 	pix_cents: number;
+	mixed_cents: number;
+	courtesy_cents: number;
 	unpaid_count: number;
 	cancelled_count: number;
 	total_minutes: number;
@@ -163,6 +173,8 @@ const EMPTY_FINANCIAL: FinancialSummary = {
 	credit_cents: 0,
 	debit_cents: 0,
 	pix_cents: 0,
+	mixed_cents: 0,
+	courtesy_cents: 0,
 	unpaid_count: 0,
 	cancelled_count: 0,
 	total_minutes: 0,
@@ -183,11 +195,13 @@ export async function getFinancialSummary(
 				COALESCE(SUM(CASE WHEN payment_method = 'credit' AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS credit_cents,
 				COALESCE(SUM(CASE WHEN payment_method = 'debit'  AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS debit_cents,
 				COALESCE(SUM(CASE WHEN payment_method = 'pix'    AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS pix_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'mixed'    AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS mixed_cents,
+				COALESCE(SUM(CASE WHEN payment_method = 'courtesy' AND paid = 1 THEN amount_cents ELSE 0 END), 0) AS courtesy_cents,
 				COUNT(CASE WHEN status = 'completed' AND paid = 0 THEN 1 END) AS unpaid_count,
 				COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled_count,
 				COALESCE(SUM(CASE WHEN status = 'completed' THEN duration_minutes ELSE 0 END), 0) AS total_minutes
 			FROM rental_sessions
-			WHERE start_time >= ? AND start_time < date(?, '+1 day')`,
+			WHERE start_time >= ${DT_FROM} AND start_time < ${DT_TO}`,
 		)
 		.bind(from, to)
 		.first<FinancialSummary>();
@@ -207,7 +221,7 @@ export async function getDailyRevenueTrend(
 				COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents,
 				COUNT(*) AS rental_count
 			FROM rental_sessions
-			WHERE start_time >= ? AND start_time < date(?, '+1 day')
+			WHERE start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				AND status = 'completed'
 			GROUP BY date(start_time, '${BZ}')
 			ORDER BY day ASC`,
@@ -235,8 +249,8 @@ export async function getPackageRevenue(
 			LEFT JOIN rental_sessions rs
 				ON rs.package_id = p.id
 				AND rs.status = 'completed'
-				AND rs.start_time >= ?
-				AND rs.start_time < date(?, '+1 day')
+				AND rs.start_time >= ${DT_FROM}
+				AND rs.start_time < ${DT_TO}
 			GROUP BY p.id, p.name, p.duration_minutes, p.price_cents
 			ORDER BY revenue_cents DESC`,
 		)
@@ -268,8 +282,8 @@ export async function getAssetUtilization(
 			LEFT JOIN rental_sessions rs
 				ON rs.asset_id = a.id
 				AND rs.status = 'completed'
-				AND rs.start_time >= ?
-				AND rs.start_time < date(?, '+1 day')
+				AND rs.start_time >= ${DT_FROM}
+				AND rs.start_time < ${DT_TO}
 			WHERE a.status != 'retired'
 			GROUP BY a.id, a.name, a.asset_type
 			ORDER BY revenue_cents DESC`,
@@ -308,7 +322,7 @@ export async function getPeakHours(
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
 				WHERE status = 'completed'
-					AND start_time >= ? AND start_time < date(?, '+1 day')
+					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				GROUP BY hour
 				ORDER BY hour ASC`,
 			)
@@ -323,7 +337,7 @@ export async function getPeakHours(
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
 				WHERE status = 'completed'
-					AND start_time >= ? AND start_time < date(?, '+1 day')
+					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				GROUP BY dow
 				ORDER BY dow ASC`,
 			)
@@ -350,8 +364,9 @@ export async function getOperatorPerformance(
 			FROM users u
 			LEFT JOIN rental_sessions rs
 				ON rs.attendant_id = u.id
-				AND rs.start_time >= ?
-				AND rs.start_time < date(?, '+1 day')
+				AND rs.status = 'completed'
+				AND rs.start_time >= ${DT_FROM}
+				AND rs.start_time < ${DT_TO}
 			WHERE u.active = 1
 			GROUP BY u.id, u.name, u.role
 			ORDER BY revenue_cents DESC`,
@@ -374,7 +389,7 @@ export async function getOperatorPerformance(
 					(julianday(COALESCE(ended_at, datetime('now'))) - julianday(started_at)) * 24
 				), 0) AS shift_hours
 			FROM shifts
-			WHERE started_at >= ? AND started_at < date(?, '+1 day')
+			WHERE started_at >= ${DT_FROM} AND started_at < ${DT_TO}
 			GROUP BY user_id`,
 		)
 		.bind(from, to)
@@ -390,8 +405,8 @@ export async function getOperatorPerformance(
 				)), 0) AS cash_discrepancy_cents
 			FROM cash_registers
 			WHERE status = 'closed'
-				AND opened_at >= ?
-				AND opened_at < date(?, '+1 day')
+				AND opened_at >= ${DT_FROM}
+				AND opened_at < ${DT_TO}
 				AND closing_balance_cents IS NOT NULL
 				AND expected_balance_cents IS NOT NULL
 			GROUP BY opened_by`,
@@ -426,7 +441,7 @@ export async function getCashReconciliation(
 	const countResult = await db
 		.prepare(
 			`SELECT COUNT(*) AS total FROM cash_registers
-			WHERE opened_at >= ? AND opened_at < date(?, '+1 day')`,
+			WHERE opened_at >= ${DT_FROM} AND opened_at < ${DT_TO}`,
 		)
 		.bind(from, to)
 		.first<{ total: number }>();
@@ -457,7 +472,7 @@ export async function getCashReconciliation(
 			JOIN users u1 ON cr.opened_by = u1.id
 			LEFT JOIN users u2 ON cr.closed_by = u2.id
 			LEFT JOIN cash_transactions ct ON ct.cash_register_id = cr.id
-			WHERE cr.opened_at >= ? AND cr.opened_at < date(?, '+1 day')
+			WHERE cr.opened_at >= ${DT_FROM} AND cr.opened_at < ${DT_TO}
 			GROUP BY cr.id
 			ORDER BY cr.opened_at DESC
 			LIMIT ? OFFSET ?`,
@@ -491,8 +506,8 @@ export async function getCustomerAnalysis(
 					FROM customers c
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
-						AND rs.start_time >= ?
-						AND rs.start_time < date(?, '+1 day')
+						AND rs.start_time >= ${DT_FROM}
+						AND rs.start_time < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY revenue_cents DESC
 					LIMIT 10`,
@@ -511,8 +526,8 @@ export async function getCustomerAnalysis(
 					FROM customers c
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
-						AND rs.start_time >= ?
-						AND rs.start_time < date(?, '+1 day')
+						AND rs.start_time >= ${DT_FROM}
+						AND rs.start_time < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY rental_count DESC
 					LIMIT 10`,
@@ -535,8 +550,8 @@ export async function getCustomerAnalysis(
 					FROM rental_sessions rs
 					JOIN children ch ON rs.child_id = ch.id
 					WHERE rs.status = 'completed'
-						AND rs.start_time >= ?
-						AND rs.start_time < date(?, '+1 day')
+						AND rs.start_time >= ${DT_FROM}
+						AND rs.start_time < ${DT_TO}
 					GROUP BY age_group
 					ORDER BY age_group ASC`,
 				)
@@ -553,7 +568,7 @@ export async function getCustomerAnalysis(
 							SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END) AS customer_revenue
 						FROM rental_sessions
 						WHERE status = 'completed'
-							AND start_time >= ? AND start_time < date(?, '+1 day')
+							AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 							AND customer_id IS NOT NULL
 						GROUP BY customer_id
 					)`,
@@ -570,7 +585,7 @@ export async function getCustomerAnalysis(
 						WHERE status = 'completed' AND customer_id IS NOT NULL
 						GROUP BY customer_id
 					)
-					WHERE first_rental >= ? AND first_rental < date(?, '+1 day')`,
+					WHERE first_rental >= ${DT_FROM} AND first_rental < ${DT_TO}`,
 				)
 				.bind(from, to)
 				.first<{ new_customers: number }>(),
@@ -622,7 +637,7 @@ export async function getShiftReport(
 				AND rs.start_time >= s.started_at
 				AND (s.ended_at IS NULL OR rs.start_time <= s.ended_at)
 				AND rs.status = 'completed'
-			WHERE s.started_at >= ? AND s.started_at < date(?, '+1 day')
+			WHERE s.started_at >= ${DT_FROM} AND s.started_at < ${DT_TO}
 			GROUP BY s.id
 			ORDER BY s.started_at DESC
 		`)
@@ -685,8 +700,8 @@ export async function getUnpaidSessions(
 			LEFT JOIN children ch ON rs.child_id = ch.id
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'completed'
-				AND (rs.paid = 0 OR rs.payment_method = 'courtesy')
-				AND rs.start_time >= ? AND rs.start_time < date(?, '+1 day')
+				AND rs.paid = 0
+				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
 		.bind(from, to)
@@ -712,7 +727,7 @@ export async function getCancelledSessions(
 			LEFT JOIN children ch ON rs.child_id = ch.id
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'cancelled'
-				AND rs.start_time >= ? AND rs.start_time < date(?, '+1 day')
+				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
 		.bind(from, to)
@@ -759,7 +774,7 @@ export async function getProductSalesSummary(
 				COALESCE(SUM(CASE WHEN payment_method = 'pix' THEN total_cents ELSE 0 END), 0) AS pix_cents
 			FROM product_sales
 			WHERE paid = 1
-				AND created_at >= ? AND created_at < date(?, '+1 day')`,
+				AND created_at >= ${DT_FROM} AND created_at < ${DT_TO}`,
 		)
 		.bind(from, to)
 		.first<ProductSalesSummary>();
@@ -789,14 +804,17 @@ export async function getProductRevenue(
 				p.name AS product_name,
 				p.category,
 				p.price_cents,
-				COALESCE(SUM(psi.quantity), 0) AS quantity_sold,
-				COALESCE(SUM(psi.total_cents), 0) AS revenue_cents
+				COALESCE(SUM(filtered.quantity), 0) AS quantity_sold,
+				COALESCE(SUM(filtered.total_cents), 0) AS revenue_cents
 			FROM products p
-			LEFT JOIN product_sale_items psi ON psi.product_id = p.id
-			LEFT JOIN product_sales ps ON ps.id = psi.product_sale_id
-				AND ps.paid = 1
-				AND ps.created_at >= ?
-				AND ps.created_at < date(?, '+1 day')
+			LEFT JOIN (
+				SELECT psi.product_id, psi.quantity, psi.total_cents
+				FROM product_sale_items psi
+				JOIN product_sales ps ON ps.id = psi.product_sale_id
+					AND ps.paid = 1
+					AND ps.created_at >= ${DT_FROM}
+					AND ps.created_at < ${DT_TO}
+			) filtered ON filtered.product_id = p.id
 			GROUP BY p.id, p.name, p.category, p.price_cents
 			ORDER BY revenue_cents DESC`,
 		)
@@ -840,7 +858,7 @@ export async function getProductSaleDetail(
 		.prepare(
 			`SELECT COUNT(*) AS total FROM product_sales ps
 			WHERE ps.paid = 1
-				AND ps.created_at >= ? AND ps.created_at < date(?, '+1 day')
+				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
 				${extraWhere}`,
 		)
 		.bind(...bindings)
@@ -862,7 +880,7 @@ export async function getProductSaleDetail(
 			LEFT JOIN users u ON ps.attendant_id = u.id
 			LEFT JOIN product_sale_items psi ON psi.product_sale_id = ps.id
 			WHERE ps.paid = 1
-				AND ps.created_at >= ? AND ps.created_at < date(?, '+1 day')
+				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
 				${extraWhere}
 			GROUP BY ps.id
 			ORDER BY ps.created_at DESC
@@ -919,8 +937,8 @@ export async function getDetailSessions(
 	to: string,
 	limit = 50,
 	offset = 0,
-): Promise<{ sessions: DetailSession[]; total: number; context: DetailContext }> {
-	const baseWhere = "rs.start_time >= ? AND rs.start_time < date(?, '+1 day') AND rs.status = 'completed'";
+): Promise<{ sessions: DetailSession[]; total: number; total_revenue_cents: number; context: DetailContext }> {
+	const baseWhere = `rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO} AND rs.status = 'completed'`;
 	let extraWhere = "";
 	let bindings: (string | number)[] = [from, to];
 	const context: DetailContext = { label: "", subLabel: "" };
@@ -939,7 +957,7 @@ export async function getDetailSessions(
 			bindings.push(filter.id);
 			break;
 		case "day":
-			extraWhere = "AND date(rs.start_time) = ?";
+			extraWhere = `AND date(rs.start_time, '${BZ}') = ?`;
 			bindings.push(filter.day);
 			break;
 		case "shift": {
@@ -947,7 +965,7 @@ export async function getDetailSessions(
 				.prepare("SELECT id, user_id, started_at, ended_at FROM shifts WHERE id = ?")
 				.bind(filter.id)
 				.first<{ id: number; user_id: number; started_at: string; ended_at: string | null }>();
-			if (!shift) return { sessions: [], total: 0, context: { label: "Turno não encontrado", subLabel: "" } };
+			if (!shift) return { sessions: [], total: 0, total_revenue_cents: 0, context: { label: "Turno não encontrado", subLabel: "" } };
 			bindings = [from, to, shift.user_id, shift.started_at];
 			extraWhere = "AND rs.attendant_id = ? AND rs.start_time >= ?";
 			if (shift.ended_at) {
@@ -997,7 +1015,7 @@ export async function getDetailSessions(
 			break;
 		}
 		case "payment_method": {
-			const methodLabels: Record<string, string> = { cash: "Dinheiro", credit: "Crédito", debit: "Débito", pix: "Pix" };
+			const methodLabels: Record<string, string> = { cash: "Dinheiro", credit: "Crédito", debit: "Débito", pix: "Pix", mixed: "Misto", courtesy: "Cortesia" };
 			context.label = `Pagamento: ${methodLabels[filter.method] ?? filter.method}`;
 			break;
 		}
@@ -1015,9 +1033,9 @@ export async function getDetailSessions(
 	}
 
 	const countRow = await db
-		.prepare(`SELECT COUNT(*) AS total FROM rental_sessions rs WHERE ${baseWhere} ${extraWhere}`)
+		.prepare(`SELECT COUNT(*) AS total, COALESCE(SUM(rs.amount_cents), 0) AS total_revenue_cents FROM rental_sessions rs WHERE ${baseWhere} ${extraWhere}`)
 		.bind(...bindings)
-		.first<{ total: number }>();
+		.first<{ total: number; total_revenue_cents: number }>();
 
 	const { results } = await db
 		.prepare(`
@@ -1040,5 +1058,5 @@ export async function getDetailSessions(
 		.bind(...bindings, limit, offset)
 		.all<DetailSession>();
 
-	return { sessions: results, total: countRow?.total ?? 0, context };
+	return { sessions: results, total: countRow?.total ?? 0, total_revenue_cents: countRow?.total_revenue_cents ?? 0, context };
 }

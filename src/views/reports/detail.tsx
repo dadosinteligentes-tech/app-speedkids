@@ -6,6 +6,7 @@ import { toBrazilDateTime, toBrazilDate } from "../../lib/timezone";
 interface ReportDetailProps {
 	sessions: DetailSession[];
 	total: number;
+	totalRevenueCents: number;
 	context: DetailContext;
 	page: number;
 	from: string;
@@ -36,10 +37,9 @@ const PAYMENT_LABELS: Record<string, string> = {
 const PER_PAGE = 50;
 
 export const ReportDetailView: FC<ReportDetailProps> = ({
-	sessions, total, context, page, from, to, filter, filterParams, backUrl, user,
+	sessions, total, totalRevenueCents, context, page, from, to, filter, filterParams, backUrl, user,
 }) => {
 	const totalPages = Math.ceil(total / PER_PAGE);
-	const totalRevenue = sessions.reduce((s, r) => s + r.amount_cents, 0);
 
 	const baseQs = `filter=${filter}${filterParams}&from=${from}&to=${to}`;
 
@@ -68,12 +68,12 @@ export const ReportDetailView: FC<ReportDetailProps> = ({
 				</div>
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
 					<p class="text-xs text-sk-muted font-body mb-1">Receita</p>
-					<p class="text-xl font-display font-bold text-sk-orange">{formatCurrency(totalRevenue)}</p>
+					<p class="text-xl font-display font-bold text-sk-orange">{formatCurrency(totalRevenueCents)}</p>
 				</div>
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 text-center">
 					<p class="text-xs text-sk-muted font-body mb-1">Ticket Médio</p>
 					<p class="text-xl font-display font-bold text-sk-blue-dark">
-						{formatCurrency(sessions.length > 0 ? Math.round(totalRevenue / sessions.length) : 0)}
+						{formatCurrency(total > 0 ? Math.round(totalRevenueCents / total) : 0)}
 					</p>
 				</div>
 			</div>
@@ -117,7 +117,9 @@ export const ReportDetailView: FC<ReportDetailProps> = ({
 										<td class="px-3 py-2 text-right font-medium">
 											{formatCurrency(s.amount_cents)}
 											{s.overtime_cents > 0 && (
-												<span class="text-xs text-sk-orange ml-1">(+{formatCurrency(s.overtime_cents)})</span>
+												<span class="text-xs text-sk-orange ml-1" title="Valor já incluso no total">
+													(incl. {formatCurrency(s.overtime_cents)} extra)
+												</span>
 											)}
 										</td>
 										<td class="px-3 py-2 hidden md:table-cell text-sk-muted text-xs">

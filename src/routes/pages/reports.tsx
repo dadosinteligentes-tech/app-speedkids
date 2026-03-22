@@ -308,7 +308,7 @@ reportPages.get("/detail", async (c) => {
 		filterParams = `&id=${id}`;
 	}
 
-	const { sessions, total, context } = await getDetailSessions(
+	const { sessions, total, total_revenue_cents, context } = await getDetailSessions(
 		c.env.DB, filter, from, to, perPage, (page - 1) * perPage,
 	);
 
@@ -316,6 +316,7 @@ reportPages.get("/detail", async (c) => {
 		<ReportDetailView
 			sessions={sessions}
 			total={total}
+			totalRevenueCents={total_revenue_cents}
 			context={context}
 			page={page}
 			from={from}

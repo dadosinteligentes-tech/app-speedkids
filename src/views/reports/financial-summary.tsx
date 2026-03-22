@@ -29,7 +29,9 @@ export const FinancialSummaryView: FC<Props> = ({
 		summary.cash_cents +
 		summary.credit_cents +
 		summary.debit_cents +
-		summary.pix_cents;
+		summary.pix_cents +
+		summary.mixed_cents +
+		summary.courtesy_cents;
 
 	return (
 		<ReportLayout
@@ -124,6 +126,34 @@ export const FinancialSummaryView: FC<Props> = ({
 						color="bg-sk-purple"
 					/>
 				</a>
+				{summary.mixed_cents > 0 && (
+					<a href={`/admin/reports/detail?filter=payment_method&method=mixed&from=${from}&to=${to}`} class="block hover:opacity-80">
+						<HBar
+							label="Misto"
+							value={summary.mixed_cents}
+							pct={
+								paymentTotal > 0
+									? Math.round((summary.mixed_cents / paymentTotal) * 100)
+									: 0
+							}
+							display={formatCurrency(summary.mixed_cents)}
+							color="bg-sk-blue-dark"
+						/>
+					</a>
+				)}
+				{summary.courtesy_cents > 0 && (
+					<HBar
+						label="Cortesia"
+						value={summary.courtesy_cents}
+						pct={
+							paymentTotal > 0
+								? Math.round((summary.courtesy_cents / paymentTotal) * 100)
+								: 0
+						}
+						display={formatCurrency(summary.courtesy_cents)}
+						color="bg-gray-400"
+					/>
+				)}
 			</div>
 
 			{/* Product Sales */}
