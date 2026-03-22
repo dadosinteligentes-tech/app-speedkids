@@ -1,19 +1,17 @@
 import { Hono } from "hono";
-import { setCookie, deleteCookie } from "hono/cookie";
+import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import type { AppEnv } from "../../types";
 import { getUserByEmail } from "../../db/queries/users";
 import { createAuthSession, deleteAuthSession } from "../../db/queries/auth";
 import { verifyPassword } from "../../lib/crypto";
 import { auditLog } from "../../lib/logger";
+import { validateJson } from "../../lib/request";
+import { loginSchema } from "../../lib/validation";
 
 export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post("/login", async (c) => {
-	const body = await c.req.json<{ email: string; password: string }>();
-
-	if (!body.email || !body.password) {
-		return c.json({ error: "Email e senha são obrigatórios" }, 400);
-	}
+	const body = await validateJson(c, loginSchema);
 
 	const user = await getUserByEmail(c.env.DB, body.email);
 	if (!user) {
@@ -50,7 +48,7 @@ authRoutes.post("/login", async (c) => {
 });
 
 authRoutes.post("/logout", async (c) => {
-	const sessionId = c.req.header("Cookie")?.match(/sk_session=([^;]+)/)?.[1];
+	const sessionId = getCookie(c, "sk_session");
 	if (sessionId) {
 		await deleteAuthSession(c.env.DB, sessionId);
 	}

@@ -2,10 +2,11 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { createProductSale, createSaleItems, getProductSaleById, getRecentSales } from "../../db/queries/product-sales";
 import { getProductById } from "../../db/queries/products";
-import { getOpenRegister, addTransaction, saveDenominations } from "../../db/queries/cash-registers";
-import { updateCustomerStats } from "../../db/queries/customers";
+import { getOpenRegister } from "../../db/queries/cash-registers";
 import { auditLog } from "../../lib/logger";
-import type { DenominationMap } from "../../lib/denominations";
+import { recordPayment } from "../../services/payment";
+import { validateJson } from "../../lib/request";
+import { productSaleSchema } from "../../lib/validation";
 
 export const productSaleRoutes = new Hono<AppEnv>();
 
@@ -20,38 +21,11 @@ productSaleRoutes.get("/:id", async (c) => {
 	return c.json(sale);
 });
 
-function toDenomMap(obj: Record<string, number> | undefined): DenominationMap | null {
-	if (!obj) return null;
-	const map: DenominationMap = {};
-	for (const [k, v] of Object.entries(obj)) {
-		if (v > 0) map[Number(k)] = v;
-	}
-	return Object.keys(map).length > 0 ? map : null;
-}
-
 productSaleRoutes.post("/", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Nao autorizado" }, 401);
 
-	const body = await c.req.json<{
-		items: Array<{ product_id: number; quantity: number }>;
-		payment_method: string;
-		customer_id?: number;
-		notes?: string;
-		discount_cents?: number;
-		payment_denominations?: Record<string, number>;
-		change_denominations?: Record<string, number>;
-		payments?: Array<{
-			method: string;
-			amount_cents: number;
-			payment_denominations?: Record<string, number>;
-			change_denominations?: Record<string, number>;
-		}>;
-	}>();
-
-	if (!body.items || body.items.length === 0) {
-		return c.json({ error: "Nenhum item na venda" }, 400);
-	}
+	const body = await validateJson(c, productSaleSchema);
 
 	const register = await getOpenRegister(c.env.DB);
 	if (!register) {
@@ -63,7 +37,6 @@ productSaleRoutes.post("/", async (c) => {
 	let totalCents = 0;
 
 	for (const item of body.items) {
-		if (item.quantity <= 0) continue;
 		const product = await getProductById(c.env.DB, item.product_id);
 		if (!product) return c.json({ error: `Produto ${item.product_id} nao encontrado` }, 404);
 		if (!product.active) return c.json({ error: `Produto "${product.name}" esta inativo` }, 400);
@@ -111,78 +84,20 @@ productSaleRoutes.post("/", async (c) => {
 
 	await createSaleItems(c.env.DB, sale.id, resolvedItems);
 
-	// Skip cash transactions for zero-value sales (100% discount)
-	if (totalCents <= 0) {
-		// No cash transaction needed — sale is fully discounted
-	} else if (isMixed && body.payments) {
-		for (const payment of body.payments) {
-			if (payment.amount_cents <= 0) continue;
-			const tx = await addTransaction(c.env.DB, {
-				cash_register_id: register.id,
-				product_sale_id: sale.id,
-				type: "product_sale",
-				amount_cents: payment.amount_cents,
-				payment_method: payment.method,
-				recorded_by: user.id,
-			});
-
-			if (tx && payment.method === "cash") {
-				const payDenoms = toDenomMap(payment.payment_denominations);
-				if (payDenoms) {
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "payment_in",
-						denominations: payDenoms,
-					});
-				}
-				const changeDenoms = toDenomMap(payment.change_denominations);
-				if (changeDenoms) {
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "change_out",
-						denominations: changeDenoms,
-					});
-				}
-			}
-		}
-	} else {
-		const tx = await addTransaction(c.env.DB, {
-			cash_register_id: register.id,
-			product_sale_id: sale.id,
-			type: "product_sale",
-			amount_cents: totalCents,
-			payment_method: body.payment_method,
-			recorded_by: user.id,
-		});
-
-		if (tx && body.payment_method === "cash") {
-			const payDenoms = toDenomMap(body.payment_denominations);
-			if (payDenoms) {
-				await saveDenominations(c.env.DB, {
-					cash_register_id: register.id,
-					cash_transaction_id: tx.id,
-					event_type: "payment_in",
-					denominations: payDenoms,
-				});
-			}
-			const changeDenoms = toDenomMap(body.change_denominations);
-			if (changeDenoms) {
-				await saveDenominations(c.env.DB, {
-					cash_register_id: register.id,
-					cash_transaction_id: tx.id,
-					event_type: "change_out",
-					denominations: changeDenoms,
-				});
-			}
-		}
-	}
-
-	// Update customer stats
-	if (body.customer_id) {
-		await updateCustomerStats(c.env.DB, body.customer_id, totalCents);
-	}
+	// Record payment (handles single, split, zero-amount, and customer stats)
+	await recordPayment({
+		db: c.env.DB,
+		registerId: register.id,
+		recordedBy: user.id,
+		productSaleId: sale.id,
+		transactionType: "product_sale",
+		amountCents: totalCents,
+		paymentMethod,
+		paymentDenominations: body.payment_denominations,
+		changeDenominations: body.change_denominations,
+		payments: body.payments,
+		customerId: body.customer_id,
+	});
 
 	await auditLog(c, "product_sale.create", "product_sale", sale.id, {
 		total_cents: totalCents,

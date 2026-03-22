@@ -148,17 +148,16 @@ export async function stopSession(db: D1Database, id: string, endTime: string): 
 
 	const finalAmount = session.amount_cents + overtimeCents;
 
-	// Update — use column names that work before and after migration 0014
-	const hasOvertimeCols = overtimeCents > 0;
-	const sql = hasOvertimeCols
-		? "UPDATE rental_sessions SET status = 'completed', end_time = ?, pause_time = NULL, total_paused_ms = ?, overtime_minutes = ?, overtime_cents = ?, amount_cents = ?, updated_at = datetime('now') WHERE id = ? AND status IN ('running', 'paused')"
-		: "UPDATE rental_sessions SET status = 'completed', end_time = ?, pause_time = NULL, total_paused_ms = ?, amount_cents = ?, updated_at = datetime('now') WHERE id = ? AND status IN ('running', 'paused')";
-
-	if (hasOvertimeCols) {
-		await db.prepare(sql).bind(endTime, totalPaused, overtimeMinutes, overtimeCents, finalAmount, id).run();
-	} else {
-		await db.prepare(sql).bind(endTime, totalPaused, finalAmount, id).run();
-	}
+	// Always set overtime columns — zero values are valid and avoid fragile branching
+	await db
+		.prepare(`
+			UPDATE rental_sessions
+			SET status = 'completed', end_time = ?, pause_time = NULL, total_paused_ms = ?,
+			    overtime_minutes = ?, overtime_cents = ?, amount_cents = ?, updated_at = datetime('now')
+			WHERE id = ? AND status IN ('running', 'paused')
+		`)
+		.bind(endTime, totalPaused, overtimeMinutes, overtimeCents, finalAmount, id)
+		.run();
 
 	return db.prepare("SELECT * FROM rental_sessions WHERE id = ?").bind(id).first<RentalSession>();
 }
