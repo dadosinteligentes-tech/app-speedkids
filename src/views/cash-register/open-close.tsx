@@ -417,6 +417,55 @@ function addTx(registerId) {
 							)}
 						</div>
 
+						{/* Vendas do Dia */}
+						{summary && (
+							<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-4 mb-4">
+								<h3 class="font-display font-bold text-sm text-sk-text mb-3">Vendas do Dia</h3>
+
+								{/* Total */}
+								<div class="bg-sk-blue-light rounded-sk p-3 text-center mb-3">
+									<p class="text-xs text-sk-muted font-body">Total faturado</p>
+									<p class="text-2xl font-display font-bold text-sk-blue-dark">
+										{formatCurrency(
+											summary.cash_payments_cents +
+											summary.pix_payments_cents +
+											summary.debit_payments_cents +
+											summary.credit_payments_cents
+										)}
+									</p>
+								</div>
+
+								{/* Breakdown por método */}
+								<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm mb-3">
+									<div class="bg-sk-green-light rounded-sk p-2">
+										<p class="text-xs text-sk-muted font-body">Dinheiro</p>
+										<p class="font-display font-bold text-sk-green-dark">{formatCurrency(summary.cash_payments_cents)}</p>
+									</div>
+									<div class="bg-sk-purple-light rounded-sk p-2">
+										<p class="text-xs text-sk-muted font-body">PIX</p>
+										<p class="font-display font-bold text-sk-purple">{formatCurrency(summary.pix_payments_cents)}</p>
+									</div>
+									<div class="bg-sk-blue-light rounded-sk p-2">
+										<p class="text-xs text-sk-muted font-body">Debito</p>
+										<p class="font-display font-bold text-sk-blue-dark">{formatCurrency(summary.debit_payments_cents)}</p>
+									</div>
+									<div class="bg-sk-blue-light/60 rounded-sk p-2">
+										<p class="text-xs text-sk-muted font-body">Credito</p>
+										<p class="font-display font-bold text-sk-blue-dark">{formatCurrency(summary.credit_payments_cents)}</p>
+									</div>
+								</div>
+
+								{/* Contagens */}
+								<div class="text-center">
+									<span class="text-xs text-sk-muted font-body">
+										{summary.rental_count} locacoes
+										{summary.product_sale_count > 0 && <> &middot; {summary.product_sale_count} produtos</>}
+										{summary.courtesy_count > 0 && <> &middot; {summary.courtesy_count} cortesias</>}
+									</span>
+								</div>
+							</div>
+						)}
+
 						{/* Denomination Inventory Panel */}
 						<div class="bg-sk-surface rounded-sk-xl shadow-sk-sm p-4 mb-4">
 							<h3 class="font-display font-bold text-sm text-sk-text mb-2">Composicao do Caixa</h3>
