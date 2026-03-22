@@ -1,14 +1,26 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
-import { getActiveSessionByAsset, getActiveSessions, getSessionById, createSession, pauseSession, resumeSession, stopSession, paySession, updateSessionDuration, extendSession } from "../../db/queries/rentals";
+import {
+	getActiveSessionByAsset,
+	getActiveSessions,
+	getSessionById,
+	createSession,
+	pauseSession,
+	resumeSession,
+	stopSession,
+	paySession,
+	updateSessionDuration,
+	extendSession,
+} from "../../db/queries/rentals";
 import { getPackageById } from "../../db/queries/packages";
 import { getAssetById, updateAssetStatus } from "../../db/queries/assets";
 import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
-import { getOpenRegister, addTransaction, saveDenominations } from "../../db/queries/cash-registers";
-import { updateCustomerStats } from "../../db/queries/customers";
-import type { DenominationMap } from "../../lib/denominations";
+import { getOpenRegister } from "../../db/queries/cash-registers";
 import { getBatteryByAssetId, updateBatteryStatus, updateBatteryDrain } from "../../db/queries/batteries";
+import { recordPayment } from "../../services/payment";
+import { validateJson } from "../../lib/request";
+import { rentalStartSchema, rentalPaySchema, rentalExtendSchema, rentalEditSchema } from "../../lib/validation";
 
 export const rentalRoutes = new Hono<AppEnv>();
 
@@ -24,24 +36,7 @@ rentalRoutes.get("/:id", async (c) => {
 });
 
 rentalRoutes.post("/start", async (c) => {
-	const body = await c.req.json<{
-		asset_id: number;
-		package_id: number;
-		id?: string;
-		customer_id?: number;
-		child_id?: number;
-		payment_method?: string;
-		paid?: boolean;
-		discount_cents?: number;
-		payment_denominations?: Record<string, number>;
-		change_denominations?: Record<string, number>;
-		payments?: Array<{
-			method: string;
-			amount_cents: number;
-			payment_denominations?: Record<string, number>;
-			change_denominations?: Record<string, number>;
-		}>;
-	}>();
+	const body = await validateJson(c, rentalStartSchema);
 
 	// Block rental if no cash register is open
 	const register = await getOpenRegister(c.env.DB);
@@ -49,20 +44,22 @@ rentalRoutes.post("/start", async (c) => {
 		return c.json({ error: "Abra o caixa antes de iniciar uma locacao", code: "NO_REGISTER" }, 400);
 	}
 
-	const asset = await getAssetById(c.env.DB, body.asset_id);
+	// Validate asset and package in parallel
+	const [asset, existing, pkg] = await Promise.all([
+		getAssetById(c.env.DB, body.asset_id),
+		getActiveSessionByAsset(c.env.DB, body.asset_id),
+		getPackageById(c.env.DB, body.package_id),
+	]);
+
 	if (!asset) return c.json({ error: "Asset not found" }, 404);
 	if (asset.status !== "available") return c.json({ error: "Asset not available" }, 400);
-
-	const existing = await getActiveSessionByAsset(c.env.DB, body.asset_id);
 	if (existing) return c.json({ error: "Asset already has active session" }, 400);
-
-	const pkg = await getPackageById(c.env.DB, body.package_id);
 	if (!pkg) return c.json({ error: "Package not found" }, 404);
 
 	const sessionId = body.id ?? crypto.randomUUID();
 	const now = new Date().toISOString();
-
 	const user = c.get("user");
+
 	await createSession(c.env.DB, {
 		id: sessionId,
 		asset_id: body.asset_id,
@@ -85,101 +82,30 @@ rentalRoutes.post("/start", async (c) => {
 		}
 	}
 
-	const prepaidDiscount = Math.min(body.discount_cents ?? 0, pkg.price_cents);
-
-	// Handle prepaid split payment (multiple methods)
-	if (body.payments && body.payments.length >= 2 && body.paid) {
-		const amount = Math.max(0, pkg.price_cents - prepaidDiscount);
-		await paySession(c.env.DB, sessionId, "mixed", amount, null);
-
-		if (register && amount > 0) {
-			for (const payment of body.payments) {
-				if (payment.amount_cents <= 0) continue;
-				const tx = await addTransaction(c.env.DB, {
-					cash_register_id: register.id,
-					rental_session_id: sessionId,
-					type: "rental_payment",
-					amount_cents: payment.amount_cents,
-					payment_method: payment.method,
-					recorded_by: user?.id ?? null,
-				});
-
-				if (tx && payment.method === "cash") {
-					if (payment.payment_denominations) {
-						const payDenoms: DenominationMap = Object.fromEntries(
-							Object.entries(payment.payment_denominations).map(([k, v]) => [Number(k), v]),
-						);
-						await saveDenominations(c.env.DB, {
-							cash_register_id: register.id,
-							cash_transaction_id: tx.id,
-							event_type: "payment_in",
-							denominations: payDenoms,
-						});
-					}
-					if (payment.change_denominations) {
-						const changeDenoms: DenominationMap = Object.fromEntries(
-							Object.entries(payment.change_denominations).map(([k, v]) => [Number(k), v]),
-						);
-						await saveDenominations(c.env.DB, {
-							cash_register_id: register.id,
-							cash_transaction_id: tx.id,
-							event_type: "change_out",
-							denominations: changeDenoms,
-						});
-					}
-				}
-			}
-		}
-
-		if (body.customer_id) {
-			await updateCustomerStats(c.env.DB, body.customer_id, amount);
-		}
-	}
-	// Handle prepaid single payment
-	else if (body.payment_method && body.paid) {
+	// Handle prepaid payment
+	if (body.paid) {
+		const prepaidDiscount = Math.min(body.discount_cents ?? 0, pkg.price_cents);
+		const isSplit = body.payments && body.payments.length >= 2;
 		const isCourtesy = body.payment_method === "courtesy";
 		const amount = isCourtesy ? 0 : Math.max(0, pkg.price_cents - prepaidDiscount);
+		const method = isSplit ? "mixed" : (body.payment_method ?? "cash");
 
-		await paySession(c.env.DB, sessionId, body.payment_method, amount, null);
+		await paySession(c.env.DB, sessionId, method, amount, null);
 
-		if (register && amount > 0 && !isCourtesy) {
-			const tx = await addTransaction(c.env.DB, {
-				cash_register_id: register.id,
-				rental_session_id: sessionId,
-				type: "rental_payment",
-				amount_cents: amount,
-				payment_method: body.payment_method,
-				recorded_by: user?.id ?? null,
+		if (amount > 0) {
+			await recordPayment({
+				db: c.env.DB,
+				registerId: register.id,
+				recordedBy: user?.id ?? null,
+				rentalSessionId: sessionId,
+				transactionType: "rental_payment",
+				amountCents: amount,
+				paymentMethod: method,
+				paymentDenominations: body.payment_denominations,
+				changeDenominations: body.change_denominations,
+				payments: body.payments,
+				customerId: body.customer_id,
 			});
-
-			if (tx && body.payment_method === "cash") {
-				if (body.payment_denominations) {
-					const payDenoms: DenominationMap = Object.fromEntries(
-						Object.entries(body.payment_denominations).map(([k, v]) => [Number(k), v]),
-					);
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "payment_in",
-						denominations: payDenoms,
-					});
-				}
-				if (body.change_denominations) {
-					const changeDenoms: DenominationMap = Object.fromEntries(
-						Object.entries(body.change_denominations).map(([k, v]) => [Number(k), v]),
-					);
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "change_out",
-						denominations: changeDenoms,
-					});
-				}
-			}
-		}
-
-		if (body.customer_id) {
-			await updateCustomerStats(c.env.DB, body.customer_id, amount);
 		}
 	}
 
@@ -190,7 +116,7 @@ rentalRoutes.post("/start", async (c) => {
 		child_id: body.child_id,
 		prepaid: body.paid ?? false,
 		payment_method: body.payments ? "mixed" : (body.payment_method ?? null),
-		discount_cents: prepaidDiscount > 0 ? prepaidDiscount : undefined,
+		discount_cents: (body.discount_cents ?? 0) > 0 ? body.discount_cents : undefined,
 	});
 
 	const session = await getSessionById(c.env.DB, sessionId);
@@ -243,19 +169,7 @@ rentalRoutes.post("/:id/stop", async (c) => {
 
 rentalRoutes.post("/:id/pay", async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<{
-		payment_method: string;
-		discount_cents?: number;
-		notes?: string;
-		payment_denominations?: Record<string, number>;
-		change_denominations?: Record<string, number>;
-		payments?: Array<{
-			method: string;
-			amount_cents: number;
-			payment_denominations?: Record<string, number>;
-			change_denominations?: Record<string, number>;
-		}>;
-	}>();
+	const body = await validateJson(c, rentalPaySchema);
 
 	const session = await getSessionById(c.env.DB, id);
 	if (!session) return c.json({ error: "Session not found" }, 404);
@@ -266,108 +180,47 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	const user = c.get("user");
 	const register = await getOpenRegister(c.env.DB);
 
-	// For prepaid sessions with overtime, the base was already paid — only overtime is due now
+	// For prepaid sessions with overtime, only overtime is due now
 	const isOvertimeOnly = session.paid === 1 && session.overtime_cents > 0;
 	const amountDue = isOvertimeOnly
 		? Math.max(0, session.overtime_cents - discount)
 		: finalAmount;
 
-	// Split payment: multiple methods
-	if (body.payments && body.payments.length >= 2) {
+	const isSplit = body.payments && body.payments.length >= 2;
+
+	// Validate split payment totals
+	if (isSplit && body.payments) {
 		const paymentsTotal = body.payments.reduce((sum, p) => sum + p.amount_cents, 0);
 		if (paymentsTotal !== amountDue) {
 			return c.json({ error: "Soma dos pagamentos nao confere com o total" }, 400);
 		}
-
-		await paySession(c.env.DB, id, "mixed", finalAmount, body.notes ?? null);
-
-		if (register) {
-			for (const payment of body.payments) {
-				if (payment.amount_cents <= 0) continue;
-				const tx = await addTransaction(c.env.DB, {
-					cash_register_id: register.id,
-					rental_session_id: id,
-					type: "rental_payment",
-					amount_cents: payment.amount_cents,
-					payment_method: payment.method,
-					recorded_by: user?.id ?? null,
-				});
-
-				if (tx && payment.method === "cash") {
-					if (payment.payment_denominations) {
-						const payDenoms: DenominationMap = Object.fromEntries(
-							Object.entries(payment.payment_denominations).map(([k, v]) => [Number(k), v]),
-						);
-						await saveDenominations(c.env.DB, {
-							cash_register_id: register.id,
-							cash_transaction_id: tx.id,
-							event_type: "payment_in",
-							denominations: payDenoms,
-						});
-					}
-					if (payment.change_denominations) {
-						const changeDenoms: DenominationMap = Object.fromEntries(
-							Object.entries(payment.change_denominations).map(([k, v]) => [Number(k), v]),
-						);
-						await saveDenominations(c.env.DB, {
-							cash_register_id: register.id,
-							cash_transaction_id: tx.id,
-							event_type: "change_out",
-							denominations: changeDenoms,
-						});
-					}
-				}
-			}
-		}
-	} else {
-		// Single payment (existing flow)
-		const isCourtesy = body.payment_method === "courtesy";
-		await paySession(c.env.DB, id, body.payment_method, finalAmount, body.notes ?? null);
-
-		if (register && amountDue > 0 && !isCourtesy) {
-			const tx = await addTransaction(c.env.DB, {
-				cash_register_id: register.id,
-				rental_session_id: id,
-				type: "rental_payment",
-				amount_cents: amountDue,
-				payment_method: body.payment_method,
-				recorded_by: user?.id ?? null,
-			});
-
-			if (tx && body.payment_method === "cash") {
-				if (body.payment_denominations) {
-					const payDenoms: DenominationMap = Object.fromEntries(
-						Object.entries(body.payment_denominations).map(([k, v]) => [Number(k), v]),
-					);
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "payment_in",
-						denominations: payDenoms,
-					});
-				}
-				if (body.change_denominations) {
-					const changeDenoms: DenominationMap = Object.fromEntries(
-						Object.entries(body.change_denominations).map(([k, v]) => [Number(k), v]),
-					);
-					await saveDenominations(c.env.DB, {
-						cash_register_id: register.id,
-						cash_transaction_id: tx.id,
-						event_type: "change_out",
-						denominations: changeDenoms,
-					});
-				}
-			}
-		}
 	}
 
-	// Update customer stats — only count what's paid now (avoid double-counting prepaid base)
-	if (session.customer_id) {
+	const method = isSplit ? "mixed" : body.payment_method;
+	await paySession(c.env.DB, id, method, finalAmount, body.notes ?? null);
+
+	if (register && amountDue > 0) {
+		await recordPayment({
+			db: c.env.DB,
+			registerId: register.id,
+			recordedBy: user?.id ?? null,
+			rentalSessionId: id,
+			transactionType: "rental_payment",
+			amountCents: amountDue,
+			paymentMethod: method,
+			paymentDenominations: body.payment_denominations,
+			changeDenominations: body.change_denominations,
+			payments: body.payments,
+			customerId: session.customer_id,
+		});
+	} else if (session.customer_id) {
+		// No register open but still update customer stats
+		const { updateCustomerStats } = await import("../../db/queries/customers");
 		await updateCustomerStats(c.env.DB, session.customer_id, amountDue);
 	}
 
 	await auditLog(c, "rental.pay", "rental", id, {
-		payment_method: body.payments ? "mixed" : body.payment_method,
+		payment_method: method,
 		original_amount_cents: originalAmount,
 		discount_cents: discount,
 		final_amount_cents: finalAmount,
@@ -381,7 +234,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 
 rentalRoutes.post("/:id/extend", requirePermission("rentals.extend"), async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<{ package_id?: number; additional_minutes?: number }>();
+	const body = await validateJson(c, rentalExtendSchema);
 
 	const session = await getSessionById(c.env.DB, id);
 	if (!session) return c.json({ error: "Session not found" }, 404);
@@ -397,11 +250,9 @@ rentalRoutes.post("/:id/extend", requirePermission("rentals.extend"), async (c) 
 		if (!pkg) return c.json({ error: "Package not found" }, 404);
 		addMinutes = pkg.duration_minutes;
 		addCents = pkg.price_cents;
-	} else if (body.additional_minutes) {
-		addMinutes = body.additional_minutes;
-		addCents = 0;
 	} else {
-		return c.json({ error: "Provide package_id or additional_minutes" }, 400);
+		addMinutes = body.additional_minutes!;
+		addCents = 0;
 	}
 
 	await extendSession(c.env.DB, id, addMinutes, addCents);
@@ -412,7 +263,7 @@ rentalRoutes.post("/:id/extend", requirePermission("rentals.extend"), async (c) 
 
 rentalRoutes.put("/:id/edit", async (c) => {
 	const id = c.req.param("id");
-	const body = await c.req.json<{ package_id?: number; duration_minutes?: number }>();
+	const body = await validateJson(c, rentalEditSchema);
 
 	const session = await getSessionById(c.env.DB, id);
 	if (!session) return c.json({ error: "Session not found" }, 404);

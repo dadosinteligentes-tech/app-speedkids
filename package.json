@@ -16,7 +16,9 @@
 		"publish": true
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.71",
 		"typescript": "5.9.3",
+		"vitest": "^3.2.4",
 		"wrangler": "4.56.0"
 	},
 	"private": true,
@@ -26,9 +28,14 @@
 		"deploy": "wrangler deploy",
 		"dev": "npm run seedLocalD1 && wrangler dev",
 		"predeploy": "wrangler d1 migrations apply DB --remote",
-		"seedLocalD1": "wrangler d1 migrations apply DB --local"
+		"seedLocalD1": "wrangler d1 migrations apply DB --local",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:unit": "vitest run test/unit",
+		"test:integration": "vitest run test/integration"
 	},
 	"dependencies": {
-		"hono": "^4.12.7"
+		"hono": "^4.12.7",
+		"zod": "^4.3.6"
 	}
 }

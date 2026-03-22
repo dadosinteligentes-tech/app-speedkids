@@ -3,12 +3,16 @@ import { HTTPException } from "hono/http-exception";
 import type { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { authMiddleware } from "./auth";
+import { HttpValidationError } from "../lib/request";
 
 export function registerMiddleware(app: Hono<AppEnv>) {
 	app.use("/api/*", cors());
 	app.use("*", authMiddleware);
 
 	app.onError((err, c) => {
+		if (err instanceof HttpValidationError) {
+			return c.json({ error: err.message }, 400);
+		}
 		if (err instanceof HTTPException) {
 			return c.json({ error: err.message }, err.status);
 		}
