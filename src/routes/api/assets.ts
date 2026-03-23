@@ -3,6 +3,7 @@ import type { AppEnv } from "../../types";
 import { getAssets, getAssetById, createAsset, updateAsset, retireAsset } from "../../db/queries/assets";
 import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
+import { getLimitsForPlan, getTenantUsage, checkLimit } from "../../lib/plan-limits";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
@@ -39,6 +40,16 @@ assetRoutes.get("/:id", async (c) => {
 
 assetRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 	const tenantId = c.get('tenant_id');
+	const tenant = c.get('tenant');
+
+	// Enforce plan limits
+	const limits = getLimitsForPlan(tenant?.plan || "starter");
+	const usage = await getTenantUsage(c.env.DB, tenantId);
+	const check = checkLimit(usage.assetCount, limits.maxAssets, "ativos");
+	if (!check.allowed) {
+		return c.json({ error: check.message }, 403);
+	}
+
 	const body = await c.req.json<{
 		name: string; asset_type: string; model?: string; photo_url?: string; notes?: string;
 		uses_battery?: number; max_weight_kg?: number | null; min_age?: number | null; max_age?: number | null; sort_order?: number;

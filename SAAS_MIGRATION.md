@@ -78,24 +78,28 @@ O sistema foi originalmente construído para o cliente **SpeedKids**, que opera 
 | Fase | Descrição | Status | Observações |
 |------|-----------|--------|-------------|
 | **Fase 0** | Fundação multi-tenant | ✅ Concluída | Tabela tenants, tenant_id em 13 tabelas, middleware, 70+ queries refatoradas |
-| **Fase 1** | White-label (marca dinâmica) | ✅ Concluída | Logo, títulos, cores, timezone por tenant |
+| **Fase 1** | White-label (marca dinâmica) | ✅ Concluída | Logo, títulos, cores dinâmicas (CSS gerado por tenant), timezone, upload de logo e color picker no admin |
 | **Fase 2** | Self-service (landing, Stripe, provisioning) | ✅ Concluída | Landing page, checkout, webhook, provisioning automático |
-| **Fase 3** | Planos e limites | 🔲 Pendente | Enforcement de max_users/max_assets por plano |
-| **Fase 4** | Refinamento | 🔲 Pendente | Admin SaaS, emails, wizard de onboarding |
+| **Fase 3** | Planos e limites | ✅ Concluída | Enforcement de max_users/max_assets, tela "Meu Plano" com barras de uso |
+| **Fase 4** | Painel admin e refinamento | 🟡 Parcial | Painel Platform Admin concluído. Pendente: emails, wizard de onboarding |
 
-### Detalhamento das fases pendentes
+### Detalhamento do que resta
 
-**Fase 3 — Planos e Limites (~1 semana)**
-- Middleware que verifica limites antes de criar users, assets, etc.
-- Tela "Meu Plano" no admin mostrando uso vs. limites
-- Webhook para atualizar plano quando upgrade/downgrade no Stripe
-- Bloqueio gracioso (aviso, não erro seco) ao atingir limite
-
-**Fase 4 — Refinamento (~1 semana)**
-- Painel admin global (seu dashboard de dono do SaaS) para ver todos os tenants
+**Pendente (prioridade baixa — não bloqueia operação):**
 - Email de boas-vindas com credenciais (via Cloudflare Email Workers ou Resend)
 - Wizard de setup pós-signup (logo, cores, cadastro de ativos)
-- Página "Meu Plano" com botão de upgrade/cancelamento
+- Configuração de Price IDs reais no Stripe
+- Testes de integração para signup/provisioning
+
+### Funcionalidades extras implementadas (fora do plano original)
+
+- **Tenant `_platform`** — Tenant oculto para superadmins (isolamento total do cliente)
+- **Login cross-tenant** — Platform admins podem logar de qualquer subdomínio
+- **Audit log scoped** — Logs gravados no tenant do usuário, não vaza para clientes
+- **Cores CSS dinâmicas** — Paleta `sk-orange` gerada automaticamente a partir de `primary_color` do tenant
+- **Upload de logo** — Upload via R2 no admin settings
+- **Color picker** — Interface para trocar cor primária no admin settings
+- **Superadmin via migration** — Criado automaticamente no deploy, sem dependência de senha de terceiros
 
 ---
 

@@ -23,6 +23,7 @@ const NAV_ITEMS = [
 	{ href: "/admin/users", label: "Usuários", icon: "👤", roles: ["owner"] },
 	{ href: "/admin/permissions", label: "Permissões", icon: "🔐", roles: ["owner"] },
 	{ href: "/admin/settings", label: "Configurações", icon: "⚙️", roles: ["owner"] },
+	{ href: "/admin/plan", label: "Meu Plano", icon: "📋", roles: ["manager", "owner"] },
 ];
 
 export const AdminLayout: FC<PropsWithChildren<AdminLayoutProps>> = ({ title, user, activeTab, children, bodyScripts, tenant, isPlatformAdmin }) => (

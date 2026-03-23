@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { constructWebhookEvent } from "../../lib/stripe";
 import { provisionTenant } from "../../services/provisioning";
-import { generateSalt, hashPassword } from "../../lib/crypto";
+import { sendEmail, buildWelcomeEmail } from "../../lib/email";
 
 export const stripeWebhookRoutes = new Hono<AppEnv>();
 
@@ -69,13 +69,28 @@ stripeWebhookRoutes.post("/", async (c) => {
 					ownerName: ownerName || "Administrador",
 					ownerEmail,
 					ownerPassword: tempPassword,
-					plan: "pro", // default plan from checkout
+					plan: "pro",
 					stripeCustomerId: session.customer as string,
 					stripeSubscriptionId: session.subscription as string,
 				});
 
 				console.log(`Provisioned tenant ${tenant.slug} (id=${tenant.id}) for ${ownerEmail}`);
-				// TODO: Send welcome email with temp password and subdomain URL
+
+				// Send welcome email
+				const domain = c.env.APP_DOMAIN || "dadosinteligentes.app.br";
+				const welcomeEmail = buildWelcomeEmail({
+					ownerName: ownerName || "Administrador",
+					businessName: tenantName || slug,
+					slug,
+					domain,
+					tempPassword,
+				});
+				welcomeEmail.to = ownerEmail;
+				await sendEmail(
+					c.env.RESEND_API_KEY,
+					`Dados Inteligentes <noreply@${domain}>`,
+					welcomeEmail,
+				);
 			} catch (err) {
 				console.error(`Failed to provision tenant ${slug}:`, err);
 			}

@@ -21,6 +21,7 @@ export default defineWorkersConfig({
 						STRIPE_PUBLISHABLE_KEY: "pk_test_fake",
 						APP_DOMAIN: "test.local",
 						PLATFORM_ADMIN_EMAILS: "admin@test.com",
+						RESEND_API_KEY: "",
 					},
 				},
 			},

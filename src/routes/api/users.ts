@@ -4,6 +4,7 @@ import { listUsers, getUserById, createUser, updateUser, deactivateUser } from "
 import { requirePermission } from "../../middleware/require-permission";
 import { generateSalt, hashPassword } from "../../lib/crypto";
 import { auditLog } from "../../lib/logger";
+import { getLimitsForPlan, getTenantUsage, checkLimit } from "../../lib/plan-limits";
 
 export const userRoutes = new Hono<AppEnv>();
 
@@ -28,6 +29,16 @@ userRoutes.get("/:id", async (c) => {
 
 userRoutes.post("/", async (c) => {
 	const tenantId = c.get('tenant_id');
+	const tenant = c.get('tenant');
+
+	// Enforce plan limits
+	const limits = getLimitsForPlan(tenant?.plan || "starter");
+	const usage = await getTenantUsage(c.env.DB, tenantId);
+	const check = checkLimit(usage.userCount, limits.maxUsers, "usuarios");
+	if (!check.allowed) {
+		return c.json({ error: check.message }, 403);
+	}
+
 	const body = await c.req.json<{ name: string; email: string; password: string; role: string }>();
 	if (!body.name || !body.email || !body.password || !body.role) {
 		return c.json({ error: "Todos os campos são obrigatórios" }, 400);

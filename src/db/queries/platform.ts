@@ -45,16 +45,32 @@ export async function getPlatformStats(db: D1Database): Promise<PlatformStats> {
 		.first<{ total_rentals: number; total_revenue_cents: number }>();
 
 	// MRR = sum of active subscriptions price
-	// Simplified: count active subs by plan
+	// Read plan prices from platform_config, fall back to hardcoded defaults
+	const defaultPrices: Record<string, number> = { starter: 9700, pro: 19700, enterprise: 39700 };
+	let planPrices = defaultPrices;
+	try {
+		const configRow = await db
+			.prepare("SELECT value FROM platform_config WHERE key = 'plan_limits'")
+			.first<{ value: string }>();
+		if (configRow) {
+			const parsed = JSON.parse(configRow.value) as Record<string, { priceCents?: number }>;
+			planPrices = {};
+			for (const [key, val] of Object.entries(parsed)) {
+				planPrices[key] = val.priceCents ?? defaultPrices[key] ?? 0;
+			}
+		}
+	} catch {
+		// Fall back to hardcoded defaults
+	}
+
+	const caseParts = Object.entries(planPrices)
+		.map(([plan, price]) => `WHEN plan = '${plan}' THEN ${price}`)
+		.join(" ");
+
 	const mrr = await db
 		.prepare(`
 			SELECT
-				COALESCE(SUM(CASE
-					WHEN plan = 'starter' THEN 9700
-					WHEN plan = 'pro' THEN 19700
-					WHEN plan = 'enterprise' THEN 39700
-					ELSE 0
-				END), 0) as mrr_cents
+				COALESCE(SUM(CASE ${caseParts} ELSE 0 END), 0) as mrr_cents
 			FROM subscriptions
 			WHERE status = 'active'
 		`)
@@ -160,4 +176,516 @@ export async function updateTenantStatus(db: D1Database, tenantId: number, statu
 		.prepare("UPDATE tenants SET status = ?, updated_at = datetime('now') WHERE id = ?")
 		.bind(status, tenantId)
 		.run();
+}
+
+// Get all users for a tenant
+export async function getTenantUsers(
+	db: D1Database,
+	tenantId: number,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		email: string;
+		role: string;
+		active: number;
+		created_at: string;
+		last_login: string | null;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT u.id, u.name, u.email, u.role, u.active, u.created_at,
+				(SELECT MAX(s.created_at) FROM auth_sessions s WHERE s.user_id = u.id) as last_login
+			FROM users u WHERE u.tenant_id = ? ORDER BY u.name`,
+		)
+		.bind(tenantId)
+		.all();
+	return results as any;
+}
+
+// Get active/stuck rental sessions for a tenant
+export async function getTenantActiveSessions(
+	db: D1Database,
+	tenantId: number,
+): Promise<
+	Array<{
+		id: string;
+		asset_name: string;
+		package_name: string;
+		customer_name: string | null;
+		status: string;
+		start_time: string;
+		duration_minutes: number;
+		amount_cents: number;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT rs.id, a.name as asset_name, p.name as package_name, c.name as customer_name,
+				rs.status, rs.start_time, rs.duration_minutes, rs.amount_cents
+			FROM rental_sessions rs
+			JOIN assets a ON rs.asset_id = a.id
+			JOIN packages p ON rs.package_id = p.id
+			LEFT JOIN customers c ON rs.customer_id = c.id
+			WHERE rs.tenant_id = ? AND rs.status IN ('running', 'paused')
+			ORDER BY rs.start_time DESC`,
+		)
+		.bind(tenantId)
+		.all();
+	return results as any;
+}
+
+// Get business config for a tenant
+export async function getTenantConfig(
+	db: D1Database,
+	tenantId: number,
+): Promise<{
+	name: string;
+	cnpj: string | null;
+	address: string | null;
+	phone: string | null;
+	receipt_footer: string | null;
+} | null> {
+	return db
+		.prepare(
+			`SELECT name, cnpj, address, phone, receipt_footer FROM business_config WHERE tenant_id = ?`,
+		)
+		.bind(tenantId)
+		.first();
+}
+
+// Get recent logs for a tenant
+export async function getTenantLogs(
+	db: D1Database,
+	tenantId: number,
+	limit = 50,
+): Promise<
+	Array<{
+		id: number;
+		user_name: string | null;
+		action: string;
+		entity_type: string;
+		entity_id: string | null;
+		created_at: string;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT l.id, u.name as user_name, l.action, l.entity_type, l.entity_id, l.created_at
+			FROM operation_logs l
+			LEFT JOIN users u ON l.user_id = u.id
+			WHERE l.tenant_id = ?
+			ORDER BY l.created_at DESC LIMIT ?`,
+		)
+		.bind(tenantId, limit)
+		.all();
+	return results as any;
+}
+
+// Get cross-tenant logs (all tenants)
+export async function getCrossTenantLogs(
+	db: D1Database,
+	limit = 100,
+): Promise<
+	Array<{
+		id: number;
+		tenant_name: string;
+		user_name: string | null;
+		action: string;
+		entity_type: string;
+		entity_id: string | null;
+		created_at: string;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT l.id, t.name as tenant_name, u.name as user_name, l.action, l.entity_type, l.entity_id, l.created_at
+			FROM operation_logs l
+			JOIN tenants t ON l.tenant_id = t.id
+			LEFT JOIN users u ON l.user_id = u.id
+			WHERE t.slug != '_platform'
+			ORDER BY l.created_at DESC LIMIT ?`,
+		)
+		.bind(limit)
+		.all();
+	return results as any;
+}
+
+// Update tenant plan and limits
+export async function updateTenantPlan(
+	db: D1Database,
+	tenantId: number,
+	plan: string,
+	maxUsers: number,
+	maxAssets: number,
+): Promise<void> {
+	await db
+		.prepare(
+			`UPDATE tenants SET plan = ?, max_users = ?, max_assets = ?, updated_at = datetime('now') WHERE id = ?`,
+		)
+		.bind(plan, maxUsers, maxAssets, tenantId)
+		.run();
+}
+
+// Update tenant business config
+export async function updateTenantConfig(
+	db: D1Database,
+	tenantId: number,
+	params: {
+		name?: string;
+		cnpj?: string | null;
+		address?: string | null;
+		phone?: string | null;
+		receipt_footer?: string | null;
+	},
+): Promise<void> {
+	const sets: string[] = [];
+	const values: any[] = [];
+
+	if (params.name !== undefined) {
+		sets.push("name = ?");
+		values.push(params.name);
+	}
+	if (params.cnpj !== undefined) {
+		sets.push("cnpj = ?");
+		values.push(params.cnpj);
+	}
+	if (params.address !== undefined) {
+		sets.push("address = ?");
+		values.push(params.address);
+	}
+	if (params.phone !== undefined) {
+		sets.push("phone = ?");
+		values.push(params.phone);
+	}
+	if (params.receipt_footer !== undefined) {
+		sets.push("receipt_footer = ?");
+		values.push(params.receipt_footer);
+	}
+
+	if (sets.length === 0) return;
+
+	sets.push("updated_at = datetime('now')");
+	values.push(tenantId);
+
+	await db
+		.prepare(`UPDATE business_config SET ${sets.join(", ")} WHERE tenant_id = ?`)
+		.bind(...values)
+		.run();
+}
+
+// ── Superadmin queries ──────────────────────────────────────────────
+
+export async function getSuperadminUsers(
+	db: D1Database,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		email: string;
+		role: string;
+		active: number;
+		created_at: string;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT id, name, email, role, active, created_at
+			FROM users
+			WHERE tenant_id = (SELECT id FROM tenants WHERE slug = '_platform')
+			ORDER BY name`,
+		)
+		.all();
+	return results as any;
+}
+
+export async function createSuperadminUser(
+	db: D1Database,
+	params: { name: string; email: string; passwordHash: string; salt: string },
+): Promise<Record<string, unknown>> {
+	const row = await db
+		.prepare(
+			`INSERT INTO users (tenant_id, name, email, password_hash, salt, role)
+			VALUES ((SELECT id FROM tenants WHERE slug = '_platform'), ?, ?, ?, ?, 'owner')
+			RETURNING *`,
+		)
+		.bind(params.name, params.email, params.passwordHash, params.salt)
+		.first();
+	return row as Record<string, unknown>;
+}
+
+export async function toggleSuperadminActive(
+	db: D1Database,
+	userId: number,
+	active: boolean,
+): Promise<void> {
+	await db
+		.prepare(
+			`UPDATE users SET active = ?, updated_at = datetime('now')
+			WHERE id = ? AND tenant_id = (SELECT id FROM tenants WHERE slug = '_platform')`,
+		)
+		.bind(active ? 1 : 0, userId)
+		.run();
+}
+
+export async function resetSuperadminPassword(
+	db: D1Database,
+	userId: number,
+	passwordHash: string,
+	salt: string,
+): Promise<void> {
+	await db
+		.prepare(
+			`UPDATE users SET password_hash = ?, salt = ?, updated_at = datetime('now')
+			WHERE id = ? AND tenant_id = (SELECT id FROM tenants WHERE slug = '_platform')`,
+		)
+		.bind(passwordHash, salt, userId)
+		.run();
+}
+
+// ── Plan config queries ─────────────────────────────────────────────
+
+export interface PlanConfig {
+	label: string;
+	maxUsers: number;
+	maxAssets: number;
+	priceCents: number;
+}
+
+export async function getPlanDefinitions(db: D1Database): Promise<Record<string, PlanConfig>> {
+	const row = await db
+		.prepare("SELECT value FROM platform_config WHERE key = 'plan_limits'")
+		.first<{ value: string }>();
+
+	if (row) return JSON.parse(row.value);
+
+	// Hardcoded defaults
+	return {
+		starter: { label: "Starter", maxUsers: 3, maxAssets: 10, priceCents: 9700 },
+		pro: { label: "Pro", maxUsers: 10, maxAssets: 50, priceCents: 19700 },
+		enterprise: { label: "Enterprise", maxUsers: 50, maxAssets: 200, priceCents: 39700 },
+	};
+}
+
+export async function updatePlanDefinitions(
+	db: D1Database,
+	plans: Record<string, PlanConfig>,
+): Promise<void> {
+	await db
+		.prepare(
+			`INSERT OR REPLACE INTO platform_config (key, value, updated_at)
+			VALUES ('plan_limits', ?, datetime('now'))`,
+		)
+		.bind(JSON.stringify(plans))
+		.run();
+}
+
+// ── Report queries ──────────────────────────────────────────────────
+
+export async function getRevenueOverTime(
+	db: D1Database,
+	period: "daily" | "weekly" | "monthly",
+	startDate: string,
+	endDate: string,
+): Promise<Array<{ period: string; revenue_cents: number; rental_count: number }>> {
+	const bucketExpr =
+		period === "daily"
+			? "date(created_at)"
+			: period === "weekly"
+				? "strftime('%Y-W%W', created_at)"
+				: "strftime('%Y-%m', created_at)";
+
+	const { results } = await db
+		.prepare(
+			`SELECT
+				${bucketExpr} as period,
+				SUM(revenue_cents) as revenue_cents,
+				SUM(cnt) as rental_count
+			FROM (
+				SELECT created_at, amount_cents as revenue_cents, 1 as cnt
+				FROM rental_sessions
+				WHERE paid = 1 AND status = 'completed'
+					AND created_at BETWEEN ? AND ?
+				UNION ALL
+				SELECT created_at, total_cents as revenue_cents, 0 as cnt
+				FROM product_sales
+				WHERE created_at BETWEEN ? AND ?
+			)
+			GROUP BY period
+			ORDER BY period`,
+		)
+		.bind(startDate, endDate, startDate, endDate)
+		.all();
+
+	return results as any;
+}
+
+export async function getTenantGrowth(
+	db: D1Database,
+): Promise<Array<{ date: string; count: number }>> {
+	const { results } = await db
+		.prepare(
+			`SELECT date(created_at) as date, COUNT(*) as count
+			FROM tenants
+			WHERE slug != '_platform'
+			GROUP BY date(created_at)
+			ORDER BY date`,
+		)
+		.all();
+	return results as any;
+}
+
+export async function getActiveTenants(
+	db: D1Database,
+	days: number,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		slug: string;
+		last_activity: string;
+		login_count: number;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT t.id, t.name, t.slug,
+				MAX(s.created_at) as last_activity,
+				COUNT(s.id) as login_count
+			FROM tenants t
+			JOIN users u ON u.tenant_id = t.id
+			JOIN auth_sessions s ON s.user_id = u.id
+			WHERE t.slug != '_platform'
+				AND s.created_at >= datetime('now', '-' || ? || ' days')
+			GROUP BY t.id
+			ORDER BY last_activity DESC`,
+		)
+		.bind(days)
+		.all();
+	return results as any;
+}
+
+export async function getInactiveTenants(
+	db: D1Database,
+	days: number,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		slug: string;
+		last_activity: string | null;
+		days_inactive: number;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT t.id, t.name, t.slug,
+				activity.last_activity,
+				CAST(JULIANDAY('now') - JULIANDAY(COALESCE(activity.last_activity, t.created_at)) AS INTEGER) as days_inactive
+			FROM tenants t
+			LEFT JOIN (
+				SELECT u.tenant_id, MAX(s.created_at) as last_activity
+				FROM users u
+				JOIN auth_sessions s ON s.user_id = u.id
+				GROUP BY u.tenant_id
+			) activity ON activity.tenant_id = t.id
+			WHERE t.slug != '_platform'
+				AND (activity.last_activity IS NULL
+					OR activity.last_activity < datetime('now', '-' || ? || ' days'))
+			ORDER BY days_inactive DESC`,
+		)
+		.bind(days)
+		.all();
+	return results as any;
+}
+
+export async function getTopTenantsByRevenue(
+	db: D1Database,
+	limit: number,
+	startDate?: string,
+	endDate?: string,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		slug: string;
+		plan: string;
+		revenue_cents: number;
+		rental_count: number;
+	}>
+> {
+	const dateFilter =
+		startDate && endDate ? "AND rs.created_at BETWEEN ? AND ?" : "";
+	const binds: (string | number)[] = [];
+	if (startDate && endDate) {
+		binds.push(startDate, endDate);
+	}
+	binds.push(limit);
+
+	const { results } = await db
+		.prepare(
+			`SELECT t.id, t.name, t.slug, t.plan,
+				COALESCE(SUM(CASE WHEN rs.paid = 1 THEN rs.amount_cents ELSE 0 END), 0) as revenue_cents,
+				COUNT(rs.id) as rental_count
+			FROM tenants t
+			LEFT JOIN rental_sessions rs ON rs.tenant_id = t.id ${dateFilter}
+			WHERE t.slug != '_platform'
+			GROUP BY t.id
+			ORDER BY revenue_cents DESC
+			LIMIT ?`,
+		)
+		.bind(...binds)
+		.all();
+	return results as any;
+}
+
+export async function getAllUsersAcrossTenants(
+	db: D1Database,
+): Promise<
+	Array<{
+		id: number;
+		name: string;
+		email: string;
+		role: string;
+		active: number;
+		created_at: string;
+		tenant_name: string;
+		tenant_slug: string;
+		last_login: string | null;
+	}>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT u.id, u.name, u.email, u.role, u.active, u.created_at,
+				t.name as tenant_name, t.slug as tenant_slug,
+				(SELECT MAX(s.created_at) FROM auth_sessions s WHERE s.user_id = u.id) as last_login
+			FROM users u
+			JOIN tenants t ON u.tenant_id = t.id
+			WHERE t.slug != '_platform'
+			ORDER BY u.name`,
+		)
+		.all();
+	return results as any;
+}
+
+export async function getSubscriptionDetails(
+	db: D1Database,
+): Promise<
+	Array<
+		Subscription & {
+			tenant_name: string;
+			tenant_slug: string;
+		}
+	>
+> {
+	const { results } = await db
+		.prepare(
+			`SELECT s.*, t.name as tenant_name, t.slug as tenant_slug
+			FROM subscriptions s
+			JOIN tenants t ON s.tenant_id = t.id
+			ORDER BY s.created_at DESC`,
+		)
+		.all();
+	return results as any;
 }

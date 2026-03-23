@@ -19,6 +19,7 @@ import { productSaleRoutes } from "./routes/api/product-sales";
 import { permissionRoutes } from "./routes/api/permissions";
 import { signupRoutes } from "./routes/api/signup";
 import { stripeWebhookRoutes } from "./routes/api/stripe-webhook";
+import { setupRoutes } from "./routes/api/setup";
 import { loginPages } from "./routes/pages/login";
 import { dashboardPages } from "./routes/pages/dashboard";
 import { adminPages } from "./routes/pages/admin";
@@ -41,6 +42,9 @@ registerMiddleware(app);
 // Public API routes (no auth required — handled by middleware exclusion)
 app.route("/api/signup", signupRoutes);
 app.route("/api/stripe/webhook", stripeWebhookRoutes);
+
+// Setup routes
+app.route("/api/setup", setupRoutes);
 
 // Platform admin routes (auth required + platform admin check)
 app.route("/api/platform", platformApiRoutes);

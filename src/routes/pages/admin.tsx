@@ -19,6 +19,8 @@ import { getBusinessConfig } from "../../db/queries/business-config";
 import { BusinessSettings } from "../../views/admin/business-settings";
 import { getAllPermissions, getAllRolePermissions } from "../../db/queries/permissions";
 import { PermissionsMatrix } from "../../views/admin/permissions-matrix";
+import { MyPlan } from "../../views/admin/my-plan";
+import { getLimitsForPlan, getTenantUsage } from "../../lib/plan-limits";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -105,6 +107,17 @@ adminPages.get("/permissions", requireRole("owner"), async (c) => {
 	]);
 	const user = c.get("user");
 	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+});
+
+// My plan page
+adminPages.get("/plan", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const limits = getLimitsForPlan(tenant?.plan || "starter");
+	const usage = await getTenantUsage(c.env.DB, tenantId);
+	const user = c.get("user");
+	return c.html(<MyPlan tenant={tenant} limits={limits} usage={usage} user={user} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // Business settings requires settings.manage permission

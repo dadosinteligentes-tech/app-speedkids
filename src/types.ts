@@ -9,6 +9,7 @@ export type Bindings = {
 	STRIPE_PUBLISHABLE_KEY: string;
 	APP_DOMAIN: string; // e.g. "dadosinteligentes.app.br"
 	PLATFORM_ADMIN_EMAILS: string; // comma-separated emails with SaaS admin access
+	RESEND_API_KEY: string; // Resend.com API key for transactional emails
 };
 
 export type AppVariables = {

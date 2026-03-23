@@ -3,6 +3,7 @@ import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import type { CashStatusBadge } from "../lib/cash-status";
 import type { Tenant } from "../db/schema";
+import { generateBrandPalette } from "../lib/color-utils";
 
 interface LayoutProps {
 	title?: string;
@@ -27,6 +28,7 @@ const ROLE_LABELS: Record<string, string> = {
 export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, headScripts, bodyScripts, user, cashStatus, tenant, isPlatformAdmin }) => {
 	const brandName = tenant?.name || "SpeedKids";
 	const brandColor = tenant?.primary_color || "#FF7043";
+	const brandPalette = generateBrandPalette(brandColor);
 	const logoUrl = tenant?.logo_url || "/logo.svg";
 
 	return (
@@ -48,7 +50,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 						extend: {
 							colors: {
 								'sk-yellow':  { DEFAULT: '#FFC107', light: '#FFF8E1', dark: '#F9A825' },
-								'sk-orange':  { DEFAULT: '#FF7043', light: '#FBE9E7', dark: '#E64A19' },
+								'sk-orange':  { DEFAULT: '${brandPalette.DEFAULT}', light: '${brandPalette.light}', dark: '${brandPalette.dark}' },
 								'sk-blue':    { DEFAULT: '#0288D1', light: '#E1F5FE', dark: '#01579B' },
 								'sk-green':   { DEFAULT: '#388E3C', light: '#E8F5E9', dark: '#1B5E20' },
 								'sk-danger':  { DEFAULT: '#EF5350', light: '#FFEBEE' },
@@ -265,7 +267,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 
 			{html`<script>
 				function triggerConfetti() {
-					var colors = ['#FFC107','#FF7043','#29B6F6','#66BB6A','#AB47BC','#EF5350'];
+					var colors = ['#FFC107','${brandPalette.DEFAULT}','#29B6F6','#66BB6A','#AB47BC','#EF5350'];
 					var container = document.createElement('div');
 					container.id = 'sk-confetti';
 					container.setAttribute('aria-hidden', 'true');
