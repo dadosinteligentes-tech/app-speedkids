@@ -11,12 +11,15 @@ export const dashboardPages = new Hono<AppEnv>();
 
 dashboardPages.get("/", async (c) => {
 	const user = c.get("user");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 	const [assets, packages, sessions, cashStatus, batteries] = await Promise.all([
-		getAssets(c.env.DB),
-		getActivePackages(c.env.DB),
-		getActiveSessions(c.env.DB),
-		user ? getCashStatus(c.env.DB) : Promise.resolve(null),
-		getInstalledBatteries(c.env.DB),
+		getAssets(c.env.DB, tenantId),
+		getActivePackages(c.env.DB, tenantId),
+		getActiveSessions(c.env.DB, tenantId),
+		user ? getCashStatus(c.env.DB, tenantId) : Promise.resolve(null),
+		getInstalledBatteries(c.env.DB, tenantId),
 	]);
-	return c.html(<Dashboard assets={assets} packages={packages} sessions={sessions} user={user} cashStatus={cashStatus} batteries={batteries} />);
+	return c.html(<Dashboard assets={assets} packages={packages} sessions={sessions} user={user} cashStatus={cashStatus} batteries={batteries} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });

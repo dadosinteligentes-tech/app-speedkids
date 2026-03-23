@@ -54,11 +54,14 @@ reportPages.get("/", (c) => {
 });
 
 reportPages.get("/financial", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
 	const [summary, trend, productSales] = await Promise.all([
-		getFinancialSummary(c.env.DB, from, to),
-		getDailyRevenueTrend(c.env.DB, from, to),
-		getProductSalesSummary(c.env.DB, from, to),
+		getFinancialSummary(c.env.DB, tenantId, from, to),
+		getDailyRevenueTrend(c.env.DB, tenantId, from, to),
+		getProductSalesSummary(c.env.DB, tenantId, from, to),
 	]);
 	return c.html(
 		<FinancialSummaryView
@@ -68,39 +71,54 @@ reportPages.get("/financial", async (c) => {
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/packages", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const packages = await getPackageRevenue(c.env.DB, from, to);
+	const packages = await getPackageRevenue(c.env.DB, tenantId, from, to);
 	return c.html(
 		<PackageRevenueView
 			packages={packages}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/assets", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const assets = await getAssetUtilization(c.env.DB, from, to);
+	const assets = await getAssetUtilization(c.env.DB, tenantId, from, to);
 	return c.html(
 		<AssetUtilizationView
 			assets={assets}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/peak-hours", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const data = await getPeakHours(c.env.DB, from, to);
+	const data = await getPeakHours(c.env.DB, tenantId, from, to);
 	return c.html(
 		<PeakHoursView
 			byHour={data.byHour}
@@ -108,30 +126,41 @@ reportPages.get("/peak-hours", async (c) => {
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 // Owner-only
 reportPages.get("/operators", requirePermission("reports.operators"), async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const operators = await getOperatorPerformance(c.env.DB, from, to);
+	const operators = await getOperatorPerformance(c.env.DB, tenantId, from, to);
 	return c.html(
 		<OperatorPerformanceView
 			operators={operators}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/cash", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
 	const page = Number(c.req.query("page")) || 1;
 	const perPage = 20;
 	const { registers, total } = await getCashReconciliation(
 		c.env.DB,
+		tenantId,
 		from,
 		to,
 		perPage,
@@ -145,67 +174,92 @@ reportPages.get("/cash", async (c) => {
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/customers", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const data = await getCustomerAnalysis(c.env.DB, from, to);
+	const data = await getCustomerAnalysis(c.env.DB, tenantId, from, to);
 	return c.html(
 		<CustomerAnalysisView
 			{...data}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/unpaid", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const sessions = await getUnpaidSessions(c.env.DB, from, to);
+	const sessions = await getUnpaidSessions(c.env.DB, tenantId, from, to);
 	return c.html(
 		<UnpaidReportView
 			sessions={sessions}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/cancelled", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const sessions = await getCancelledSessions(c.env.DB, from, to);
+	const sessions = await getCancelledSessions(c.env.DB, tenantId, from, to);
 	return c.html(
 		<CancelledReportView
 			sessions={sessions}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/shifts", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
-	const shifts = await getShiftReport(c.env.DB, from, to);
+	const shifts = await getShiftReport(c.env.DB, tenantId, from, to);
 	return c.html(
 		<ShiftReportView
 			shifts={shifts}
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/products", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
 	const [summary, products] = await Promise.all([
-		getProductSalesSummary(c.env.DB, from, to),
-		getProductRevenue(c.env.DB, from, to),
+		getProductSalesSummary(c.env.DB, tenantId, from, to),
+		getProductRevenue(c.env.DB, tenantId, from, to),
 	]);
 	return c.html(
 		<ProductSalesReportView
@@ -214,23 +268,28 @@ reportPages.get("/products", async (c) => {
 			from={from}
 			to={to}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
 
 reportPages.get("/product-detail", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
 	const productId = c.req.query("product_id") ? Number(c.req.query("product_id")) : undefined;
 	const page = Number(c.req.query("page")) || 1;
 	const perPage = 50;
 	const { sales, total } = await getProductSaleDetail(
-		c.env.DB, from, to, productId, perPage, (page - 1) * perPage,
+		c.env.DB, tenantId, from, to, productId, perPage, (page - 1) * perPage,
 	);
 
 	let productName: string | undefined;
 	if (productId && sales.length > 0) {
 		// Get product name from the first sale's items or query
-		const row = await c.env.DB.prepare("SELECT name FROM products WHERE id = ?").bind(productId).first<{ name: string }>();
+		const row = await c.env.DB.prepare("SELECT name FROM products WHERE id = ? AND tenant_id = ?").bind(productId, tenantId).first<{ name: string }>();
 		productName = row?.name;
 	}
 
@@ -244,6 +303,8 @@ reportPages.get("/product-detail", async (c) => {
 			productId={productId}
 			productName={productName}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
@@ -261,6 +322,9 @@ const BACK_URL_MAP: Record<string, string> = {
 };
 
 reportPages.get("/detail", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const { from, to } = getDateRange(c);
 	const filterType = c.req.query("filter") ?? "all";
 	const id = c.req.query("id");
@@ -309,7 +373,7 @@ reportPages.get("/detail", async (c) => {
 	}
 
 	const { sessions, total, total_revenue_cents, context } = await getDetailSessions(
-		c.env.DB, filter, from, to, perPage, (page - 1) * perPage,
+		c.env.DB, tenantId, filter, from, to, perPage, (page - 1) * perPage,
 	);
 
 	return c.html(
@@ -325,6 +389,8 @@ reportPages.get("/detail", async (c) => {
 			filterParams={filterParams}
 			backUrl={BACK_URL_MAP[filterType] ?? "/admin/reports/financial"}
 			user={c.get("user")}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });

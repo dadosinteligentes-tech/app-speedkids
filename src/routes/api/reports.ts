@@ -100,10 +100,11 @@ const ROLE_LABELS: Record<string, string> = {
 // ── Endpoints ──
 
 reportApiRoutes.get("/financial/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
 	const [summary, trend] = await Promise.all([
-		getFinancialSummary(c.env.DB, from, to),
-		getDailyRevenueTrend(c.env.DB, from, to),
+		getFinancialSummary(c.env.DB, tenantId, from, to),
+		getDailyRevenueTrend(c.env.DB, tenantId, from, to),
 	]);
 
 	const csv = toCSVMultiSection([
@@ -153,8 +154,9 @@ reportApiRoutes.get("/financial/export", async (c) => {
 });
 
 reportApiRoutes.get("/packages/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const packages = await getPackageRevenue(c.env.DB, from, to);
+	const packages = await getPackageRevenue(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		["Pacote", "Duracao (min)", "Preco Unitario", "Locações", "Receita", "Participacao %"],
@@ -172,8 +174,9 @@ reportApiRoutes.get("/packages/export", async (c) => {
 });
 
 reportApiRoutes.get("/assets/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const assets = await getAssetUtilization(c.env.DB, from, to);
+	const assets = await getAssetUtilization(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		["Ativo", "Tipo", "Locações", "Minutos", "Receita", "Utilizacao %"],
@@ -191,8 +194,9 @@ reportApiRoutes.get("/assets/export", async (c) => {
 });
 
 reportApiRoutes.get("/peak-hours/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const data = await getPeakHours(c.env.DB, from, to);
+	const data = await getPeakHours(c.env.DB, tenantId, from, to);
 
 	const csv = toCSVMultiSection([
 		{
@@ -219,8 +223,9 @@ reportApiRoutes.get("/peak-hours/export", async (c) => {
 });
 
 reportApiRoutes.get("/operators/export", requirePermission("reports.operators"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const operators = await getOperatorPerformance(c.env.DB, from, to);
+	const operators = await getOperatorPerformance(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		[
@@ -247,8 +252,9 @@ reportApiRoutes.get("/operators/export", requirePermission("reports.operators"),
 });
 
 reportApiRoutes.get("/cash/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const { registers } = await getCashReconciliation(c.env.DB, from, to, 10000, 0);
+	const { registers } = await getCashReconciliation(c.env.DB, tenantId, from, to, 10000, 0);
 
 	const csv = toCSV(
 		[
@@ -285,8 +291,9 @@ reportApiRoutes.get("/cash/export", async (c) => {
 });
 
 reportApiRoutes.get("/customers/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const data = await getCustomerAnalysis(c.env.DB, from, to);
+	const data = await getCustomerAnalysis(c.env.DB, tenantId, from, to);
 
 	const csv = toCSVMultiSection([
 		{
@@ -320,8 +327,9 @@ reportApiRoutes.get("/customers/export", async (c) => {
 });
 
 reportApiRoutes.get("/unpaid/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const sessions = await getUnpaidSessions(c.env.DB, from, to);
+	const sessions = await getUnpaidSessions(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		["Data", "Crianca", "Responsavel", "Ativo", "Pacote", "Valor", "Tipo", "Motivo", "Operador"],
@@ -342,8 +350,9 @@ reportApiRoutes.get("/unpaid/export", async (c) => {
 });
 
 reportApiRoutes.get("/shifts/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const shifts = await getShiftReport(c.env.DB, from, to);
+	const shifts = await getShiftReport(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		["Turno", "Operador", "Inicio", "Fim", "Locações", "Receita", "Dinheiro", "Credito", "Debito", "PIX", "Cortesias"],
@@ -366,8 +375,9 @@ reportApiRoutes.get("/shifts/export", async (c) => {
 });
 
 reportApiRoutes.get("/cancelled/export", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const { from, to } = getDateRange(c);
-	const sessions = await getCancelledSessions(c.env.DB, from, to);
+	const sessions = await getCancelledSessions(c.env.DB, tenantId, from, to);
 
 	const csv = toCSV(
 		["Data", "Crianca", "Responsavel", "Ativo", "Pacote", "Valor", "Motivo", "Operador"],

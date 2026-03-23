@@ -12,13 +12,16 @@ export const rentalPages = new Hono<AppEnv>();
 
 rentalPages.get("/", async (c) => {
 	const user = c.get("user");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 	const [assets, packages, sessions, cashStatus, batteries, bizConfig] = await Promise.all([
-		getAssets(c.env.DB),
-		getActivePackages(c.env.DB),
-		getActiveSessions(c.env.DB),
-		user ? getCashStatus(c.env.DB) : Promise.resolve(null),
-		getInstalledBatteries(c.env.DB),
-		getBusinessConfig(c.env.DB),
+		getAssets(c.env.DB, tenantId),
+		getActivePackages(c.env.DB, tenantId),
+		getActiveSessions(c.env.DB, tenantId),
+		user ? getCashStatus(c.env.DB, tenantId) : Promise.resolve(null),
+		getInstalledBatteries(c.env.DB, tenantId),
+		getBusinessConfig(c.env.DB, tenantId),
 	]);
 	return c.html(
 		<Dashboard
@@ -30,6 +33,8 @@ rentalPages.get("/", async (c) => {
 			batteries={batteries}
 			pageTitle="Controle de Locações"
 			receiptEnabled={!!bizConfig?.name}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });

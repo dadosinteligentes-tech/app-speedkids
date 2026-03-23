@@ -2,12 +2,15 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency } from "../../lib/report-utils";
 import type { OperatorPerformance } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	operators: OperatorPerformance[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,6 +36,8 @@ export const OperatorPerformanceView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const totalRevenue = operators.reduce((s, o) => s + o.revenue_cents, 0);
 	const totalRentals = operators.reduce((s, o) => s + o.rentals_started, 0);
@@ -44,6 +49,8 @@ export const OperatorPerformanceView: FC<Props> = ({
 			activeReport="/admin/reports/operators"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			<div class="bg-sk-purple-light rounded-sk p-3 mb-4 text-xs font-body text-sk-purple">
 				Este relatorio e exclusivo para socios. Os dados sao confidenciais.

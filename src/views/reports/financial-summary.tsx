@@ -6,6 +6,7 @@ import type {
 	DailyRevenueTrend,
 	ProductSalesSummary,
 } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	summary: FinancialSummary;
@@ -14,6 +15,8 @@ interface Props {
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 export const FinancialSummaryView: FC<Props> = ({
@@ -23,6 +26,8 @@ export const FinancialSummaryView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const maxDayRevenue = Math.max(...trend.map((d) => d.revenue_cents), 1);
 	const paymentTotal =
@@ -40,6 +45,8 @@ export const FinancialSummaryView: FC<Props> = ({
 			activeReport="/admin/reports/financial"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

@@ -2,15 +2,18 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency, formatDateTime } from "../../lib/report-utils";
 import type { UnpaidSession } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	sessions: UnpaidSession[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user }) => {
+export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin }) => {
 	const courtesies = sessions.filter((s) => s.payment_method === "courtesy");
 	const pending = sessions.filter((s) => s.payment_method !== "courtesy");
 	const lostValue = courtesies.reduce((s, c) => s + c.amount_cents, 0);
@@ -20,8 +23,10 @@ export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user }) => {
 			title="Não Pagos / Cortesias"
 			user={user}
 			activeReport="/admin/reports/unpaid"
+			isPlatformAdmin={isPlatformAdmin}
 			from={from}
 			to={to}
+			tenant={tenant}
 		>
 			{/* KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

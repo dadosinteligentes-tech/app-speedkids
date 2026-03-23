@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { Customer, RentalSessionView } from "../../db/schema";
+import type { Customer, RentalSessionView, Tenant } from "../../db/schema";
 import { AdminLayout } from "../admin/layout";
 import { toBrazilDate, toBrazilDateTime } from "../../lib/timezone";
 
@@ -8,6 +8,8 @@ interface CustomerDetailProps {
 	sessions: RentalSessionView[];
 	totalSessions: number;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -17,8 +19,8 @@ const STATUS_LABELS: Record<string, string> = {
 	cancelled: "Cancelado",
 };
 
-export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, totalSessions, user }) => (
-	<AdminLayout title={`Cliente: ${customer.name}`} user={user} activeTab="/admin/customers">
+export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, totalSessions, user, tenant, isPlatformAdmin }) => (
+	<AdminLayout title={`Cliente: ${customer.name}`} user={user} activeTab="/admin/customers" tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 		<div class="mb-4">
 			<a href="/admin/customers" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar para Clientes</a>
 		</div>

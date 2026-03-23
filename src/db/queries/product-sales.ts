@@ -9,6 +9,7 @@ export interface ProductSaleView extends ProductSale {
 export async function createProductSale(
 	db: D1Database,
 	params: {
+		tenant_id: number;
 		cash_register_id: number | null;
 		customer_id: number | null;
 		attendant_id: number | null;
@@ -20,9 +21,10 @@ export async function createProductSale(
 ): Promise<ProductSale | null> {
 	return db
 		.prepare(
-			"INSERT INTO product_sales (cash_register_id, customer_id, attendant_id, total_cents, discount_cents, payment_method, paid, notes) VALUES (?, ?, ?, ?, ?, ?, 1, ?) RETURNING *",
+			"INSERT INTO product_sales (tenant_id, cash_register_id, customer_id, attendant_id, total_cents, discount_cents, payment_method, paid, notes) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) RETURNING *",
 		)
 		.bind(
+			params.tenant_id,
 			params.cash_register_id,
 			params.customer_id,
 			params.attendant_id,
@@ -49,16 +51,16 @@ export async function createSaleItems(
 	await db.batch(stmts);
 }
 
-export async function getProductSaleById(db: D1Database, id: number): Promise<ProductSaleView | null> {
+export async function getProductSaleById(db: D1Database, id: number, tenantId: number): Promise<ProductSaleView | null> {
 	const sale = await db
 		.prepare(
 			`SELECT ps.*, c.name as customer_name, u.name as attendant_name
 			 FROM product_sales ps
 			 LEFT JOIN customers c ON ps.customer_id = c.id
 			 LEFT JOIN users u ON ps.attendant_id = u.id
-			 WHERE ps.id = ?`,
+			 WHERE ps.id = ? AND ps.tenant_id = ?`,
 		)
-		.bind(id)
+		.bind(id, tenantId)
 		.first<Omit<ProductSaleView, "items">>();
 
 	if (!sale) return null;
@@ -71,17 +73,18 @@ export async function getProductSaleById(db: D1Database, id: number): Promise<Pr
 	return { ...sale, items };
 }
 
-export async function getRecentSales(db: D1Database, limit = 20): Promise<ProductSaleView[]> {
+export async function getRecentSales(db: D1Database, tenantId: number, limit = 20): Promise<ProductSaleView[]> {
 	const { results } = await db
 		.prepare(
 			`SELECT ps.*, c.name as customer_name, u.name as attendant_name
 			 FROM product_sales ps
 			 LEFT JOIN customers c ON ps.customer_id = c.id
 			 LEFT JOIN users u ON ps.attendant_id = u.id
+			 WHERE ps.tenant_id = ?
 			 ORDER BY ps.created_at DESC
 			 LIMIT ?`,
 		)
-		.bind(limit)
+		.bind(tenantId, limit)
 		.all<Omit<ProductSaleView, "items">>();
 
 	const sales: ProductSaleView[] = [];

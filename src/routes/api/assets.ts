@@ -11,7 +11,8 @@ const EXT_MAP: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png
 export const assetRoutes = new Hono<AppEnv>();
 
 assetRoutes.get("/", async (c) => {
-	const assets = await getAssets(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const assets = await getAssets(c.env.DB, tenantId);
 	return c.json(assets);
 });
 
@@ -30,12 +31,14 @@ assetRoutes.get("/photo/*", async (c) => {
 });
 
 assetRoutes.get("/:id", async (c) => {
-	const asset = await getAssetById(c.env.DB, Number(c.req.param("id")));
+	const tenantId = c.get('tenant_id');
+	const asset = await getAssetById(c.env.DB, tenantId, Number(c.req.param("id")));
 	if (!asset) return c.json({ error: "Asset not found" }, 404);
 	return c.json(asset);
 });
 
 assetRoutes.post("/", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await c.req.json<{
 		name: string; asset_type: string; model?: string; photo_url?: string; notes?: string;
 		uses_battery?: number; max_weight_kg?: number | null; min_age?: number | null; max_age?: number | null; sort_order?: number;
@@ -43,40 +46,43 @@ assetRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 	if (!body.name || !body.asset_type) {
 		return c.json({ error: "Nome e tipo são obrigatórios" }, 400);
 	}
-	const asset = await createAsset(c.env.DB, body);
+	const asset = await createAsset(c.env.DB, { ...body, tenant_id: tenantId });
 	await auditLog(c, "asset.create", "asset", asset?.id, { name: body.name });
 	return c.json(asset, 201);
 });
 
 assetRoutes.put("/:id", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getAssetById(c.env.DB, id);
+	const existing = await getAssetById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Asset not found" }, 404);
 
 	const body = await c.req.json<{
 		name?: string; asset_type?: string; model?: string; photo_url?: string; notes?: string;
 		uses_battery?: number; max_weight_kg?: number | null; min_age?: number | null; max_age?: number | null; sort_order?: number;
 	}>();
-	await updateAsset(c.env.DB, id, body);
+	await updateAsset(c.env.DB, tenantId, id, body);
 	await auditLog(c, "asset.update", "asset", id, body);
-	const updated = await getAssetById(c.env.DB, id);
+	const updated = await getAssetById(c.env.DB, tenantId, id);
 	return c.json(updated);
 });
 
 assetRoutes.delete("/:id", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getAssetById(c.env.DB, id);
+	const existing = await getAssetById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Asset not found" }, 404);
 
-	await retireAsset(c.env.DB, id);
+	await retireAsset(c.env.DB, tenantId, id);
 	await auditLog(c, "asset.retire", "asset", id, { name: existing.name });
 	return c.json({ ok: true });
 });
 
 // Upload asset photo to R2
 assetRoutes.post("/:id/photo", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getAssetById(c.env.DB, id);
+	const existing = await getAssetById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);
 
 	const formData = await c.req.formData();
@@ -104,7 +110,7 @@ assetRoutes.post("/:id/photo", requirePermission("assets.manage"), async (c) => 
 		httpMetadata: { contentType: file.type },
 	});
 
-	await updateAsset(c.env.DB, id, { photo_url: key });
+	await updateAsset(c.env.DB, tenantId, id, { photo_url: key });
 	await auditLog(c, "asset.photo.upload", "asset", id, { key });
 
 	return c.json({ photo_url: key }, 200);
@@ -112,13 +118,14 @@ assetRoutes.post("/:id/photo", requirePermission("assets.manage"), async (c) => 
 
 // Delete asset photo
 assetRoutes.delete("/:id/photo", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getAssetById(c.env.DB, id);
+	const existing = await getAssetById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Ativo nao encontrado" }, 404);
 
 	if (existing.photo_url) {
 		await c.env.B_BUCKET_SPEEDKIDS.delete(existing.photo_url);
-		await updateAsset(c.env.DB, id, { photo_url: null as unknown as string });
+		await updateAsset(c.env.DB, tenantId, id, { photo_url: null as unknown as string });
 		await auditLog(c, "asset.photo.delete", "asset", id);
 	}
 

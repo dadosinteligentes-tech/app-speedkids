@@ -21,10 +21,10 @@ export async function createAuthSession(
 export async function getAuthSession(
 	db: D1Database,
 	sessionId: string,
-): Promise<(AuthSession & { user_name: string; user_email: string; user_role: string }) | null> {
+): Promise<(AuthSession & { user_name: string; user_email: string; user_role: string; user_tenant_id: number }) | null> {
 	return db
 		.prepare(`
-			SELECT s.*, u.name as user_name, u.email as user_email, u.role as user_role
+			SELECT s.*, u.name as user_name, u.email as user_email, u.role as user_role, u.tenant_id as user_tenant_id
 			FROM auth_sessions s
 			JOIN users u ON s.user_id = u.id
 			WHERE s.id = ? AND s.expires_at > datetime('now') AND u.active = 1

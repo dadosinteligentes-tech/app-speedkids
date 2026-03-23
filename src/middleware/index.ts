@@ -3,10 +3,12 @@ import { HTTPException } from "hono/http-exception";
 import type { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { authMiddleware } from "./auth";
+import { tenantMiddleware } from "./tenant";
 import { HttpValidationError } from "../lib/request";
 
 export function registerMiddleware(app: Hono<AppEnv>) {
 	app.use("/api/*", cors());
+	app.use("*", tenantMiddleware);
 	app.use("*", authMiddleware);
 
 	app.onError((err, c) => {

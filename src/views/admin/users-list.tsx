@@ -1,11 +1,13 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { User } from "../../db/schema";
+import type { User, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface UsersListProps {
 	users: Omit<User, "password_hash" | "salt">[];
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -14,7 +16,7 @@ const ROLE_LABELS: Record<string, string> = {
 	owner: "Sócio",
 };
 
-export const UsersList: FC<UsersListProps> = ({ users, user }) => {
+export const UsersList: FC<UsersListProps> = ({ users, user, tenant, isPlatformAdmin }) => {
 	const script = html`<script>
 ${raw(`
 function showUserForm(u) {
@@ -81,7 +83,7 @@ function deactivateUser(id, name) {
 </script>`;
 
 	return (
-		<AdminLayout title="Usuários" user={user} activeTab="/admin/users" bodyScripts={script}>
+		<AdminLayout title="Usuários" user={user} activeTab="/admin/users" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Usuários</h2>
 				<button onclick="showUserForm(null)" class="btn-touch btn-bounce px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm active:bg-sk-orange-dark">

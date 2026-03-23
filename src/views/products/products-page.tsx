@@ -1,6 +1,6 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Product } from "../../db/schema";
+import type { Product, Tenant } from "../../db/schema";
 import type { CashStatusBadge } from "../../lib/cash-status";
 import { Layout } from "../layout";
 import { DenominationInput } from "../components/denomination-input";
@@ -10,13 +10,15 @@ interface ProductsPageProps {
 	products: Product[];
 	user: { name: string; role: string } | null;
 	cashStatus: CashStatusBadge | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function fmtPrice(cents: number): string {
 	return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
 }
 
-export const ProductsPage: FC<ProductsPageProps> = ({ products, user, cashStatus }) => {
+export const ProductsPage: FC<ProductsPageProps> = ({ products, user, cashStatus, tenant, isPlatformAdmin }) => {
 	const activeProducts = products.filter((p) => p.active);
 	const inactiveProducts = products.filter((p) => !p.active);
 	const uniqueCategories = [...new Set(products.filter((p) => p.category).map((p) => p.category!))].sort();
@@ -833,7 +835,7 @@ function closeSuccess() { closePayment(); }
 </script>`;
 
 	return (
-		<Layout title="SpeedKids - Produtos" user={user} bodyScripts={script} cashStatus={cashStatus}>
+		<Layout title={`${tenant?.name || "App"} - Produtos`} user={user} bodyScripts={script} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-xl font-display font-bold text-sk-text">Produtos</h2>
 				{(user?.role === "manager" || user?.role === "owner") && (

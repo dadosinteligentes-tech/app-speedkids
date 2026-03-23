@@ -1,6 +1,6 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Shift } from "../../db/schema";
+import type { Shift, Tenant } from "../../db/schema";
 import type { CashRegisterView } from "../../db/queries/cash-registers";
 import type { CashStatusBadge } from "../../lib/cash-status";
 import { Layout } from "../layout";
@@ -11,13 +11,15 @@ interface ClockInOutProps {
 	register: CashRegisterView | null;
 	user: { name: string; role: string } | null;
 	cashStatus?: CashStatusBadge | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function formatDateTime(iso: string): string {
 	return toBrazilDateTime(iso);
 }
 
-export const ClockInOut: FC<ClockInOutProps> = ({ shift, register, user, cashStatus }) => {
+export const ClockInOut: FC<ClockInOutProps> = ({ shift, register, user, cashStatus, tenant, isPlatformAdmin }) => {
 	const script = html`<script>
 ${raw(`
 function setShiftName(name) {
@@ -74,7 +76,7 @@ function showShiftEndScreen(shiftId) {
 </script>`;
 
 	return (
-		<Layout title="SpeedKids - Turno" user={user} bodyScripts={script} cashStatus={cashStatus}>
+		<Layout title={`${tenant?.name || "App"} - Turno`} user={user} bodyScripts={script} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="mb-4">
 				<a href="/" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Dashboard</a>
 			</div>

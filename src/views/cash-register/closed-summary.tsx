@@ -1,7 +1,7 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { CashRegisterView, CashTransactionView, RegisterSummary } from "../../db/queries/cash-registers";
-import type { CashRegisterDenomination } from "../../db/schema";
+import type { CashRegisterDenomination, Tenant } from "../../db/schema";
 import type { CashStatusBadge } from "../../lib/cash-status";
 import type { DenominationMap } from "../../lib/denominations";
 import { DENOMINATIONS } from "../../lib/denominations";
@@ -16,6 +16,8 @@ interface ClosedSummaryProps {
 	denomInventory: DenominationMap;
 	user: { name: string; role: string } | null;
 	cashStatus?: CashStatusBadge | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const TX_TYPE_LABELS: Record<string, string> = {
@@ -44,7 +46,7 @@ function buildDenomMap(events: CashRegisterDenomination[], eventType: string): D
 	return map;
 }
 
-export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactions, summary, denomEvents, denomInventory, user, cashStatus }) => {
+export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactions, summary, denomEvents, denomInventory, user, cashStatus, tenant, isPlatformAdmin }) => {
 	const discrepancy = (register.closing_balance_cents ?? 0) - (register.expected_balance_cents ?? 0);
 	const absDiff = Math.abs(discrepancy);
 
@@ -109,7 +111,7 @@ export const CashClosedSummary: FC<ClosedSummaryProps> = ({ register, transactio
 	const script = html`<script>${raw(`function printSummary(){window.print();}`)}</script>`;
 
 	return (
-		<Layout title="SpeedKids - Resumo de Caixa" user={user} headScripts={printStyles} bodyScripts={script} cashStatus={cashStatus}>
+		<Layout title={`${tenant?.name || "App"} - Resumo de Caixa`} user={user} headScripts={printStyles} bodyScripts={script} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="mb-4 flex items-center justify-between print:hidden">
 				<a href="/cash" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Caixa</a>
 				<div class="flex gap-2">

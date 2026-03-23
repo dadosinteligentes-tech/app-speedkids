@@ -9,13 +9,16 @@ export const productPages = new Hono<AppEnv>();
 productPages.get("/", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.redirect("/login");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 
 	const [products, cashStatus] = await Promise.all([
-		getAllProducts(c.env.DB),
-		getCashStatus(c.env.DB),
+		getAllProducts(c.env.DB, tenantId),
+		getCashStatus(c.env.DB, tenantId),
 	]);
 
 	return c.html(
-		<ProductsPage products={products} user={user} cashStatus={cashStatus} />,
+		<ProductsPage products={products} user={user} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />,
 	);
 });

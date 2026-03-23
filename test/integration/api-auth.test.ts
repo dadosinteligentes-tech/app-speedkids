@@ -13,10 +13,32 @@ async function applyMigrations(db: D1Database) {
 	// Create minimal tables needed for auth tests
 	await db.batch([
 		db.prepare(`
+			CREATE TABLE IF NOT EXISTS tenants (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				slug TEXT UNIQUE NOT NULL,
+				name TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'active',
+				plan TEXT NOT NULL DEFAULT 'pro',
+				logo_url TEXT,
+				primary_color TEXT DEFAULT '#FF7043',
+				timezone TEXT DEFAULT 'America/Sao_Paulo',
+				owner_email TEXT NOT NULL,
+				max_users INTEGER DEFAULT 10,
+				max_assets INTEGER DEFAULT 50,
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
+			INSERT OR IGNORE INTO tenants (id, slug, name, owner_email)
+			VALUES (1, 'test', 'Test Tenant', 'admin@test.com')
+		`),
+		db.prepare(`
 			CREATE TABLE IF NOT EXISTS users (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
 				name TEXT NOT NULL,
-				email TEXT NOT NULL UNIQUE,
+				email TEXT NOT NULL,
 				password_hash TEXT NOT NULL,
 				salt TEXT NOT NULL,
 				role TEXT NOT NULL DEFAULT 'operator',
@@ -37,6 +59,7 @@ async function applyMigrations(db: D1Database) {
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS operation_logs (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
 				user_id INTEGER,
 				action TEXT NOT NULL,
 				entity_type TEXT NOT NULL,

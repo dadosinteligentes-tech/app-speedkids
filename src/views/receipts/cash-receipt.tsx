@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { BusinessConfig } from "../../db/schema";
+import type { BusinessConfig, Tenant } from "../../db/schema";
 import type { CashRegisterView, RegisterSummary } from "../../db/queries/cash-registers";
 import { ReceiptLayout, fmtMoney, fmtDate } from "./receipt-layout";
 
@@ -7,6 +7,7 @@ interface CashReceiptProps {
 	register: CashRegisterView;
 	summary: RegisterSummary;
 	config: BusinessConfig;
+	tenant?: Tenant | null;
 }
 
 export const CashReceipt: FC<CashReceiptProps> = ({ register, summary, config }) => {

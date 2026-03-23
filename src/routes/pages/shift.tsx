@@ -10,10 +10,13 @@ export const shiftPages = new Hono<AppEnv>();
 shiftPages.get("/", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.redirect("/login");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 	const [shift, register, cashStatus] = await Promise.all([
-		getActiveShift(c.env.DB, user.id),
-		getOpenRegister(c.env.DB),
-		getCashStatus(c.env.DB),
+		getActiveShift(c.env.DB, tenantId, user.id),
+		getOpenRegister(c.env.DB, tenantId),
+		getCashStatus(c.env.DB, tenantId),
 	]);
-	return c.html(<ClockInOut shift={shift} register={register} user={user} cashStatus={cashStatus} />);
+	return c.html(<ClockInOut shift={shift} register={register} user={user} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });

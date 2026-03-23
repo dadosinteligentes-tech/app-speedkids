@@ -14,14 +14,15 @@ import { getProductSaleById } from "../../db/queries/product-sales";
 export const receiptPages = new Hono<AppEnv>();
 
 // Helper: check business config is set up
-async function requireConfig(db: D1Database) {
-	const config = await getBusinessConfig(db);
+async function requireConfig(db: D1Database, tenantId: number) {
+	const config = await getBusinessConfig(db, tenantId);
 	if (!config || !config.name) return null;
 	return config;
 }
 
 receiptPages.get("/rental/:id", async (c) => {
-	const config = await requireConfig(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const config = await requireConfig(c.env.DB, tenantId);
 	if (!config) {
 		return c.html(
 			<html><body style="font-family:monospace;padding:20px;text-align:center">
@@ -30,20 +31,22 @@ receiptPages.get("/rental/:id", async (c) => {
 		);
 	}
 
-	const session = await getSessionById(c.env.DB, c.req.param("id"));
+	const session = await getSessionById(c.env.DB, c.req.param("id"), tenantId);
 	if (!session) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Sessao nao encontrada.</p></body></html>, 404);
 
 	let attendantName: string | null = null;
 	if (session.attendant_id) {
-		const user = await getUserById(c.env.DB, session.attendant_id);
+		const user = await getUserById(c.env.DB, tenantId, session.attendant_id);
 		attendantName = user?.name ?? null;
 	}
 
-	return c.html(<RentalReceipt session={session} attendantName={attendantName} config={config} />);
+	const tenant = c.get("tenant");
+	return c.html(<RentalReceipt session={session} attendantName={attendantName} config={config} tenant={tenant} />);
 });
 
 receiptPages.get("/shift/:id", async (c) => {
-	const config = await requireConfig(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const config = await requireConfig(c.env.DB, tenantId);
 	if (!config) {
 		return c.html(
 			<html><body style="font-family:monospace;padding:20px;text-align:center">
@@ -53,14 +56,16 @@ receiptPages.get("/shift/:id", async (c) => {
 	}
 
 	const shiftId = Number(c.req.param("id"));
-	const shift = await getShiftReportById(c.env.DB, shiftId);
+	const shift = await getShiftReportById(c.env.DB, tenantId, shiftId);
 	if (!shift) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Turno nao encontrado.</p></body></html>, 404);
 
-	return c.html(<ShiftReceipt shift={shift} config={config} />);
+	const tenant = c.get("tenant");
+	return c.html(<ShiftReceipt shift={shift} config={config} tenant={tenant} />);
 });
 
 receiptPages.get("/cash/:id", async (c) => {
-	const config = await requireConfig(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const config = await requireConfig(c.env.DB, tenantId);
 	if (!config) {
 		return c.html(
 			<html><body style="font-family:monospace;padding:20px;text-align:center">
@@ -70,15 +75,17 @@ receiptPages.get("/cash/:id", async (c) => {
 	}
 
 	const registerId = Number(c.req.param("id"));
-	const register = await getRegisterById(c.env.DB, registerId);
+	const register = await getRegisterById(c.env.DB, registerId, tenantId);
 	if (!register) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Caixa nao encontrado.</p></body></html>, 404);
 
 	const summary = await getRegisterSummary(c.env.DB, registerId);
-	return c.html(<CashReceipt register={register} summary={summary} config={config} />);
+	const tenant = c.get("tenant");
+	return c.html(<CashReceipt register={register} summary={summary} config={config} tenant={tenant} />);
 });
 
 receiptPages.get("/product-sale/:id", async (c) => {
-	const config = await requireConfig(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const config = await requireConfig(c.env.DB, tenantId);
 	if (!config) {
 		return c.html(
 			<html><body style="font-family:monospace;padding:20px;text-align:center">
@@ -88,8 +95,9 @@ receiptPages.get("/product-sale/:id", async (c) => {
 	}
 
 	const saleId = Number(c.req.param("id"));
-	const sale = await getProductSaleById(c.env.DB, saleId);
+	const sale = await getProductSaleById(c.env.DB, saleId, tenantId);
 	if (!sale) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Venda nao encontrada.</p></body></html>, 404);
 
-	return c.html(<ProductSaleReceipt sale={sale} config={config} />);
+	const tenant = c.get("tenant");
+	return c.html(<ProductSaleReceipt sale={sale} config={config} tenant={tenant} />);
 });

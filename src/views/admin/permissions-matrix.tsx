@@ -1,12 +1,14 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Permission, RolePermission } from "../../db/schema";
+import type { Permission, RolePermission, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface PermissionsMatrixProps {
 	permissions: Permission[];
 	rolePermissions: RolePermission[];
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -17,7 +19,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLES = ["operator", "manager", "owner"];
 
-export const PermissionsMatrix: FC<PermissionsMatrixProps> = ({ permissions, rolePermissions, user }) => {
+export const PermissionsMatrix: FC<PermissionsMatrixProps> = ({ permissions, rolePermissions, user, tenant, isPlatformAdmin }) => {
 	const activeSet = new Set(rolePermissions.map((rp) => rp.role + ":" + rp.permission_key));
 
 	const categories: Record<string, Permission[]> = {};
@@ -104,7 +106,7 @@ function savePermissions() {
 </script>`;
 
 	return (
-		<AdminLayout title="Permissoes" user={user} activeTab="/admin/permissions" bodyScripts={script}>
+		<AdminLayout title="Permissoes" user={user} activeTab="/admin/permissions" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<div>
 					<h2 class="text-xl font-display font-bold text-sk-text">Permissoes por Perfil</h2>

@@ -1,12 +1,14 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Asset, AssetType } from "../../db/schema";
+import type { Asset, AssetType, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface AssetsListProps {
 	assets: Asset[];
 	assetTypes: AssetType[];
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -23,7 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 	retired: "bg-gray-100 text-gray-600",
 };
 
-export const AssetsList: FC<AssetsListProps> = ({ assets, assetTypes, user }) => {
+export const AssetsList: FC<AssetsListProps> = ({ assets, assetTypes, user, tenant, isPlatformAdmin }) => {
 	const typeMap = Object.fromEntries(assetTypes.map((t) => [t.name, t.label]));
 	const isOwner = user?.role === "owner";
 
@@ -231,7 +233,7 @@ function deleteType(id, label) {
 </script>`;
 
 	return (
-		<AdminLayout title="Ativos" user={user} activeTab="/admin/assets" bodyScripts={script}>
+		<AdminLayout title="Ativos" user={user} activeTab="/admin/assets" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Ativos / Brinquedos</h2>
 				<button onclick="showAssetForm(null)" class="btn-touch px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm btn-bounce active:bg-sk-orange-dark">

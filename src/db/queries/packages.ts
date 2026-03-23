@@ -1,26 +1,29 @@
 import type { Package } from "../schema";
 
-export async function getActivePackages(db: D1Database): Promise<Package[]> {
+export async function getActivePackages(db: D1Database, tenantId: number): Promise<Package[]> {
 	const { results } = await db
-		.prepare("SELECT * FROM packages WHERE active = 1 ORDER BY sort_order ASC")
+		.prepare("SELECT * FROM packages WHERE active = 1 AND tenant_id = ? ORDER BY sort_order ASC")
+		.bind(tenantId)
 		.all<Package>();
 	return results;
 }
 
-export async function getAllPackages(db: D1Database): Promise<Package[]> {
+export async function getAllPackages(db: D1Database, tenantId: number): Promise<Package[]> {
 	const { results } = await db
-		.prepare("SELECT * FROM packages ORDER BY sort_order ASC")
+		.prepare("SELECT * FROM packages WHERE tenant_id = ? ORDER BY sort_order ASC")
+		.bind(tenantId)
 		.all<Package>();
 	return results;
 }
 
-export async function getPackageById(db: D1Database, id: number): Promise<Package | null> {
-	return db.prepare("SELECT * FROM packages WHERE id = ?").bind(id).first<Package>();
+export async function getPackageById(db: D1Database, tenantId: number, id: number): Promise<Package | null> {
+	return db.prepare("SELECT * FROM packages WHERE id = ? AND tenant_id = ?").bind(id, tenantId).first<Package>();
 }
 
 export async function createPackage(
 	db: D1Database,
 	params: {
+		tenant_id: number;
 		name: string;
 		duration_minutes: number;
 		price_cents: number;
@@ -32,11 +35,12 @@ export async function createPackage(
 ): Promise<Package | null> {
 	return db
 		.prepare(`
-			INSERT INTO packages (name, duration_minutes, price_cents, sort_order, overtime_block_minutes, overtime_block_price_cents, grace_period_minutes)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO packages (tenant_id, name, duration_minutes, price_cents, sort_order, overtime_block_minutes, overtime_block_price_cents, grace_period_minutes)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			RETURNING *
 		`)
 		.bind(
+			params.tenant_id,
 			params.name,
 			params.duration_minutes,
 			params.price_cents,
@@ -50,6 +54,7 @@ export async function createPackage(
 
 export async function updatePackage(
 	db: D1Database,
+	tenantId: number,
 	id: number,
 	params: {
 		name?: string;
@@ -75,17 +80,17 @@ export async function updatePackage(
 	if (sets.length === 0) return;
 
 	sets.push("updated_at = datetime('now')");
-	values.push(id);
+	values.push(id, tenantId);
 
 	await db
-		.prepare(`UPDATE packages SET ${sets.join(", ")} WHERE id = ?`)
+		.prepare(`UPDATE packages SET ${sets.join(", ")} WHERE id = ? AND tenant_id = ?`)
 		.bind(...values)
 		.run();
 }
 
-export async function togglePackageActive(db: D1Database, id: number): Promise<void> {
+export async function togglePackageActive(db: D1Database, tenantId: number, id: number): Promise<void> {
 	await db
-		.prepare("UPDATE packages SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END, updated_at = datetime('now') WHERE id = ?")
-		.bind(id)
+		.prepare("UPDATE packages SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?")
+		.bind(id, tenantId)
 		.run();
 }

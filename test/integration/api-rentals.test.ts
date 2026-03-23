@@ -12,9 +12,25 @@ let sessionCookie: string;
 async function applyMigrations(db: D1Database) {
 	await db.batch([
 		db.prepare(`
+			CREATE TABLE IF NOT EXISTS tenants (
+				id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
+				name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
+				plan TEXT NOT NULL DEFAULT 'pro', logo_url TEXT,
+				primary_color TEXT DEFAULT '#FF7043', timezone TEXT DEFAULT 'America/Sao_Paulo',
+				owner_email TEXT NOT NULL, max_users INTEGER DEFAULT 10, max_assets INTEGER DEFAULT 50,
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
+			INSERT OR IGNORE INTO tenants (id, slug, name, owner_email)
+			VALUES (1, 'test', 'Test Tenant', 'op@test.com')
+		`),
+		db.prepare(`
 			CREATE TABLE IF NOT EXISTS users (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-				email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, salt TEXT NOT NULL,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				name TEXT NOT NULL, email TEXT NOT NULL, password_hash TEXT NOT NULL, salt TEXT NOT NULL,
 				role TEXT NOT NULL DEFAULT 'operator', active INTEGER NOT NULL DEFAULT 1,
 				created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
 			)
@@ -27,15 +43,17 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS operation_logs (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
-				action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				user_id INTEGER, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT,
 				details TEXT, ip_address TEXT, created_at TEXT DEFAULT (datetime('now'))
 			)
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS packages (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-				duration_minutes INTEGER NOT NULL, price_cents INTEGER NOT NULL,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				name TEXT NOT NULL, duration_minutes INTEGER NOT NULL, price_cents INTEGER NOT NULL,
 				overtime_block_minutes INTEGER DEFAULT 0, overtime_block_price_cents INTEGER DEFAULT 0,
 				grace_period_minutes INTEGER DEFAULT 0, active INTEGER DEFAULT 1,
 				sort_order INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')),
@@ -44,8 +62,9 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS assets (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-				asset_type TEXT NOT NULL, status TEXT DEFAULT 'available',
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				name TEXT NOT NULL, asset_type TEXT NOT NULL, status TEXT DEFAULT 'available',
 				pos_id INTEGER, model TEXT, photo_url TEXT,
 				battery_level INTEGER, uses_battery INTEGER DEFAULT 0,
 				max_weight_kg REAL, min_age INTEGER, max_age INTEGER,
@@ -56,7 +75,9 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS rental_sessions (
-				id TEXT PRIMARY KEY, asset_id INTEGER NOT NULL, package_id INTEGER NOT NULL,
+				id TEXT PRIMARY KEY,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				asset_id INTEGER NOT NULL, package_id INTEGER NOT NULL,
 				pos_id INTEGER, attendant_id INTEGER, customer_id INTEGER, child_id INTEGER,
 				cash_register_id INTEGER, status TEXT DEFAULT 'running',
 				start_time TEXT NOT NULL, pause_time TEXT, total_paused_ms INTEGER DEFAULT 0,
@@ -75,8 +96,9 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS customers (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-				phone TEXT, email TEXT, cpf TEXT, instagram TEXT, notes TEXT,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				name TEXT NOT NULL, phone TEXT, email TEXT, cpf TEXT, instagram TEXT, notes TEXT,
 				total_rentals INTEGER DEFAULT 0, total_spent_cents INTEGER DEFAULT 0,
 				loyalty_points INTEGER DEFAULT 0,
 				created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
@@ -91,8 +113,9 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS cash_registers (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, shift_id INTEGER,
-				opened_by INTEGER NOT NULL, closed_by INTEGER,
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				shift_id INTEGER, opened_by INTEGER NOT NULL, closed_by INTEGER,
 				opening_balance_cents INTEGER DEFAULT 0, closing_balance_cents INTEGER,
 				expected_balance_cents INTEGER, status TEXT DEFAULT 'open',
 				opened_at TEXT DEFAULT (datetime('now')), closed_at TEXT,
@@ -118,8 +141,9 @@ async function applyMigrations(db: D1Database) {
 		`),
 		db.prepare(`
 			CREATE TABLE IF NOT EXISTS batteries (
-				id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL,
-				asset_id INTEGER, status TEXT DEFAULT 'ready',
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id),
+				label TEXT NOT NULL, asset_id INTEGER, status TEXT DEFAULT 'ready',
 				full_charge_minutes INTEGER DEFAULT 90, charge_time_minutes INTEGER DEFAULT 480,
 				estimated_minutes_remaining INTEGER DEFAULT 90,
 				last_charged_at TEXT, notes TEXT,

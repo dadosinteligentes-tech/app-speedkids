@@ -11,8 +11,9 @@ const EXT_MAP: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png
 export const productRoutes = new Hono<AppEnv>();
 
 productRoutes.get("/", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const all = c.req.query("all");
-	const products = all ? await getAllProducts(c.env.DB) : await getActiveProducts(c.env.DB);
+	const products = all ? await getAllProducts(c.env.DB, tenantId) : await getActiveProducts(c.env.DB, tenantId);
 	return c.json(products);
 });
 
@@ -31,50 +32,55 @@ productRoutes.get("/photo/*", async (c) => {
 });
 
 productRoutes.get("/:id", async (c) => {
-	const product = await getProductById(c.env.DB, Number(c.req.param("id")));
+	const tenantId = c.get('tenant_id');
+	const product = await getProductById(c.env.DB, tenantId, Number(c.req.param("id")));
 	if (!product) return c.json({ error: "Produto nao encontrado" }, 404);
 	return c.json(product);
 });
 
 productRoutes.post("/", requirePermission("products.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await c.req.json<{
 		name: string; price_cents: number; description?: string; category?: string; sort_order?: number;
 	}>();
 	if (!body.name || body.price_cents == null) {
 		return c.json({ error: "Nome e preco sao obrigatorios" }, 400);
 	}
-	const product = await createProduct(c.env.DB, body);
+	const product = await createProduct(c.env.DB, { ...body, tenant_id: tenantId });
 	await auditLog(c, "product.create", "product", product?.id, { name: body.name });
 	return c.json(product, 201);
 });
 
 productRoutes.put("/:id", requirePermission("products.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getProductById(c.env.DB, id);
+	const existing = await getProductById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
 	const body = await c.req.json<{
 		name?: string; price_cents?: number; description?: string; category?: string; sort_order?: number;
 	}>();
-	await updateProduct(c.env.DB, id, body);
+	await updateProduct(c.env.DB, tenantId, id, body);
 	await auditLog(c, "product.update", "product", id, body);
-	const updated = await getProductById(c.env.DB, id);
+	const updated = await getProductById(c.env.DB, tenantId, id);
 	return c.json(updated);
 });
 
 productRoutes.patch("/:id/toggle", requirePermission("products.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getProductById(c.env.DB, id);
+	const existing = await getProductById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
-	await toggleProductActive(c.env.DB, id);
+	await toggleProductActive(c.env.DB, tenantId, id);
 	await auditLog(c, "product.toggle", "product", id);
-	const updated = await getProductById(c.env.DB, id);
+	const updated = await getProductById(c.env.DB, tenantId, id);
 	return c.json(updated);
 });
 
 // Upload product photo to R2
 productRoutes.post("/:id/photo", requirePermission("products.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getProductById(c.env.DB, id);
+	const existing = await getProductById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
 
 	const formData = await c.req.formData();
@@ -102,7 +108,7 @@ productRoutes.post("/:id/photo", requirePermission("products.manage"), async (c)
 		httpMetadata: { contentType: file.type },
 	});
 
-	await updateProduct(c.env.DB, id, { photo_url: key });
+	await updateProduct(c.env.DB, tenantId, id, { photo_url: key });
 	await auditLog(c, "product.photo.upload", "product", id, { key });
 
 	return c.json({ photo_url: key }, 200);
@@ -110,13 +116,14 @@ productRoutes.post("/:id/photo", requirePermission("products.manage"), async (c)
 
 // Delete product photo
 productRoutes.delete("/:id/photo", requirePermission("products.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getProductById(c.env.DB, id);
+	const existing = await getProductById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "Produto nao encontrado" }, 404);
 
 	if (existing.photo_url) {
 		await c.env.B_BUCKET_SPEEDKIDS.delete(existing.photo_url);
-		await updateProduct(c.env.DB, id, { photo_url: null });
+		await updateProduct(c.env.DB, tenantId, id, { photo_url: null });
 		await auditLog(c, "product.photo.delete", "product", id);
 	}
 

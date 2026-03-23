@@ -11,20 +11,23 @@ export const userRoutes = new Hono<AppEnv>();
 userRoutes.use("*", requirePermission("users.manage"));
 
 userRoutes.get("/", async (c) => {
-	const users = await listUsers(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const users = await listUsers(c.env.DB, tenantId);
 	// Strip sensitive fields
 	const safe = users.map(({ password_hash, salt, ...rest }) => rest);
 	return c.json(safe);
 });
 
 userRoutes.get("/:id", async (c) => {
-	const user = await getUserById(c.env.DB, Number(c.req.param("id")));
+	const tenantId = c.get('tenant_id');
+	const user = await getUserById(c.env.DB, tenantId, Number(c.req.param("id")));
 	if (!user) return c.json({ error: "User not found" }, 404);
 	const { password_hash, salt, ...safe } = user;
 	return c.json(safe);
 });
 
 userRoutes.post("/", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await c.req.json<{ name: string; email: string; password: string; role: string }>();
 	if (!body.name || !body.email || !body.password || !body.role) {
 		return c.json({ error: "Todos os campos são obrigatórios" }, 400);
@@ -33,6 +36,7 @@ userRoutes.post("/", async (c) => {
 	const salt = generateSalt();
 	const password_hash = await hashPassword(body.password, salt);
 	const user = await createUser(c.env.DB, {
+		tenant_id: tenantId,
 		name: body.name,
 		email: body.email,
 		password_hash,
@@ -48,8 +52,9 @@ userRoutes.post("/", async (c) => {
 });
 
 userRoutes.put("/:id", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const existing = await getUserById(c.env.DB, id);
+	const existing = await getUserById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "User not found" }, 404);
 
 	const body = await c.req.json<{ name?: string; email?: string; role?: string; password?: string }>();
@@ -63,15 +68,16 @@ userRoutes.put("/:id", async (c) => {
 		params.password_hash = await hashPassword(body.password, params.salt);
 	}
 
-	await updateUser(c.env.DB, id, params);
+	await updateUser(c.env.DB, tenantId, id, params);
 	await auditLog(c, "user.update", "user", id, { name: body.name, role: body.role });
-	const updated = await getUserById(c.env.DB, id);
+	const updated = await getUserById(c.env.DB, tenantId, id);
 	if (!updated) return c.json({ error: "User not found" }, 404);
 	const { password_hash, salt, ...safe } = updated;
 	return c.json(safe);
 });
 
 userRoutes.delete("/:id", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
 	const currentUser = c.get("user");
 
@@ -79,10 +85,10 @@ userRoutes.delete("/:id", async (c) => {
 		return c.json({ error: "Não é possível desativar a si mesmo" }, 400);
 	}
 
-	const existing = await getUserById(c.env.DB, id);
+	const existing = await getUserById(c.env.DB, tenantId, id);
 	if (!existing) return c.json({ error: "User not found" }, 404);
 
-	await deactivateUser(c.env.DB, id);
+	await deactivateUser(c.env.DB, tenantId, id);
 	await auditLog(c, "user.deactivate", "user", id, { name: existing.name });
 	return c.json({ ok: true });
 });

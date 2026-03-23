@@ -1,8 +1,8 @@
 import type { BusinessConfig } from "../schema";
 
-export async function getBusinessConfig(db: D1Database): Promise<BusinessConfig | null> {
+export async function getBusinessConfig(db: D1Database, tenantId: number): Promise<BusinessConfig | null> {
 	try {
-		return await db.prepare("SELECT * FROM business_config WHERE id = 1").first<BusinessConfig>();
+		return await db.prepare("SELECT * FROM business_config WHERE tenant_id = ?").bind(tenantId).first<BusinessConfig>();
 	} catch {
 		return null;
 	}
@@ -10,6 +10,7 @@ export async function getBusinessConfig(db: D1Database): Promise<BusinessConfig 
 
 export async function updateBusinessConfig(
 	db: D1Database,
+	tenantId: number,
 	params: { name?: string; cnpj?: string | null; address?: string | null; phone?: string | null; receipt_footer?: string | null },
 ): Promise<void> {
 	const sets: string[] = [];
@@ -23,7 +24,7 @@ export async function updateBusinessConfig(
 
 	if (sets.length === 0) return;
 	sets.push("updated_at = datetime('now')");
-	values.push(1);
+	values.push(tenantId);
 
-	await db.prepare(`UPDATE business_config SET ${sets.join(", ")} WHERE id = ?`).bind(...values).run();
+	await db.prepare(`UPDATE business_config SET ${sets.join(", ")} WHERE tenant_id = ?`).bind(...values).run();
 }

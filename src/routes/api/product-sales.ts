@@ -11,23 +11,26 @@ import { productSaleSchema } from "../../lib/validation";
 export const productSaleRoutes = new Hono<AppEnv>();
 
 productSaleRoutes.get("/recent", async (c) => {
-	const sales = await getRecentSales(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const sales = await getRecentSales(c.env.DB, tenantId);
 	return c.json(sales);
 });
 
 productSaleRoutes.get("/:id", async (c) => {
-	const sale = await getProductSaleById(c.env.DB, Number(c.req.param("id")));
+	const tenantId = c.get('tenant_id');
+	const sale = await getProductSaleById(c.env.DB, Number(c.req.param("id")), tenantId);
 	if (!sale) return c.json({ error: "Venda nao encontrada" }, 404);
 	return c.json(sale);
 });
 
 productSaleRoutes.post("/", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Nao autorizado" }, 401);
 
 	const body = await validateJson(c, productSaleSchema);
 
-	const register = await getOpenRegister(c.env.DB);
+	const register = await getOpenRegister(c.env.DB, tenantId);
 	if (!register) {
 		return c.json({ error: "Abra o caixa antes de registrar uma venda", code: "NO_REGISTER" }, 400);
 	}
@@ -37,7 +40,7 @@ productSaleRoutes.post("/", async (c) => {
 	let totalCents = 0;
 
 	for (const item of body.items) {
-		const product = await getProductById(c.env.DB, item.product_id);
+		const product = await getProductById(c.env.DB, tenantId, item.product_id);
 		if (!product) return c.json({ error: `Produto ${item.product_id} nao encontrado` }, 404);
 		if (!product.active) return c.json({ error: `Produto "${product.name}" esta inativo` }, 400);
 
@@ -72,6 +75,7 @@ productSaleRoutes.post("/", async (c) => {
 
 	// Create sale
 	const sale = await createProductSale(c.env.DB, {
+		tenant_id: tenantId,
 		cash_register_id: register.id,
 		customer_id: body.customer_id ?? null,
 		attendant_id: user.id,
@@ -87,6 +91,7 @@ productSaleRoutes.post("/", async (c) => {
 	// Record payment (handles single, split, zero-amount, and customer stats)
 	await recordPayment({
 		db: c.env.DB,
+		tenantId,
 		registerId: register.id,
 		recordedBy: user.id,
 		productSaleId: sale.id,
@@ -105,6 +110,6 @@ productSaleRoutes.post("/", async (c) => {
 		item_count: resolvedItems.length,
 	});
 
-	const fullSale = await getProductSaleById(c.env.DB, sale.id);
+	const fullSale = await getProductSaleById(c.env.DB, sale.id, tenantId);
 	return c.json(fullSale, 201);
 });

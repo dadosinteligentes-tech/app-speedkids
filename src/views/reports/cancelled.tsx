@@ -2,15 +2,18 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency, formatDateTime } from "../../lib/report-utils";
 import type { CancelledSession } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	sessions: CancelledSession[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const CancelledReportView: FC<Props> = ({ sessions, from, to, user }) => {
+export const CancelledReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin }) => {
 	const totalCancelled = sessions.length;
 	const totalValue = sessions.reduce((s, c) => s + c.amount_cents, 0);
 
@@ -19,8 +22,10 @@ export const CancelledReportView: FC<Props> = ({ sessions, from, to, user }) => 
 			title="Cancelados"
 			user={user}
 			activeReport="/admin/reports/cancelled"
+			isPlatformAdmin={isPlatformAdmin}
 			from={from}
 			to={to}
+			tenant={tenant}
 		>
 			{/* KPIs */}
 			<div class="grid grid-cols-2 gap-4 mb-6">

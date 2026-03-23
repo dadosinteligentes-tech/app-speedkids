@@ -11,8 +11,11 @@ export const cashRegisterPages = new Hono<AppEnv>();
 cashRegisterPages.get("/", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.redirect("/login");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 
-	const register = await getOpenRegister(c.env.DB);
+	const register = await getOpenRegister(c.env.DB, tenantId);
 	let transactions: Awaited<ReturnType<typeof getTransactions>> = [];
 	let expectedCents = 0;
 	let summary: Awaited<ReturnType<typeof getRegisterSummary>> | null = null;
@@ -26,8 +29,8 @@ cashRegisterPages.get("/", async (c) => {
 	}
 
 	const [shift, cashStatus] = await Promise.all([
-		getActiveShift(c.env.DB, user.id),
-		getCashStatus(c.env.DB),
+		getActiveShift(c.env.DB, tenantId, user.id),
+		getCashStatus(c.env.DB, tenantId),
 	]);
 
 	return c.html(
@@ -39,6 +42,8 @@ cashRegisterPages.get("/", async (c) => {
 			shift={shift}
 			user={user}
 			cashStatus={cashStatus}
+			tenant={tenant}
+		isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });
@@ -46,10 +51,13 @@ cashRegisterPages.get("/", async (c) => {
 cashRegisterPages.get("/closed/:id", async (c) => {
 	const user = c.get("user");
 	if (!user) return c.redirect("/login");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const tenantId = c.get("tenant_id");
 
 	const id = Number(c.req.param("id"));
 	const [register, transactions, summary, denomEvents, denomInventory] = await Promise.all([
-		getRegisterById(c.env.DB, id),
+		getRegisterById(c.env.DB, id, tenantId),
 		getTransactions(c.env.DB, id),
 		getRegisterSummary(c.env.DB, id),
 		getDenominationEvents(c.env.DB, id),
@@ -58,7 +66,7 @@ cashRegisterPages.get("/closed/:id", async (c) => {
 
 	if (!register) return c.redirect("/cash");
 
-	const cashStatus = await getCashStatus(c.env.DB);
+	const cashStatus = await getCashStatus(c.env.DB, tenantId);
 
 	return c.html(
 		<CashClosedSummary
@@ -69,6 +77,8 @@ cashRegisterPages.get("/closed/:id", async (c) => {
 			denomInventory={denomInventory}
 			user={user}
 			cashStatus={cashStatus}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		/>,
 	);
 });

@@ -1,14 +1,16 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Package } from "../../db/schema";
+import type { Package, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface PackagesListProps {
 	packages: Package[];
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const PackagesList: FC<PackagesListProps> = ({ packages, user }) => {
+export const PackagesList: FC<PackagesListProps> = ({ packages, user, tenant, isPlatformAdmin }) => {
 	const script = html`<script>
 ${raw(`
 function showPackageForm(pkg) {
@@ -77,7 +79,7 @@ function togglePackage(id) {
 </script>`;
 
 	return (
-		<AdminLayout title="Pacotes" user={user} activeTab="/admin/packages" bodyScripts={script}>
+		<AdminLayout title="Pacotes" user={user} activeTab="/admin/packages" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Pacotes</h2>
 				<button onclick="showPackageForm(null)" class="btn-touch btn-bounce px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm active:bg-sk-orange-dark">

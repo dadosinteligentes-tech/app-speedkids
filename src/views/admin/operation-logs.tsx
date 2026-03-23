@@ -3,12 +3,15 @@ import { html, raw } from "hono/html";
 import type { OperationLogView } from "../../db/queries/logs";
 import { AdminLayout } from "./layout";
 import { toBrazilDateTime } from "../../lib/timezone";
+import type { Tenant } from "../../db/schema";
 
 interface OperationLogsProps {
 	logs: OperationLogView[];
 	total: number;
 	page: number;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -35,7 +38,7 @@ function formatDate(iso: string): string {
 	return toBrazilDateTime(iso);
 }
 
-export const OperationLogs: FC<OperationLogsProps> = ({ logs, total, page, user }) => {
+export const OperationLogs: FC<OperationLogsProps> = ({ logs, total, page, user, tenant, isPlatformAdmin }) => {
 	const perPage = 50;
 	const totalPages = Math.ceil(total / perPage);
 
@@ -53,7 +56,7 @@ function filterLogs() {
 </script>`;
 
 	return (
-		<AdminLayout title="Logs de Operação" user={user} activeTab="/admin/logs" bodyScripts={script}>
+		<AdminLayout title="Logs de Operação" user={user} activeTab="/admin/logs" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Logs de Operação</h2>
 				<div class="flex items-center gap-2">

@@ -7,11 +7,13 @@ import { auditLog } from "../../lib/logger";
 export const assetTypeRoutes = new Hono<AppEnv>();
 
 assetTypeRoutes.get("/", async (c) => {
-	const types = await getAssetTypes(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const types = await getAssetTypes(c.env.DB, tenantId);
 	return c.json(types);
 });
 
 assetTypeRoutes.post("/", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await c.req.json<{ name: string; label: string }>();
 	if (!body.name || !body.label) {
 		return c.json({ error: "Nome e label sao obrigatorios" }, 400);
@@ -21,7 +23,7 @@ assetTypeRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 		return c.json({ error: "Nome invalido" }, 400);
 	}
 	try {
-		const assetType = await createAssetType(c.env.DB, slug, body.label);
+		const assetType = await createAssetType(c.env.DB, tenantId, slug, body.label);
 		await auditLog(c, "asset_type.create", "asset_type", assetType?.id, { name: slug, label: body.label });
 		return c.json(assetType, 201);
 	} catch (e: any) {
@@ -33,19 +35,21 @@ assetTypeRoutes.post("/", requirePermission("assets.manage"), async (c) => {
 });
 
 assetTypeRoutes.put("/:id", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
 	const body = await c.req.json<{ label: string }>();
 	if (!body.label) {
 		return c.json({ error: "Label e obrigatorio" }, 400);
 	}
-	await updateAssetType(c.env.DB, id, body.label);
+	await updateAssetType(c.env.DB, id, body.label, tenantId);
 	await auditLog(c, "asset_type.update", "asset_type", id, { label: body.label });
 	return c.json({ ok: true });
 });
 
 assetTypeRoutes.delete("/:id", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const id = Number(c.req.param("id"));
-	const result = await deleteAssetType(c.env.DB, id);
+	const result = await deleteAssetType(c.env.DB, id, tenantId);
 	if (!result.ok) {
 		return c.json({ error: result.error }, 409);
 	}

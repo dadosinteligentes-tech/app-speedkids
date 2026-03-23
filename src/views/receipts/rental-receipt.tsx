@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { RentalSessionView, BusinessConfig } from "../../db/schema";
+import type { RentalSessionView, BusinessConfig, Tenant } from "../../db/schema";
 import { ReceiptLayout, fmtMoney, fmtDateTime, fmtTime } from "./receipt-layout";
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -15,6 +15,7 @@ interface RentalReceiptProps {
 	session: RentalSessionView;
 	attendantName: string | null;
 	config: BusinessConfig;
+	tenant?: Tenant | null;
 }
 
 export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, config }) => {

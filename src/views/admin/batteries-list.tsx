@@ -1,12 +1,14 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Asset, BatteryView } from "../../db/schema";
+import type { Asset, BatteryView, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface BatteriesListProps {
 	batteries: BatteryView[];
 	assets: Asset[];
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,7 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 	retired: "bg-gray-100 text-gray-600",
 };
 
-export const BatteriesList: FC<BatteriesListProps> = ({ batteries, assets, user }) => {
+export const BatteriesList: FC<BatteriesListProps> = ({ batteries, assets, user, tenant, isPlatformAdmin }) => {
 	// Assets that use battery and don't already have one installed
 	const installedAssetIds = new Set(batteries.filter((b) => b.asset_id).map((b) => b.asset_id));
 	const availableAssets = assets.filter((a) => !installedAssetIds.has(a.id));
@@ -292,7 +294,7 @@ function uninstallBattery(id, label) {
 </script>`;
 
 	return (
-		<AdminLayout title="Baterias" user={user} activeTab="/admin/batteries" bodyScripts={script}>
+		<AdminLayout title="Baterias" user={user} activeTab="/admin/batteries" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">🔋 Inventario de Baterias</h2>
 				<button onclick="showBatteryForm(null)" class="btn-touch px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm btn-bounce active:bg-sk-orange-dark">

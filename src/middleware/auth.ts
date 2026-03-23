@@ -3,7 +3,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../types";
 import { getAuthSession } from "../db/queries/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/signup", "/api/stripe/webhook", "/landing", "/signup"];
 
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 	const path = new URL(c.req.url).pathname;
@@ -38,7 +38,14 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 		name: session.user_name,
 		email: session.user_email,
 		role: session.user_role,
+		tenant_id: session.user_tenant_id,
 	});
+
+	const adminEmails = (c.env.PLATFORM_ADMIN_EMAILS || "")
+		.split(",")
+		.map((e) => e.trim().toLowerCase())
+		.filter(Boolean);
+	c.set("isPlatformAdmin", adminEmails.includes(session.user_email.toLowerCase()));
 
 	return next();
 });

@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import type { DetailSession, DetailContext } from "../../db/queries/reports";
 import { ReportLayout } from "./layout";
 import { toBrazilDateTime, toBrazilDate } from "../../lib/timezone";
+import type { Tenant } from "../../db/schema";
 
 interface ReportDetailProps {
 	sessions: DetailSession[];
@@ -15,6 +16,8 @@ interface ReportDetailProps {
 	filterParams: string;
 	backUrl: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function formatCurrency(cents: number): string {
@@ -37,14 +40,14 @@ const PAYMENT_LABELS: Record<string, string> = {
 const PER_PAGE = 50;
 
 export const ReportDetailView: FC<ReportDetailProps> = ({
-	sessions, total, totalRevenueCents, context, page, from, to, filter, filterParams, backUrl, user,
+	sessions, total, totalRevenueCents, context, page, from, to, filter, filterParams, backUrl, user, tenant, isPlatformAdmin,
 }) => {
 	const totalPages = Math.ceil(total / PER_PAGE);
 
 	const baseQs = `filter=${filter}${filterParams}&from=${from}&to=${to}`;
 
 	return (
-		<ReportLayout title={context.label} user={user} activeReport={backUrl} from={from} to={to}>
+		<ReportLayout title={context.label} user={user} activeReport={backUrl} from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			{filter !== "all" && (
 				<div class="mb-4">
 					<a href={`${backUrl}?from=${from}&to=${to}`} class="text-sk-orange font-body text-sm hover:underline">

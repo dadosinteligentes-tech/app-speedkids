@@ -2,6 +2,7 @@ import type { FC, PropsWithChildren } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import type { CashStatusBadge } from "../lib/cash-status";
+import type { Tenant } from "../db/schema";
 
 interface LayoutProps {
 	title?: string;
@@ -9,6 +10,8 @@ interface LayoutProps {
 	bodyScripts?: HtmlEscapedString | Promise<HtmlEscapedString>;
 	user?: { name: string; role: string } | null;
 	cashStatus?: CashStatusBadge | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function formatBadgeCurrency(cents: number): string {
@@ -21,14 +24,19 @@ const ROLE_LABELS: Record<string, string> = {
 	owner: "Sócio",
 };
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, headScripts, bodyScripts, user, cashStatus }) => (
+export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, headScripts, bodyScripts, user, cashStatus, tenant, isPlatformAdmin }) => {
+	const brandName = tenant?.name || "SpeedKids";
+	const brandColor = tenant?.primary_color || "#FF7043";
+	const logoUrl = tenant?.logo_url || "/logo.svg";
+
+	return (
 	<html lang="pt-BR">
 		<head>
 			<meta charset="UTF-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-			<meta name="theme-color" content="#FF7043" />
-			<title>{title ?? "SpeedKids"}</title>
-			<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+			<meta name="theme-color" content={brandColor} />
+			<title>{title ?? brandName}</title>
+			<link rel="icon" type="image/svg+xml" href={logoUrl} />
 			<link rel="preconnect" href="https://fonts.googleapis.com" />
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
 			<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -180,7 +188,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 			<nav class="bg-gradient-to-r from-sk-orange-dark to-sk-orange text-white shadow-lg" aria-label="Navegacao principal">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 					<a href="/" class="flex items-center gap-2">
-						<img src="/logo.svg" alt="SpeedKids" class="h-9" />
+						<img src={logoUrl} alt={brandName} class="h-9" />
 					</a>
 					<div class="flex items-center gap-3">
 						<span id="online-status" class="flex items-center gap-1 text-sm">
@@ -208,6 +216,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 								<a href="/products" class="text-sm text-white hover:text-white/90 font-body">Produtos</a>
 								{(user.role === "manager" || user.role === "owner") && (
 									<a href="/admin" class="text-sm text-white hover:text-white/90 font-body">Admin</a>
+								)}
+								{isPlatformAdmin && (
+									<a href="/platform" class="text-sm bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded font-body">Platform</a>
 								)}
 								<span class="text-sm text-white/90">
 									{user.name} <span class="text-white/90 text-xs">({ROLE_LABELS[user.role] ?? user.role})</span>
@@ -275,4 +286,5 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 			{bodyScripts ?? ""}
 		</body>
 	</html>
-);
+	);
+};

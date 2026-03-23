@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { BusinessConfig } from "../../db/schema";
+import type { BusinessConfig, Tenant } from "../../db/schema";
 import type { ProductSaleView } from "../../db/queries/product-sales";
 import { ReceiptLayout, fmtMoney, fmtDateTime } from "./receipt-layout";
 
@@ -14,6 +14,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 interface ProductSaleReceiptProps {
 	sale: ProductSaleView;
 	config: BusinessConfig;
+	tenant?: Tenant | null;
 }
 
 export const ProductSaleReceipt: FC<ProductSaleReceiptProps> = ({ sale, config }) => {

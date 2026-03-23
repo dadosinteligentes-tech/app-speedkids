@@ -7,11 +7,13 @@ import { auditLog } from "../../lib/logger";
 export const businessConfigRoutes = new Hono<AppEnv>();
 
 businessConfigRoutes.get("/", async (c) => {
-	const config = await getBusinessConfig(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const config = await getBusinessConfig(c.env.DB, tenantId);
 	return c.json(config);
 });
 
 businessConfigRoutes.put("/", requirePermission("settings.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await c.req.json<{
 		name?: string;
 		cnpj?: string | null;
@@ -20,8 +22,8 @@ businessConfigRoutes.put("/", requirePermission("settings.manage"), async (c) =>
 		receipt_footer?: string | null;
 	}>();
 
-	await updateBusinessConfig(c.env.DB, body);
+	await updateBusinessConfig(c.env.DB, tenantId, body);
 	await auditLog(c, "business_config.update", "business_config", 1, body);
-	const updated = await getBusinessConfig(c.env.DB);
+	const updated = await getBusinessConfig(c.env.DB, tenantId);
 	return c.json(updated);
 });

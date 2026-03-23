@@ -1,5 +1,22 @@
+export interface Tenant {
+	id: number;
+	slug: string;
+	name: string;
+	status: "active" | "suspended" | "cancelled";
+	plan: string;
+	logo_url: string | null;
+	primary_color: string;
+	timezone: string;
+	owner_email: string;
+	max_users: number;
+	max_assets: number;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface Package {
 	id: number;
+	tenant_id: number;
 	name: string;
 	duration_minutes: number;
 	price_cents: number;
@@ -14,6 +31,7 @@ export interface Package {
 
 export interface AssetType {
 	id: number;
+	tenant_id: number;
 	name: string;
 	label: string;
 	created_at: string;
@@ -21,6 +39,7 @@ export interface AssetType {
 
 export interface Asset {
 	id: number;
+	tenant_id: number;
 	name: string;
 	asset_type: string;
 	status: "available" | "in_use" | "maintenance" | "retired";
@@ -41,6 +60,7 @@ export interface Asset {
 
 export interface Customer {
 	id: number;
+	tenant_id: number;
 	name: string;
 	phone: string | null;
 	email: string | null;
@@ -66,6 +86,7 @@ export interface Child {
 
 export interface RentalSession {
 	id: string;
+	tenant_id: number;
 	asset_id: number;
 	package_id: number;
 	pos_id: number | null;
@@ -112,6 +133,7 @@ export interface RentalSessionView extends RentalSession {
 
 export interface User {
 	id: number;
+	tenant_id: number;
 	name: string;
 	email: string;
 	password_hash: string;
@@ -131,6 +153,7 @@ export interface AuthSession {
 
 export interface OperationLog {
 	id: number;
+	tenant_id: number;
 	user_id: number | null;
 	action: string;
 	entity_type: string;
@@ -142,6 +165,7 @@ export interface OperationLog {
 
 export interface Shift {
 	id: number;
+	tenant_id: number;
 	user_id: number;
 	name: string | null;
 	started_at: string;
@@ -152,6 +176,7 @@ export interface Shift {
 
 export interface CashRegister {
 	id: number;
+	tenant_id: number;
 	shift_id: number | null;
 	opened_by: number;
 	closed_by: number | null;
@@ -179,6 +204,7 @@ export interface CashTransaction {
 
 export interface Product {
 	id: number;
+	tenant_id: number;
 	name: string;
 	description: string | null;
 	price_cents: number;
@@ -192,6 +218,7 @@ export interface Product {
 
 export interface ProductSale {
 	id: number;
+	tenant_id: number;
 	cash_register_id: number | null;
 	customer_id: number | null;
 	attendant_id: number | null;
@@ -226,6 +253,7 @@ export interface CashRegisterDenomination {
 
 export interface Battery {
 	id: number;
+	tenant_id: number;
 	label: string;
 	asset_id: number | null;
 	status: "charging" | "ready" | "in_use" | "depleted" | "retired";
@@ -244,6 +272,7 @@ export interface BatteryView extends Battery {
 
 export interface BusinessConfig {
 	id: number;
+	tenant_id: number;
 	name: string;
 	cnpj: string | null;
 	address: string | null;
@@ -266,4 +295,17 @@ export interface RolePermission {
 	role: string;
 	permission_key: string;
 	created_at: string;
+}
+
+export interface Subscription {
+	id: number;
+	tenant_id: number;
+	stripe_customer_id: string | null;
+	stripe_subscription_id: string | null;
+	plan: string;
+	status: "active" | "past_due" | "cancelled" | "trialing";
+	current_period_start: string | null;
+	current_period_end: string | null;
+	created_at: string;
+	updated_at: string;
 }

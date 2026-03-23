@@ -5,8 +5,8 @@ export interface CashStatusBadge {
 	balance_cents?: number;
 }
 
-export async function getCashStatus(db: D1Database): Promise<CashStatusBadge> {
-	const register = await getOpenRegister(db);
+export async function getCashStatus(db: D1Database, tenantId: number): Promise<CashStatusBadge> {
+	const register = await getOpenRegister(db, tenantId);
 	if (register) {
 		const balance = await calculateExpected(db, register.id);
 		return { open: true, balance_cents: balance };

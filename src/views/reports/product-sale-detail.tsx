@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import type { ProductSaleDetailRow } from "../../db/queries/reports";
 import { ReportLayout } from "./layout";
 import { toBrazilDateTime, toBrazilDate } from "../../lib/timezone";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	sales: ProductSaleDetailRow[];
@@ -12,6 +13,8 @@ interface Props {
 	productId?: number;
 	productName?: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function formatCurrency(cents: number): string {
@@ -29,7 +32,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 const PER_PAGE = 50;
 
 export const ProductSaleDetailView: FC<Props> = ({
-	sales, total, page, from, to, productId, productName, user,
+	sales, total, page, from, to, productId, productName, user, tenant, isPlatformAdmin,
 }) => {
 	const totalPages = Math.ceil(total / PER_PAGE);
 	const totalRevenue = sales.reduce((s, r) => s + r.total_cents, 0);
@@ -37,7 +40,7 @@ export const ProductSaleDetailView: FC<Props> = ({
 	const baseQs = `from=${from}&to=${to}${productId ? `&product_id=${productId}` : ""}`;
 
 	return (
-		<ReportLayout title={label} user={user} activeReport="/admin/reports/products" from={from} to={to}>
+		<ReportLayout title={label} user={user} activeReport="/admin/reports/products" from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="mb-4">
 				<a href={`/admin/reports/products?from=${from}&to=${to}`} class="text-sk-orange font-body text-sm hover:underline">
 					&larr; Voltar ao relatorio de produtos

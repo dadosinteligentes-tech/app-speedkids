@@ -21,5 +21,10 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	"vars": {
+		"APP_DOMAIN": "dadosinteligentes.app.br",
+		"STRIPE_PUBLISHABLE_KEY": "",
+		"PLATFORM_ADMIN_EMAILS": "admin@speedkids.com,contatoricardodiniz@gmail.com"
 	}
 }

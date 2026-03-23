@@ -12,8 +12,13 @@ export async function auditLog(
 	const user = c.get("user");
 	const ip = c.req.header("cf-connecting-ip") ?? c.req.header("x-forwarded-for") ?? null;
 
+	// Use the user's actual tenant_id (not the middleware-resolved one)
+	// This prevents platform admin actions from leaking into client tenant logs
+	const tenantId = user?.tenant_id ?? c.get("tenant_id");
+
 	try {
 		await createLog(c.env.DB, {
+			tenant_id: tenantId,
 			user_id: user?.id ?? null,
 			action,
 			entity_type: entityType,

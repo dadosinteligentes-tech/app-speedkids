@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency } from "../../lib/report-utils";
 import type { HourBucket, DayBucket } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	byHour: HourBucket[];
@@ -9,6 +10,8 @@ interface Props {
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
@@ -19,6 +22,8 @@ export const PeakHoursView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const maxHourCount = Math.max(...byHour.map((h) => h.rental_count), 1);
 	const maxDayCount = Math.max(...byDay.map((d) => d.rental_count), 1);
@@ -48,6 +53,8 @@ export const PeakHoursView: FC<Props> = ({
 			activeReport="/admin/reports/peak-hours"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{!hasData && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center">

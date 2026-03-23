@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency } from "../../lib/report-utils";
 import type { ProductSalesSummary, ProductRevenueRow } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	summary: ProductSalesSummary;
@@ -9,6 +10,8 @@ interface Props {
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 export const ProductSalesReportView: FC<Props> = ({
@@ -17,6 +20,8 @@ export const ProductSalesReportView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const paymentTotal =
 		summary.cash_cents +
@@ -32,6 +37,8 @@ export const ProductSalesReportView: FC<Props> = ({
 			activeReport="/admin/reports/products"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

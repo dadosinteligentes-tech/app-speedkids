@@ -11,9 +11,25 @@ import { loginSchema } from "../../lib/validation";
 export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post("/login", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const body = await validateJson(c, loginSchema);
 
-	const user = await getUserByEmail(c.env.DB, body.email);
+	// Try current tenant first
+	let user = await getUserByEmail(c.env.DB, tenantId, body.email);
+
+	// If not found and email is a platform admin, try the _platform tenant
+	if (!user) {
+		const adminEmails = (c.env.PLATFORM_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+		if (adminEmails.includes(body.email.toLowerCase())) {
+			const platformTenant = await c.env.DB
+				.prepare("SELECT id FROM tenants WHERE slug = '_platform'")
+				.first<{ id: number }>();
+			if (platformTenant) {
+				user = await getUserByEmail(c.env.DB, platformTenant.id, body.email);
+			}
+		}
+	}
+
 	if (!user) {
 		return c.json({ error: "Email ou senha inválidos" }, 401);
 	}
@@ -36,7 +52,7 @@ authRoutes.post("/login", async (c) => {
 		maxAge: 60 * 60 * 24, // 24 hours
 	});
 
-	c.set("user", { id: user.id, name: user.name, email: user.email, role: user.role });
+	c.set("user", { id: user.id, name: user.name, email: user.email, role: user.role, tenant_id: user.tenant_id });
 	await auditLog(c, "auth.login", "auth", user.id);
 
 	return c.json({

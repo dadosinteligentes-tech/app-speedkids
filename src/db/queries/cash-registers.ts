@@ -12,15 +12,15 @@ export interface CashTransactionView extends CashTransaction {
 
 export async function openRegister(
 	db: D1Database,
-	params: { opened_by: number; shift_id?: number; opening_balance_cents: number; denominations?: DenominationMap },
+	params: { opened_by: number; shift_id?: number; opening_balance_cents: number; denominations?: DenominationMap; tenant_id: number },
 ): Promise<CashRegister | null> {
 	const register = await db
 		.prepare(`
-			INSERT INTO cash_registers (opened_by, shift_id, opening_balance_cents)
-			VALUES (?, ?, ?)
+			INSERT INTO cash_registers (opened_by, shift_id, opening_balance_cents, tenant_id)
+			VALUES (?, ?, ?, ?)
 			RETURNING *
 		`)
-		.bind(params.opened_by, params.shift_id ?? null, params.opening_balance_cents)
+		.bind(params.opened_by, params.shift_id ?? null, params.opening_balance_cents, params.tenant_id)
 		.first<CashRegister>();
 
 	if (register && params.denominations) {
@@ -39,6 +39,7 @@ export async function closeRegister(
 	id: number,
 	closedBy: number,
 	closingBalanceCents: number,
+	tenantId: number,
 	closingDenominations?: DenominationMap,
 ): Promise<void> {
 	// Calculate expected balance
@@ -49,9 +50,9 @@ export async function closeRegister(
 			UPDATE cash_registers
 			SET status = 'closed', closed_by = ?, closing_balance_cents = ?,
 			    expected_balance_cents = ?, closed_at = datetime('now')
-			WHERE id = ? AND status = 'open'
+			WHERE id = ? AND status = 'open' AND tenant_id = ?
 		`)
-		.bind(closedBy, closingBalanceCents, expected, id)
+		.bind(closedBy, closingBalanceCents, expected, id, tenantId)
 		.run();
 
 	if (closingDenominations) {
@@ -63,26 +64,26 @@ export async function closeRegister(
 	}
 }
 
-export async function getOpenRegister(db: D1Database, userId?: number): Promise<CashRegisterView | null> {
+export async function getOpenRegister(db: D1Database, tenantId: number, userId?: number): Promise<CashRegisterView | null> {
 	const query = userId
-		? "SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name FROM cash_registers cr JOIN users u1 ON cr.opened_by = u1.id LEFT JOIN users u2 ON cr.closed_by = u2.id WHERE cr.status = 'open' AND cr.opened_by = ? ORDER BY cr.opened_at DESC LIMIT 1"
-		: "SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name FROM cash_registers cr JOIN users u1 ON cr.opened_by = u1.id LEFT JOIN users u2 ON cr.closed_by = u2.id WHERE cr.status = 'open' ORDER BY cr.opened_at DESC LIMIT 1";
+		? "SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name FROM cash_registers cr JOIN users u1 ON cr.opened_by = u1.id LEFT JOIN users u2 ON cr.closed_by = u2.id WHERE cr.status = 'open' AND cr.tenant_id = ? AND cr.opened_by = ? ORDER BY cr.opened_at DESC LIMIT 1"
+		: "SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name FROM cash_registers cr JOIN users u1 ON cr.opened_by = u1.id LEFT JOIN users u2 ON cr.closed_by = u2.id WHERE cr.status = 'open' AND cr.tenant_id = ? ORDER BY cr.opened_at DESC LIMIT 1";
 
 	return userId
-		? db.prepare(query).bind(userId).first<CashRegisterView>()
-		: db.prepare(query).first<CashRegisterView>();
+		? db.prepare(query).bind(tenantId, userId).first<CashRegisterView>()
+		: db.prepare(query).bind(tenantId).first<CashRegisterView>();
 }
 
-export async function getRegisterById(db: D1Database, id: number): Promise<CashRegisterView | null> {
+export async function getRegisterById(db: D1Database, id: number, tenantId: number): Promise<CashRegisterView | null> {
 	return db
 		.prepare(`
 			SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name
 			FROM cash_registers cr
 			JOIN users u1 ON cr.opened_by = u1.id
 			LEFT JOIN users u2 ON cr.closed_by = u2.id
-			WHERE cr.id = ?
+			WHERE cr.id = ? AND cr.tenant_id = ?
 		`)
-		.bind(id)
+		.bind(id, tenantId)
 		.first<CashRegisterView>();
 }
 
@@ -226,17 +227,18 @@ export async function getRegisterSummary(db: D1Database, registerId: number): Pr
 	};
 }
 
-export async function getRecentRegisters(db: D1Database, limit = 20): Promise<CashRegisterView[]> {
+export async function getRecentRegisters(db: D1Database, tenantId: number, limit = 20): Promise<CashRegisterView[]> {
 	const { results } = await db
 		.prepare(`
 			SELECT cr.*, u1.name as opened_by_name, u2.name as closed_by_name
 			FROM cash_registers cr
 			JOIN users u1 ON cr.opened_by = u1.id
 			LEFT JOIN users u2 ON cr.closed_by = u2.id
+			WHERE cr.tenant_id = ?
 			ORDER BY cr.opened_at DESC
 			LIMIT ?
 		`)
-		.bind(limit)
+		.bind(tenantId, limit)
 		.all<CashRegisterView>();
 	return results;
 }

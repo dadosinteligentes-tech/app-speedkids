@@ -21,6 +21,7 @@ export interface PaymentItem {
 
 export interface RecordPaymentParams {
 	db: D1Database;
+	tenantId: number;
 	registerId: number;
 	recordedBy: number | null;
 	/** Link to rental or product sale */
@@ -93,6 +94,7 @@ async function recordDenominations(
 export async function recordPayment(params: RecordPaymentParams): Promise<void> {
 	const {
 		db,
+		tenantId,
 		registerId,
 		recordedBy,
 		rentalSessionId,
@@ -109,7 +111,7 @@ export async function recordPayment(params: RecordPaymentParams): Promise<void> 
 	if (amountCents <= 0) {
 		// Zero-amount or fully discounted — only update customer stats
 		if (customerId) {
-			await updateCustomerStats(db, customerId, 0);
+			await updateCustomerStats(db, tenantId, customerId, 0);
 		}
 		return;
 	}
@@ -170,7 +172,7 @@ export async function recordPayment(params: RecordPaymentParams): Promise<void> 
 
 	// Update customer stats
 	if (customerId) {
-		await updateCustomerStats(db, customerId, amountCents);
+		await updateCustomerStats(db, tenantId, customerId, amountCents);
 	}
 }
 

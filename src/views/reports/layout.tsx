@@ -1,6 +1,7 @@
 import type { FC, PropsWithChildren } from "hono/jsx";
 import { AdminLayout } from "../admin/layout";
 import { todayISO, daysAgoISO } from "../../lib/report-utils";
+import type { Tenant } from "../../db/schema";
 
 interface ReportLayoutProps {
 	title: string;
@@ -8,6 +9,8 @@ interface ReportLayoutProps {
 	activeReport: string;
 	from: string;
 	to: string;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const REPORT_NAV = [
@@ -32,8 +35,10 @@ export const ReportLayout: FC<PropsWithChildren<ReportLayoutProps>> = ({
 	from,
 	to,
 	children,
+	tenant,
+	isPlatformAdmin,
 }) => (
-	<AdminLayout title={`Relatorio — ${title}`} user={user} activeTab="/admin/reports">
+	<AdminLayout title={`Relatorio — ${title}`} user={user} activeTab="/admin/reports" tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 		{/* Report sub-navigation */}
 		<div class="flex flex-wrap gap-1 mb-4 bg-sk-surface rounded-sk p-2 shadow-sk-sm">
 			{REPORT_NAV.filter((r) => user && r.roles.includes(user.role)).map((r) => (

@@ -5,5 +5,6 @@ import { LoginPage } from "../../views/login";
 export const loginPages = new Hono<AppEnv>();
 
 loginPages.get("/login", async (c) => {
-	return c.html(<LoginPage />);
+	const tenant = c.get("tenant");
+	return c.html(<LoginPage tenant={tenant} />);
 });

@@ -1,11 +1,12 @@
 import type { FC } from "hono/jsx";
-import type { BusinessConfig } from "../../db/schema";
+import type { BusinessConfig, Tenant } from "../../db/schema";
 import type { ShiftReport } from "../../db/queries/reports";
 import { ReceiptLayout, fmtMoney, fmtDateTime } from "./receipt-layout";
 
 interface ShiftReceiptProps {
 	shift: ShiftReport;
 	config: BusinessConfig;
+	tenant?: Tenant | null;
 }
 
 export const ShiftReceipt: FC<ShiftReceiptProps> = ({ shift, config }) => (

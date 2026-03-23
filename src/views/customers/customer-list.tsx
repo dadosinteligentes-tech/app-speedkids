@@ -1,6 +1,6 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Customer } from "../../db/schema";
+import type { Customer, Tenant } from "../../db/schema";
 import { AdminLayout } from "../admin/layout";
 
 interface CustomerListProps {
@@ -8,9 +8,11 @@ interface CustomerListProps {
 	total: number;
 	page: number;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const CustomerList: FC<CustomerListProps> = ({ customers, total, page, user }) => {
+export const CustomerList: FC<CustomerListProps> = ({ customers, total, page, user, tenant, isPlatformAdmin }) => {
 	const totalPages = Math.ceil(total / 50);
 
 	const script = html`<script>
@@ -54,7 +56,7 @@ function saveCustomer() {
 </script>`;
 
 	return (
-		<AdminLayout title="Clientes" user={user} activeTab="/admin/customers" bodyScripts={script}>
+		<AdminLayout title="Clientes" user={user} activeTab="/admin/customers" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Clientes ({total})</h2>
 				<button

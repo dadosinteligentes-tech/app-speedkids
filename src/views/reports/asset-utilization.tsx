@@ -2,12 +2,15 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency } from "../../lib/report-utils";
 import type { AssetUtilization } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	assets: AssetUtilization[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const TYPE_BADGE = "bg-sk-blue-light text-sk-blue-dark";
@@ -23,6 +26,8 @@ export const AssetUtilizationView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const totalRevenue = assets.reduce((s, a) => s + a.revenue_cents, 0);
 	const totalRentals = assets.reduce((s, a) => s + a.rental_count, 0);
@@ -34,6 +39,8 @@ export const AssetUtilizationView: FC<Props> = ({
 			activeReport="/admin/reports/assets"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

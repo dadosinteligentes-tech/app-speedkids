@@ -23,17 +23,20 @@ import { cashOpenSchema, cashCloseSchema, cashTransactionSchema, calculateChange
 export const cashRegisterRoutes = new Hono<AppEnv>();
 
 cashRegisterRoutes.get("/active", async (c) => {
-	const register = await getOpenRegister(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const register = await getOpenRegister(c.env.DB, tenantId);
 	return c.json(register);
 });
 
 cashRegisterRoutes.get("/recent", async (c) => {
-	const registers = await getRecentRegisters(c.env.DB);
+	const tenantId = c.get('tenant_id');
+	const registers = await getRecentRegisters(c.env.DB, tenantId);
 	return c.json(registers);
 });
 
 cashRegisterRoutes.get("/:id", async (c) => {
-	const register = await getRegisterById(c.env.DB, Number(c.req.param("id")));
+	const tenantId = c.get('tenant_id');
+	const register = await getRegisterById(c.env.DB, Number(c.req.param("id")), tenantId);
 	if (!register) return c.json({ error: "Register not found" }, 404);
 	return c.json(register);
 });
@@ -54,14 +57,15 @@ cashRegisterRoutes.get("/:id/summary", async (c) => {
 });
 
 cashRegisterRoutes.post("/open", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-	const existing = await getOpenRegister(c.env.DB);
+	const existing = await getOpenRegister(c.env.DB, tenantId);
 	if (existing) return c.json({ error: "Já existe um caixa aberto" }, 400);
 
 	const body = await validateJson(c, cashOpenSchema);
-	const shift = await getActiveShift(c.env.DB, user.id);
+	const shift = await getActiveShift(c.env.DB, tenantId, user.id);
 
 	const denoms = toDenomMap(body.denominations);
 	const openingCents = denoms ? denomTotal(denoms) : (body.opening_balance_cents ?? 0);
@@ -71,6 +75,7 @@ cashRegisterRoutes.post("/open", async (c) => {
 		shift_id: shift?.id,
 		opening_balance_cents: openingCents,
 		denominations: denoms ?? undefined,
+		tenant_id: tenantId,
 	});
 
 	await auditLog(c, "cash.open", "cash_register", register?.id, { opening_balance_cents: openingCents, denominations: denoms });
@@ -78,11 +83,12 @@ cashRegisterRoutes.post("/open", async (c) => {
 });
 
 cashRegisterRoutes.post("/:id/close", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 
 	const id = Number(c.req.param("id"));
-	const register = await getRegisterById(c.env.DB, id);
+	const register = await getRegisterById(c.env.DB, id, tenantId);
 	if (!register) return c.json({ error: "Register not found" }, 404);
 	if (register.status === "closed") return c.json({ error: "Caixa já está fechado" }, 400);
 
@@ -90,9 +96,9 @@ cashRegisterRoutes.post("/:id/close", async (c) => {
 	const closingDenoms = toDenomMap(body.denominations);
 	const closingCents = closingDenoms ? denomTotal(closingDenoms) : (body.closing_balance_cents ?? 0);
 
-	await closeRegister(c.env.DB, id, user.id, closingCents, closingDenoms ?? undefined);
+	await closeRegister(c.env.DB, id, user.id, closingCents, tenantId, closingDenoms ?? undefined);
 
-	const updated = await getRegisterById(c.env.DB, id);
+	const updated = await getRegisterById(c.env.DB, id, tenantId);
 	await auditLog(c, "cash.close", "cash_register", id, {
 		closing: closingCents,
 		expected: updated?.expected_balance_cents,
@@ -102,11 +108,12 @@ cashRegisterRoutes.post("/:id/close", async (c) => {
 });
 
 cashRegisterRoutes.post("/:id/transactions", async (c) => {
+	const tenantId = c.get('tenant_id');
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 
 	const id = Number(c.req.param("id"));
-	const register = await getRegisterById(c.env.DB, id);
+	const register = await getRegisterById(c.env.DB, id, tenantId);
 	if (!register) return c.json({ error: "Register not found" }, 404);
 	if (register.status === "closed") return c.json({ error: "Caixa fechado" }, 400);
 

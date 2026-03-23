@@ -2,12 +2,15 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency } from "../../lib/report-utils";
 import type { PackageRevenue } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	packages: PackageRevenue[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 export const PackageRevenueView: FC<Props> = ({
@@ -15,6 +18,8 @@ export const PackageRevenueView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const totalRevenue = packages.reduce((s, p) => s + p.revenue_cents, 0);
 	const totalRentals = packages.reduce((s, p) => s + p.rental_count, 0);
@@ -26,6 +31,8 @@ export const PackageRevenueView: FC<Props> = ({
 			activeReport="/admin/reports/packages"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

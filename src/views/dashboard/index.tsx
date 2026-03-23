@@ -1,6 +1,6 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { Asset, Battery, Package, RentalSessionView } from "../../db/schema";
+import type { Asset, Battery, Package, RentalSessionView, Tenant } from "../../db/schema";
 import type { CashStatusBadge } from "../../lib/cash-status";
 import { Layout } from "../layout";
 import { AssetCard } from "./asset-card";
@@ -19,9 +19,11 @@ interface DashboardProps {
 	batteries?: Battery[];
 	pageTitle?: string;
 	receiptEnabled?: boolean;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle, receiptEnabled }) => {
+export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle, receiptEnabled, tenant, isPlatformAdmin }) => {
 	const sessionMap = new Map(sessions.map((s) => [s.asset_id, s]));
 	const batteryMap = new Map((batteries ?? []).map((b) => [b.asset_id!, b]));
 
@@ -42,7 +44,7 @@ ${raw(dashboardControllerScript)}
 </script>`;
 
 	return (
-		<Layout title={`SpeedKids - ${pageTitle ?? "Dashboard"}`} bodyScripts={html`${dataScript}${appScript}`} user={user} cashStatus={cashStatus}>
+		<Layout title={`${tenant?.name || "App"} - ${pageTitle ?? "Dashboard"}`} bodyScripts={html`${dataScript}${appScript}`} user={user} cashStatus={cashStatus} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div id="toast-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 			<div class="mb-6 flex items-center justify-between">
 				<h1 class="text-2xl font-display font-bold text-sk-text">{pageTitle ? `🎮 ${pageTitle}` : "🎠 Painel de Controle"}</h1>

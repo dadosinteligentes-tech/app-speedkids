@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { Asset, RentalSessionView } from "../../db/schema";
+import type { Asset, RentalSessionView, Tenant } from "../../db/schema";
 import { Layout } from "../layout";
 
 interface AssetHistoryProps {
@@ -8,6 +8,8 @@ interface AssetHistoryProps {
 	total: number;
 	page: number;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -22,12 +24,12 @@ function formatDate(iso: string): string {
 	return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export const AssetHistory: FC<AssetHistoryProps> = ({ asset, sessions, total, page, user }) => {
+export const AssetHistory: FC<AssetHistoryProps> = ({ asset, sessions, total, page, user, tenant, isPlatformAdmin }) => {
 	const perPage = 50;
 	const totalPages = Math.ceil(total / perPage);
 
 	return (
-		<Layout title={`SpeedKids - Histórico: ${asset.name}`} user={user}>
+		<Layout title={`${tenant?.name || "App"} - Histórico: ${asset.name}`} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<div class="mb-4">
 				<a href="/" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Dashboard</a>
 			</div>

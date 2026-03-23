@@ -17,6 +17,8 @@ import { businessConfigRoutes } from "./routes/api/business-config";
 import { productRoutes } from "./routes/api/products";
 import { productSaleRoutes } from "./routes/api/product-sales";
 import { permissionRoutes } from "./routes/api/permissions";
+import { signupRoutes } from "./routes/api/signup";
+import { stripeWebhookRoutes } from "./routes/api/stripe-webhook";
 import { loginPages } from "./routes/pages/login";
 import { dashboardPages } from "./routes/pages/dashboard";
 import { adminPages } from "./routes/pages/admin";
@@ -28,10 +30,20 @@ import { rentalPages } from "./routes/pages/rentals";
 import { reportPages } from "./routes/pages/reports";
 import { receiptPages } from "./routes/pages/receipts";
 import { productPages } from "./routes/pages/products";
+import { landingPages } from "./routes/pages/landing";
+import { platformPages } from "./routes/pages/platform";
+import { platformApiRoutes } from "./routes/api/platform";
 
 const app = new Hono<AppEnv>();
 
 registerMiddleware(app);
+
+// Public API routes (no auth required — handled by middleware exclusion)
+app.route("/api/signup", signupRoutes);
+app.route("/api/stripe/webhook", stripeWebhookRoutes);
+
+// Platform admin routes (auth required + platform admin check)
+app.route("/api/platform", platformApiRoutes);
 
 // API routes
 app.route("/api/auth", authRoutes);
@@ -51,7 +63,14 @@ app.route("/api/products", productRoutes);
 app.route("/api/product-sales", productSaleRoutes);
 app.route("/api/permissions", permissionRoutes);
 
-// Page routes
+// Landing pages (public site)
+app.route("/landing", landingPages);
+
+// Platform admin pages
+app.route("/platform", platformPages);
+app.get("/platform/", (c) => c.redirect("/platform"));
+
+// Page routes (tenant app)
 app.route("/", loginPages);
 app.route("/", dashboardPages);
 app.route("/admin/reports", reportPages);

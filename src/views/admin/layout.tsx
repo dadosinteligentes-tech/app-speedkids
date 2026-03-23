@@ -1,6 +1,7 @@
 import type { FC, PropsWithChildren } from "hono/jsx";
 import { html } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
+import type { Tenant } from "../../db/schema";
 import { Layout } from "../layout";
 
 interface AdminLayoutProps {
@@ -8,6 +9,8 @@ interface AdminLayoutProps {
 	user: { name: string; role: string } | null;
 	activeTab?: string;
 	bodyScripts?: HtmlEscapedString | Promise<HtmlEscapedString>;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const NAV_ITEMS = [
@@ -22,8 +25,8 @@ const NAV_ITEMS = [
 	{ href: "/admin/settings", label: "Configurações", icon: "⚙️", roles: ["owner"] },
 ];
 
-export const AdminLayout: FC<PropsWithChildren<AdminLayoutProps>> = ({ title, user, activeTab, children, bodyScripts }) => (
-	<Layout title={`SpeedKids - ${title}`} user={user} bodyScripts={bodyScripts}>
+export const AdminLayout: FC<PropsWithChildren<AdminLayoutProps>> = ({ title, user, activeTab, children, bodyScripts, tenant, isPlatformAdmin }) => (
+	<Layout title={`${tenant?.name || "App"} - ${title}`} user={user} bodyScripts={bodyScripts} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 		<div class="mb-4">
 			<a href="/" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar ao Dashboard</a>
 		</div>

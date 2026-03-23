@@ -6,6 +6,7 @@ import type {
 	AgeGroup,
 	CustomerStats,
 } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	topByRevenue: TopCustomer[];
@@ -15,6 +16,8 @@ interface Props {
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 const AGE_COLORS: Record<string, string> = {
@@ -34,6 +37,8 @@ export const CustomerAnalysisView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const maxAgeCount = Math.max(...ageGroups.map((a) => a.count), 1);
 
@@ -44,6 +49,8 @@ export const CustomerAnalysisView: FC<Props> = ({
 			activeReport="/admin/reports/customers"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

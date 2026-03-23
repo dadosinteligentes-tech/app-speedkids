@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency, formatDateTime } from "../../lib/report-utils";
 import type { CashRegisterReport } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	registers: CashRegisterReport[];
@@ -10,6 +11,8 @@ interface Props {
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
 function discrepancyClass(cents: number | null): string {
@@ -27,6 +30,8 @@ export const CashReconciliationView: FC<Props> = ({
 	from,
 	to,
 	user,
+	tenant,
+	isPlatformAdmin,
 }) => {
 	const perPage = 20;
 	const totalPages = Math.ceil(total / perPage);
@@ -43,6 +48,8 @@ export const CashReconciliationView: FC<Props> = ({
 			activeReport="/admin/reports/cash"
 			from={from}
 			to={to}
+			tenant={tenant}
+			isPlatformAdmin={isPlatformAdmin}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

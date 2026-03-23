@@ -1,6 +1,6 @@
 import type { RentalSession, RentalSessionView } from "../schema";
 
-export async function getActiveSessions(db: D1Database): Promise<RentalSessionView[]> {
+export async function getActiveSessions(db: D1Database, tenantId: number): Promise<RentalSessionView[]> {
 	const { results } = await db
 		.prepare(`
 			SELECT rs.*, a.name as asset_name, a.asset_type, a.photo_url as asset_photo_url,
@@ -12,15 +12,17 @@ export async function getActiveSessions(db: D1Database): Promise<RentalSessionVi
 			JOIN packages p ON rs.package_id = p.id
 			LEFT JOIN customers cu ON rs.customer_id = cu.id
 			LEFT JOIN children ch ON rs.child_id = ch.id
-			WHERE rs.status IN ('running', 'paused')
-			   OR (rs.status = 'completed' AND rs.paid = 0)
+			WHERE (rs.status IN ('running', 'paused')
+			   OR (rs.status = 'completed' AND rs.paid = 0))
+			   AND rs.tenant_id = ?
 			ORDER BY rs.start_time DESC
 		`)
+		.bind(tenantId)
 		.all<RentalSessionView>();
 	return results;
 }
 
-export async function getSessionById(db: D1Database, id: string): Promise<RentalSessionView | null> {
+export async function getSessionById(db: D1Database, id: string, tenantId: number): Promise<RentalSessionView | null> {
 	return db
 		.prepare(`
 			SELECT rs.*, a.name as asset_name, a.asset_type, a.photo_url as asset_photo_url,
@@ -32,16 +34,16 @@ export async function getSessionById(db: D1Database, id: string): Promise<Rental
 			JOIN packages p ON rs.package_id = p.id
 			LEFT JOIN customers cu ON rs.customer_id = cu.id
 			LEFT JOIN children ch ON rs.child_id = ch.id
-			WHERE rs.id = ?
+			WHERE rs.id = ? AND rs.tenant_id = ?
 		`)
-		.bind(id)
+		.bind(id, tenantId)
 		.first<RentalSessionView>();
 }
 
-export async function getActiveSessionByAsset(db: D1Database, assetId: number): Promise<RentalSession | null> {
+export async function getActiveSessionByAsset(db: D1Database, assetId: number, tenantId: number): Promise<RentalSession | null> {
 	return db
-		.prepare("SELECT * FROM rental_sessions WHERE asset_id = ? AND status IN ('running', 'paused')")
-		.bind(assetId)
+		.prepare("SELECT * FROM rental_sessions WHERE asset_id = ? AND status IN ('running', 'paused') AND tenant_id = ?")
+		.bind(assetId, tenantId)
 		.first<RentalSession>();
 }
 
@@ -57,33 +59,34 @@ export async function createSession(
 		start_time: string;
 		duration_minutes: number;
 		amount_cents: number;
+		tenant_id: number;
 	},
 ): Promise<RentalSession | null> {
 	return db
 		.prepare(`
-			INSERT INTO rental_sessions (id, asset_id, package_id, attendant_id, customer_id, child_id, status, start_time, duration_minutes, amount_cents)
-			VALUES (?, ?, ?, ?, ?, ?, 'running', ?, ?, ?)
+			INSERT INTO rental_sessions (id, asset_id, package_id, attendant_id, customer_id, child_id, status, start_time, duration_minutes, amount_cents, tenant_id)
+			VALUES (?, ?, ?, ?, ?, ?, 'running', ?, ?, ?, ?)
 			RETURNING *
 		`)
-		.bind(params.id, params.asset_id, params.package_id, params.attendant_id ?? null, params.customer_id ?? null, params.child_id ?? null, params.start_time, params.duration_minutes, params.amount_cents)
+		.bind(params.id, params.asset_id, params.package_id, params.attendant_id ?? null, params.customer_id ?? null, params.child_id ?? null, params.start_time, params.duration_minutes, params.amount_cents, params.tenant_id)
 		.first<RentalSession>();
 }
 
-export async function pauseSession(db: D1Database, id: string, pauseTime: string): Promise<void> {
+export async function pauseSession(db: D1Database, id: string, pauseTime: string, tenantId: number): Promise<void> {
 	await db.batch([
 		db
-			.prepare("UPDATE rental_sessions SET status = 'paused', pause_time = ?, updated_at = datetime('now') WHERE id = ? AND status = 'running'")
-			.bind(pauseTime, id),
+			.prepare("UPDATE rental_sessions SET status = 'paused', pause_time = ?, updated_at = datetime('now') WHERE id = ? AND status = 'running' AND tenant_id = ?")
+			.bind(pauseTime, id, tenantId),
 		db
 			.prepare("INSERT INTO session_pauses (session_id, paused_at) VALUES (?, ?)")
 			.bind(id, pauseTime),
 	]);
 }
 
-export async function resumeSession(db: D1Database, id: string, resumeTime: string): Promise<void> {
+export async function resumeSession(db: D1Database, id: string, resumeTime: string, tenantId: number): Promise<void> {
 	const session = await db
-		.prepare("SELECT pause_time, total_paused_ms FROM rental_sessions WHERE id = ? AND status = 'paused'")
-		.bind(id)
+		.prepare("SELECT pause_time, total_paused_ms FROM rental_sessions WHERE id = ? AND status = 'paused' AND tenant_id = ?")
+		.bind(id, tenantId)
 		.first<{ pause_time: string; total_paused_ms: number }>();
 
 	if (!session?.pause_time) return;
@@ -93,19 +96,19 @@ export async function resumeSession(db: D1Database, id: string, resumeTime: stri
 
 	await db.batch([
 		db
-			.prepare("UPDATE rental_sessions SET status = 'running', pause_time = NULL, total_paused_ms = ?, updated_at = datetime('now') WHERE id = ?")
-			.bind(newTotalPaused, id),
+			.prepare("UPDATE rental_sessions SET status = 'running', pause_time = NULL, total_paused_ms = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?")
+			.bind(newTotalPaused, id, tenantId),
 		db
 			.prepare("UPDATE session_pauses SET resumed_at = ?, duration_ms = ? WHERE session_id = ? AND resumed_at IS NULL")
 			.bind(resumeTime, pauseDuration, id),
 	]);
 }
 
-export async function stopSession(db: D1Database, id: string, endTime: string): Promise<RentalSession | null> {
+export async function stopSession(db: D1Database, id: string, endTime: string, tenantId: number): Promise<RentalSession | null> {
 	// Fetch session data
 	const session = await db
-		.prepare("SELECT status, pause_time, total_paused_ms, start_time, duration_minutes, amount_cents, package_id FROM rental_sessions WHERE id = ?")
-		.bind(id)
+		.prepare("SELECT status, pause_time, total_paused_ms, start_time, duration_minutes, amount_cents, package_id FROM rental_sessions WHERE id = ? AND tenant_id = ?")
+		.bind(id, tenantId)
 		.first<{
 			status: string; pause_time: string | null; total_paused_ms: number;
 			start_time: string; duration_minutes: number; amount_cents: number; package_id: number;
@@ -154,12 +157,12 @@ export async function stopSession(db: D1Database, id: string, endTime: string): 
 			UPDATE rental_sessions
 			SET status = 'completed', end_time = ?, pause_time = NULL, total_paused_ms = ?,
 			    overtime_minutes = ?, overtime_cents = ?, amount_cents = ?, updated_at = datetime('now')
-			WHERE id = ? AND status IN ('running', 'paused')
+			WHERE id = ? AND status IN ('running', 'paused') AND tenant_id = ?
 		`)
-		.bind(endTime, totalPaused, overtimeMinutes, overtimeCents, finalAmount, id)
+		.bind(endTime, totalPaused, overtimeMinutes, overtimeCents, finalAmount, id, tenantId)
 		.run();
 
-	return db.prepare("SELECT * FROM rental_sessions WHERE id = ?").bind(id).first<RentalSession>();
+	return db.prepare("SELECT * FROM rental_sessions WHERE id = ? AND tenant_id = ?").bind(id, tenantId).first<RentalSession>();
 }
 
 export async function paySession(
@@ -168,12 +171,13 @@ export async function paySession(
 	paymentMethod: string,
 	finalAmountCents: number,
 	notes: string | null,
+	tenantId: number,
 ): Promise<void> {
 	await db
 		.prepare(
-			"UPDATE rental_sessions SET paid = 1, payment_method = ?, amount_cents = ?, notes = COALESCE(?, notes), updated_at = datetime('now') WHERE id = ?",
+			"UPDATE rental_sessions SET paid = 1, payment_method = ?, amount_cents = ?, notes = COALESCE(?, notes), updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
 		)
-		.bind(paymentMethod, finalAmountCents, notes, id)
+		.bind(paymentMethod, finalAmountCents, notes, id, tenantId)
 		.run();
 }
 
@@ -182,10 +186,11 @@ export async function updateSessionDuration(
 	id: string,
 	durationMinutes: number,
 	amountCents: number,
+	tenantId: number,
 ): Promise<void> {
 	await db
-		.prepare("UPDATE rental_sessions SET duration_minutes = ?, amount_cents = ?, updated_at = datetime('now') WHERE id = ?")
-		.bind(durationMinutes, amountCents, id)
+		.prepare("UPDATE rental_sessions SET duration_minutes = ?, amount_cents = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?")
+		.bind(durationMinutes, amountCents, id, tenantId)
 		.run();
 }
 
@@ -194,10 +199,11 @@ export async function getSessionsByAsset(
 	assetId: number,
 	limit = 50,
 	offset = 0,
+	tenantId: number,
 ): Promise<{ sessions: RentalSessionView[]; total: number }> {
 	const countResult = await db
-		.prepare("SELECT COUNT(*) as total FROM rental_sessions WHERE asset_id = ?")
-		.bind(assetId)
+		.prepare("SELECT COUNT(*) as total FROM rental_sessions WHERE asset_id = ? AND tenant_id = ?")
+		.bind(assetId, tenantId)
 		.first<{ total: number }>();
 
 	const { results } = await db
@@ -211,11 +217,11 @@ export async function getSessionsByAsset(
 			JOIN packages p ON rs.package_id = p.id
 			LEFT JOIN customers cu ON rs.customer_id = cu.id
 			LEFT JOIN children ch ON rs.child_id = ch.id
-			WHERE rs.asset_id = ?
+			WHERE rs.asset_id = ? AND rs.tenant_id = ?
 			ORDER BY rs.start_time DESC
 			LIMIT ? OFFSET ?
 		`)
-		.bind(assetId, limit, offset)
+		.bind(assetId, tenantId, limit, offset)
 		.all<RentalSessionView>();
 
 	return { sessions: results, total: countResult?.total ?? 0 };
@@ -226,6 +232,7 @@ export async function extendSession(
 	id: string,
 	additionalMinutes: number,
 	additionalCents: number,
+	tenantId: number,
 ): Promise<void> {
 	await db
 		.prepare(`
@@ -233,8 +240,8 @@ export async function extendSession(
 			SET duration_minutes = duration_minutes + ?,
 			    amount_cents = amount_cents + ?,
 			    updated_at = datetime('now')
-			WHERE id = ? AND status IN ('running', 'paused')
+			WHERE id = ? AND status IN ('running', 'paused') AND tenant_id = ?
 		`)
-		.bind(additionalMinutes, additionalCents, id)
+		.bind(additionalMinutes, additionalCents, id, tenantId)
 		.run();
 }

@@ -185,6 +185,7 @@ const EMPTY_FINANCIAL: FinancialSummary = {
 
 export async function getFinancialSummary(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<FinancialSummary> {
@@ -205,9 +206,10 @@ export async function getFinancialSummary(
 				COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled_count,
 				COALESCE(SUM(CASE WHEN status = 'completed' THEN duration_minutes ELSE 0 END), 0) AS total_minutes
 			FROM rental_sessions
-			WHERE start_time >= ${DT_FROM} AND start_time < ${DT_TO}`,
+			WHERE tenant_id = ?
+				AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.first<FinancialSummary>();
 
 	return row ?? EMPTY_FINANCIAL;
@@ -215,6 +217,7 @@ export async function getFinancialSummary(
 
 export async function getDailyRevenueTrend(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<DailyRevenueTrend[]> {
@@ -225,18 +228,20 @@ export async function getDailyRevenueTrend(
 				COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents,
 				COUNT(*) AS rental_count
 			FROM rental_sessions
-			WHERE start_time >= ${DT_FROM} AND start_time < ${DT_TO}
+			WHERE tenant_id = ?
+				AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				AND status = 'completed'
 			GROUP BY date(start_time, '${BZ}')
 			ORDER BY day ASC`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<DailyRevenueTrend>();
 	return results;
 }
 
 export async function getPackageRevenue(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<PackageRevenue[]> {
@@ -255,10 +260,11 @@ export async function getPackageRevenue(
 				AND rs.status = 'completed'
 				AND rs.start_time >= ${DT_FROM}
 				AND rs.start_time < ${DT_TO}
+			WHERE p.tenant_id = ?
 			GROUP BY p.id, p.name, p.duration_minutes, p.price_cents
 			ORDER BY revenue_cents DESC`,
 		)
-		.bind(from, to)
+		.bind(from, to, tenantId)
 		.all<Omit<PackageRevenue, "revenue_pct">>();
 
 	const total = results.reduce((s, r) => s + r.revenue_cents, 0);
@@ -270,6 +276,7 @@ export async function getPackageRevenue(
 
 export async function getAssetUtilization(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<AssetUtilization[]> {
@@ -289,10 +296,11 @@ export async function getAssetUtilization(
 				AND rs.start_time >= ${DT_FROM}
 				AND rs.start_time < ${DT_TO}
 			WHERE a.status != 'retired'
+				AND a.tenant_id = ?
 			GROUP BY a.id, a.name, a.asset_type
 			ORDER BY revenue_cents DESC`,
 		)
-		.bind(from, to)
+		.bind(from, to, tenantId)
 		.all<Omit<AssetUtilization, "utilization_pct">>();
 
 	const periodDays = Math.max(
@@ -314,6 +322,7 @@ export async function getAssetUtilization(
 
 export async function getPeakHours(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<{ byHour: HourBucket[]; byDay: DayBucket[] }> {
@@ -326,11 +335,12 @@ export async function getPeakHours(
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
 				WHERE status = 'completed'
+					AND tenant_id = ?
 					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				GROUP BY hour
 				ORDER BY hour ASC`,
 			)
-			.bind(from, to)
+			.bind(tenantId, from, to)
 			.all<HourBucket>(),
 
 		db
@@ -341,11 +351,12 @@ export async function getPeakHours(
 					COALESCE(SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END), 0) AS revenue_cents
 				FROM rental_sessions
 				WHERE status = 'completed'
+					AND tenant_id = ?
 					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 				GROUP BY dow
 				ORDER BY dow ASC`,
 			)
-			.bind(from, to)
+			.bind(tenantId, from, to)
 			.all<DayBucket>(),
 	]);
 
@@ -354,6 +365,7 @@ export async function getPeakHours(
 
 export async function getOperatorPerformance(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<OperatorPerformance[]> {
@@ -372,10 +384,11 @@ export async function getOperatorPerformance(
 				AND rs.start_time >= ${DT_FROM}
 				AND rs.start_time < ${DT_TO}
 			WHERE u.active = 1
+				AND u.tenant_id = ?
 			GROUP BY u.id, u.name, u.role
 			ORDER BY revenue_cents DESC`,
 		)
-		.bind(from, to)
+		.bind(from, to, tenantId)
 		.all<{
 			user_id: number;
 			user_name: string;
@@ -393,10 +406,11 @@ export async function getOperatorPerformance(
 					(julianday(COALESCE(ended_at, datetime('now'))) - julianday(started_at)) * 24
 				), 0) AS shift_hours
 			FROM shifts
-			WHERE started_at >= ${DT_FROM} AND started_at < ${DT_TO}
+			WHERE tenant_id = ?
+				AND started_at >= ${DT_FROM} AND started_at < ${DT_TO}
 			GROUP BY user_id`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<{ user_id: number; shift_count: number; shift_hours: number }>();
 
 	const cashRows = await db
@@ -409,13 +423,14 @@ export async function getOperatorPerformance(
 				)), 0) AS cash_discrepancy_cents
 			FROM cash_registers
 			WHERE status = 'closed'
+				AND tenant_id = ?
 				AND opened_at >= ${DT_FROM}
 				AND opened_at < ${DT_TO}
 				AND closing_balance_cents IS NOT NULL
 				AND expected_balance_cents IS NOT NULL
 			GROUP BY opened_by`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<{ user_id: number; cash_discrepancy_cents: number }>();
 
 	const shiftMap = new Map(
@@ -437,6 +452,7 @@ export async function getOperatorPerformance(
 
 export async function getCashReconciliation(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 	limit = 20,
@@ -445,9 +461,10 @@ export async function getCashReconciliation(
 	const countResult = await db
 		.prepare(
 			`SELECT COUNT(*) AS total FROM cash_registers
-			WHERE opened_at >= ${DT_FROM} AND opened_at < ${DT_TO}`,
+			WHERE tenant_id = ?
+				AND opened_at >= ${DT_FROM} AND opened_at < ${DT_TO}`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.first<{ total: number }>();
 
 	const { results } = await db
@@ -481,12 +498,13 @@ export async function getCashReconciliation(
 			JOIN users u1 ON cr.opened_by = u1.id
 			LEFT JOIN users u2 ON cr.closed_by = u2.id
 			LEFT JOIN cash_transactions ct ON ct.cash_register_id = cr.id
-			WHERE cr.opened_at >= ${DT_FROM} AND cr.opened_at < ${DT_TO}
+			WHERE cr.tenant_id = ?
+				AND cr.opened_at >= ${DT_FROM} AND cr.opened_at < ${DT_TO}
 			GROUP BY cr.id
 			ORDER BY cr.opened_at DESC
 			LIMIT ? OFFSET ?`,
 		)
-		.bind(from, to, limit, offset)
+		.bind(tenantId, from, to, limit, offset)
 		.all<CashRegisterReport>();
 
 	return { registers: results, total: countResult?.total ?? 0 };
@@ -494,6 +512,7 @@ export async function getCashReconciliation(
 
 export async function getCustomerAnalysis(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<{
@@ -515,13 +534,14 @@ export async function getCustomerAnalysis(
 					FROM customers c
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
+						AND rs.tenant_id = ?
 						AND rs.start_time >= ${DT_FROM}
 						AND rs.start_time < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY revenue_cents DESC
 					LIMIT 10`,
 				)
-				.bind(from, to)
+				.bind(tenantId, from, to)
 				.all<TopCustomer>(),
 
 			db
@@ -535,13 +555,14 @@ export async function getCustomerAnalysis(
 					FROM customers c
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
+						AND rs.tenant_id = ?
 						AND rs.start_time >= ${DT_FROM}
 						AND rs.start_time < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY rental_count DESC
 					LIMIT 10`,
 				)
-				.bind(from, to)
+				.bind(tenantId, from, to)
 				.all<TopCustomer>(),
 
 			db
@@ -559,12 +580,13 @@ export async function getCustomerAnalysis(
 					FROM rental_sessions rs
 					JOIN children ch ON rs.child_id = ch.id
 					WHERE rs.status = 'completed'
+						AND rs.tenant_id = ?
 						AND rs.start_time >= ${DT_FROM}
 						AND rs.start_time < ${DT_TO}
 					GROUP BY age_group
 					ORDER BY age_group ASC`,
 				)
-				.bind(from, to)
+				.bind(tenantId, from, to)
 				.all<AgeGroup>(),
 
 			db
@@ -577,12 +599,13 @@ export async function getCustomerAnalysis(
 							SUM(CASE WHEN paid = 1 THEN amount_cents ELSE 0 END) AS customer_revenue
 						FROM rental_sessions
 						WHERE status = 'completed'
+							AND tenant_id = ?
 							AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
 							AND customer_id IS NOT NULL
 						GROUP BY customer_id
 					)`,
 				)
-				.bind(from, to)
+				.bind(tenantId, from, to)
 				.first<{ total_customers: number; avg_spent_cents: number }>(),
 
 			db
@@ -592,11 +615,12 @@ export async function getCustomerAnalysis(
 						SELECT customer_id, MIN(start_time) AS first_rental
 						FROM rental_sessions
 						WHERE status = 'completed' AND customer_id IS NOT NULL
+							AND tenant_id = ?
 						GROUP BY customer_id
 					)
 					WHERE first_rental >= ${DT_FROM} AND first_rental < ${DT_TO}`,
 				)
-				.bind(from, to)
+				.bind(tenantId, from, to)
 				.first<{ new_customers: number }>(),
 		]);
 
@@ -618,6 +642,7 @@ export async function getCustomerAnalysis(
 
 export async function getShiftReport(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<ShiftReport[]> {
@@ -646,17 +671,19 @@ export async function getShiftReport(
 				AND rs.start_time >= s.started_at
 				AND (s.ended_at IS NULL OR rs.start_time <= s.ended_at)
 				AND rs.status = 'completed'
-			WHERE s.started_at >= ${DT_FROM} AND s.started_at < ${DT_TO}
+			WHERE s.tenant_id = ?
+				AND s.started_at >= ${DT_FROM} AND s.started_at < ${DT_TO}
 			GROUP BY s.id
 			ORDER BY s.started_at DESC
 		`)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<ShiftReport>();
 	return results;
 }
 
 export async function getShiftReportById(
 	db: D1Database,
+	tenantId: number,
 	shiftId: number,
 ): Promise<ShiftReport | null> {
 	return db
@@ -684,15 +711,16 @@ export async function getShiftReportById(
 				AND rs.start_time >= s.started_at
 				AND (s.ended_at IS NULL OR rs.start_time <= s.ended_at)
 				AND rs.status = 'completed'
-			WHERE s.id = ?
+			WHERE s.id = ? AND s.tenant_id = ?
 			GROUP BY s.id
 		`)
-		.bind(shiftId)
+		.bind(shiftId, tenantId)
 		.first<ShiftReport>();
 }
 
 export async function getUnpaidSessions(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<UnpaidSession[]> {
@@ -710,16 +738,18 @@ export async function getUnpaidSessions(
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'completed'
 				AND (rs.paid = 0 OR rs.payment_method = 'courtesy')
+				AND rs.tenant_id = ?
 				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<UnpaidSession>();
 	return results;
 }
 
 export async function getCancelledSessions(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<CancelledSession[]> {
@@ -736,10 +766,11 @@ export async function getCancelledSessions(
 			LEFT JOIN children ch ON rs.child_id = ch.id
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'cancelled'
+				AND rs.tenant_id = ?
 				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.all<CancelledSession>();
 	return results;
 }
@@ -768,6 +799,7 @@ const EMPTY_PRODUCT_SALES: ProductSalesSummary = {
 
 export async function getProductSalesSummary(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<ProductSalesSummary> {
@@ -783,9 +815,10 @@ export async function getProductSalesSummary(
 				COALESCE(SUM(CASE WHEN payment_method = 'pix' THEN total_cents ELSE 0 END), 0) AS pix_cents
 			FROM product_sales
 			WHERE paid = 1
+				AND tenant_id = ?
 				AND created_at >= ${DT_FROM} AND created_at < ${DT_TO}`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to)
 		.first<ProductSalesSummary>();
 
 	return row ?? EMPTY_PRODUCT_SALES;
@@ -803,6 +836,7 @@ export interface ProductRevenueRow {
 
 export async function getProductRevenue(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 ): Promise<ProductRevenueRow[]> {
@@ -821,13 +855,15 @@ export async function getProductRevenue(
 				FROM product_sale_items psi
 				JOIN product_sales ps ON ps.id = psi.product_sale_id
 					AND ps.paid = 1
+					AND ps.tenant_id = ?
 					AND ps.created_at >= ${DT_FROM}
 					AND ps.created_at < ${DT_TO}
 			) filtered ON filtered.product_id = p.id
+			WHERE p.tenant_id = ?
 			GROUP BY p.id, p.name, p.category, p.price_cents
 			ORDER BY revenue_cents DESC`,
 		)
-		.bind(from, to)
+		.bind(tenantId, from, to, tenantId)
 		.all<Omit<ProductRevenueRow, "revenue_pct">>();
 
 	const total = results.reduce((s, r) => s + r.revenue_cents, 0);
@@ -850,6 +886,7 @@ export interface ProductSaleDetailRow {
 
 export async function getProductSaleDetail(
 	db: D1Database,
+	tenantId: number,
 	from: string,
 	to: string,
 	productId?: number,
@@ -857,7 +894,7 @@ export async function getProductSaleDetail(
 	offset = 0,
 ): Promise<{ sales: ProductSaleDetailRow[]; total: number }> {
 	let extraWhere = "";
-	const bindings: (string | number)[] = [from, to];
+	const bindings: (string | number)[] = [tenantId, from, to];
 	if (productId) {
 		extraWhere = "AND ps.id IN (SELECT product_sale_id FROM product_sale_items WHERE product_id = ?)";
 		bindings.push(productId);
@@ -867,6 +904,7 @@ export async function getProductSaleDetail(
 		.prepare(
 			`SELECT COUNT(*) AS total FROM product_sales ps
 			WHERE ps.paid = 1
+				AND ps.tenant_id = ?
 				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
 				${extraWhere}`,
 		)
@@ -889,6 +927,7 @@ export async function getProductSaleDetail(
 			LEFT JOIN users u ON ps.attendant_id = u.id
 			LEFT JOIN product_sale_items psi ON psi.product_sale_id = ps.id
 			WHERE ps.paid = 1
+				AND ps.tenant_id = ?
 				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
 				${extraWhere}
 			GROUP BY ps.id
@@ -941,15 +980,16 @@ export interface DetailContext {
 
 export async function getDetailSessions(
 	db: D1Database,
+	tenantId: number,
 	filter: DetailFilter,
 	from: string,
 	to: string,
 	limit = 50,
 	offset = 0,
 ): Promise<{ sessions: DetailSession[]; total: number; total_revenue_cents: number; context: DetailContext }> {
-	const baseWhere = `rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO} AND rs.status = 'completed'`;
+	const baseWhere = `rs.tenant_id = ? AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO} AND rs.status = 'completed'`;
 	let extraWhere = "";
-	let bindings: (string | number)[] = [from, to];
+	let bindings: (string | number)[] = [tenantId, from, to];
 	const context: DetailContext = { label: "", subLabel: "" };
 
 	switch (filter.type) {
@@ -971,11 +1011,11 @@ export async function getDetailSessions(
 			break;
 		case "shift": {
 			const shift = await db
-				.prepare("SELECT id, user_id, started_at, ended_at FROM shifts WHERE id = ?")
-				.bind(filter.id)
+				.prepare("SELECT id, user_id, started_at, ended_at FROM shifts WHERE id = ? AND tenant_id = ?")
+				.bind(filter.id, tenantId)
 				.first<{ id: number; user_id: number; started_at: string; ended_at: string | null }>();
 			if (!shift) return { sessions: [], total: 0, total_revenue_cents: 0, context: { label: "Turno não encontrado", subLabel: "" } };
-			bindings = [from, to, shift.user_id, shift.started_at];
+			bindings = [tenantId, from, to, shift.user_id, shift.started_at];
 			extraWhere = "AND rs.attendant_id = ? AND rs.start_time >= ?";
 			if (shift.ended_at) {
 				extraWhere += " AND rs.start_time <= ?";

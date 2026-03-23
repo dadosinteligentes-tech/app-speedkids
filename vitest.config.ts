@@ -15,6 +15,13 @@ export default defineWorkersConfig({
 					r2Buckets: {
 						B_BUCKET_SPEEDKIDS: "test-bucket",
 					},
+					bindings: {
+						STRIPE_SECRET_KEY: "sk_test_fake",
+						STRIPE_WEBHOOK_SECRET: "whsec_fake",
+						STRIPE_PUBLISHABLE_KEY: "pk_test_fake",
+						APP_DOMAIN: "test.local",
+						PLATFORM_ADMIN_EMAILS: "admin@test.com",
+					},
 				},
 			},
 		},

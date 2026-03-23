@@ -1,8 +1,9 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
+import type { Tenant } from "../db/schema";
 import { Layout } from "./layout";
 
-export const LoginPage: FC = () => {
+export const LoginPage: FC<{ tenant?: Tenant | null }> = ({ tenant }) => {
 	const loginScript = html`<script>
 ${raw(`
 document.getElementById('login-form').addEventListener('submit', function(e) {
@@ -43,7 +44,7 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 </script>`;
 
 	return (
-		<Layout title="SpeedKids - Login" bodyScripts={loginScript}>
+		<Layout title={tenant?.name ? `${tenant.name} - Login` : "Login"} bodyScripts={loginScript} tenant={tenant}>
 			<div class="flex items-center justify-center min-h-[70vh] relative">
 				{/* Decorative floating elements */}
 				<span class="sk-float absolute top-10 left-10 text-4xl opacity-60 pointer-events-none" style="animation-delay: 0s" aria-hidden="true">🎈</span>
@@ -53,7 +54,7 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 
 				<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg p-8 w-full max-w-sm relative z-10">
 					<div class="text-center mb-6">
-						<img src="/logo.svg" alt="SpeedKids" class="h-16 mx-auto mb-2" />
+						<img src={tenant?.logo_url || "/logo.svg"} alt={tenant?.name || "Logo"} class="h-16 mx-auto mb-2" />
 						<p class="text-sk-muted font-body text-sm mt-1">Faca login para continuar</p>
 					</div>
 

@@ -1,14 +1,16 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { BusinessConfig } from "../../db/schema";
+import type { BusinessConfig, Tenant } from "../../db/schema";
 import { AdminLayout } from "./layout";
 
 interface BusinessSettingsProps {
 	config: BusinessConfig | null;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const BusinessSettings: FC<BusinessSettingsProps> = ({ config, user }) => {
+export const BusinessSettings: FC<BusinessSettingsProps> = ({ config, user, tenant, isPlatformAdmin }) => {
 	const script = html`<script>
 ${raw(`
 function saveConfig() {
@@ -61,7 +63,7 @@ function saveConfig() {
 </script>`;
 
 	return (
-		<AdminLayout title="Configuracoes" user={user} activeTab="/admin/settings" bodyScripts={script}>
+		<AdminLayout title="Configuracoes" user={user} activeTab="/admin/settings" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
 			<h2 class="text-xl font-display font-bold text-sk-text mb-4">Dados do Estabelecimento</h2>
 			<p class="text-sm text-sk-muted font-body mb-6">
 				Estas informacoes aparecem no cabecalho dos cupons impressos. A impressao de cupons so fica disponivel apos preencher o nome do estabelecimento.
@@ -75,7 +77,7 @@ function saveConfig() {
 							id="cfg-name"
 							type="text"
 							value={config?.name ?? ""}
-							placeholder="Ex: SpeedKids Diversoes"
+							placeholder="Ex: Minha Empresa"
 							class="w-full border border-sk-border rounded-sk px-3 py-2 font-body text-sm focus:ring-sk-blue/30 focus:border-sk-blue"
 						/>
 					</div>

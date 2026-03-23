@@ -29,67 +29,90 @@ adminPages.use("*", requireRole("manager", "owner"));
 adminPages.get("/", (c) => c.redirect("/admin/assets"));
 
 adminPages.get("/assets", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const [assets, assetTypes] = await Promise.all([
-		getAllAssets(c.env.DB),
-		getAssetTypes(c.env.DB),
+		getAllAssets(c.env.DB, tenantId),
+		getAssetTypes(c.env.DB, tenantId),
 	]);
 	const user = c.get("user");
-	return c.html(<AssetsList assets={assets} assetTypes={assetTypes} user={user} />);
+	return c.html(<AssetsList assets={assets} assetTypes={assetTypes} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 adminPages.get("/packages", async (c) => {
-	const packages = await getAllPackages(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const packages = await getAllPackages(c.env.DB, tenantId);
 	const user = c.get("user");
-	return c.html(<PackagesList packages={packages} user={user} />);
+	return c.html(<PackagesList packages={packages} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 adminPages.get("/logs", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const page = Number(c.req.query("page")) || 1;
 	const entityType = c.req.query("entity_type") || undefined;
 	const perPage = 50;
-	const { logs, total } = await getLogs(c.env.DB, { entity_type: entityType, limit: perPage, offset: (page - 1) * perPage });
+	const { logs, total } = await getLogs(c.env.DB, tenantId, { entity_type: entityType, limit: perPage, offset: (page - 1) * perPage });
 	const user = c.get("user");
-	return c.html(<OperationLogs logs={logs} total={total} page={page} user={user} />);
+	return c.html(<OperationLogs logs={logs} total={total} page={page} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 adminPages.get("/customers", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const page = Number(c.req.query("page") ?? "1");
-	const { customers, total } = await getCustomers(c.env.DB, 50, (page - 1) * 50);
+	const { customers, total } = await getCustomers(c.env.DB, tenantId, 50, (page - 1) * 50);
 	const user = c.get("user");
-	return c.html(<CustomerList customers={customers} total={total} page={page} user={user ?? null} />);
+	return c.html(<CustomerList customers={customers} total={total} page={page} user={user ?? null} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 adminPages.get("/batteries", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const [batteries, assets] = await Promise.all([
-		getBatteries(c.env.DB),
-		getAllAssets(c.env.DB),
+		getBatteries(c.env.DB, tenantId),
+		getAllAssets(c.env.DB, tenantId),
 	]);
 	const user = c.get("user");
 	const batteryAssets = assets.filter((a) => a.uses_battery && a.status !== "retired");
-	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} />);
+	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // Users page requires users.manage permission
 adminPages.get("/users", requirePermission("users.manage"), async (c) => {
-	const users = await listUsers(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const users = await listUsers(c.env.DB, tenantId);
 	const user = c.get("user");
 	const safeUsers = users.map(({ password_hash, salt, ...rest }) => rest);
-	return c.html(<UsersList users={safeUsers} user={user} />);
+	return c.html(<UsersList users={safeUsers} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // Permissions matrix requires owner role (hardcoded to prevent lock-out)
 adminPages.get("/permissions", requireRole("owner"), async (c) => {
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const [permissions, rolePermissions] = await Promise.all([
 		getAllPermissions(c.env.DB),
 		getAllRolePermissions(c.env.DB),
 	]);
 	const user = c.get("user");
-	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} />);
+	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // Business settings requires settings.manage permission
 adminPages.get("/settings", requirePermission("settings.manage"), async (c) => {
-	const config = await getBusinessConfig(c.env.DB);
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const config = await getBusinessConfig(c.env.DB, tenantId);
 	const user = c.get("user");
-	return c.html(<BusinessSettings config={config} user={user} />);
+	return c.html(<BusinessSettings config={config} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });

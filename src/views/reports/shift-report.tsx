@@ -2,15 +2,18 @@ import type { FC } from "hono/jsx";
 import { ReportLayout } from "./layout";
 import { formatCurrency, formatDateTime } from "../../lib/report-utils";
 import type { ShiftReport } from "../../db/queries/reports";
+import type { Tenant } from "../../db/schema";
 
 interface Props {
 	shifts: ShiftReport[];
 	from: string;
 	to: string;
 	user: { name: string; role: string } | null;
+	tenant?: Tenant | null;
+	isPlatformAdmin?: boolean;
 }
 
-export const ShiftReportView: FC<Props> = ({ shifts, from, to, user }) => {
+export const ShiftReportView: FC<Props> = ({ shifts, from, to, user, tenant, isPlatformAdmin }) => {
 	const totalShifts = shifts.length;
 	const totalRentals = shifts.reduce((s, r) => s + r.rental_count, 0);
 	const totalRevenue = shifts.reduce((s, r) => s + r.revenue_cents, 0);
@@ -20,8 +23,10 @@ export const ShiftReportView: FC<Props> = ({ shifts, from, to, user }) => {
 			title="Turnos"
 			user={user}
 			activeReport="/admin/reports/shifts"
+			isPlatformAdmin={isPlatformAdmin}
 			from={from}
 			to={to}
+			tenant={tenant}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
