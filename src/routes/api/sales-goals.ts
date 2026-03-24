@@ -10,7 +10,7 @@ import {
 	deleteSalesGoal,
 	getSalesGoalById,
 	getGoalsProgress,
-	checkGoalAchievements,
+	getRecentAchievements,
 } from "../../db/queries/sales-goals";
 
 export const salesGoalRoutes = new Hono<AppEnv>();
@@ -26,12 +26,12 @@ salesGoalRoutes.get("/progress", requirePermission("goals.view"), async (c) => {
 	return c.json(goals);
 });
 
-// Check achievements after payment (called by frontend)
+// Return recently achieved goals (called by frontend after payment for celebration)
 salesGoalRoutes.get("/check-achievements", requirePermission("goals.view"), async (c) => {
 	const tenantId = c.get("tenant_id");
 	const user = c.get("user");
 	if (!user) return c.json({ achievements: [] });
-	const achievements = await checkGoalAchievements(c.env.DB, tenantId, user.id);
+	const achievements = await getRecentAchievements(c.env.DB, tenantId, user.id);
 	return c.json({ achievements });
 });
 

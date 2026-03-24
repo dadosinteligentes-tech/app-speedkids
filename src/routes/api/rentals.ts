@@ -96,8 +96,9 @@ rentalRoutes.post("/start", async (c) => {
 
 		await paySession(c.env.DB, sessionId, method, amount, null, tenantId);
 
+		let payResult = { achievements: [] as any[] };
 		if (amount > 0) {
-			await recordPayment({
+			payResult = await recordPayment({
 				db: c.env.DB,
 				tenantId,
 				registerId: register.id,
@@ -111,6 +112,10 @@ rentalRoutes.post("/start", async (c) => {
 				payments: body.payments,
 				customerId: body.customer_id,
 			});
+		}
+		if (payResult.achievements.length > 0) {
+			const session = await getSessionById(c.env.DB, sessionId, tenantId);
+			return c.json({ ...session, achievements: payResult.achievements }, 201);
 		}
 	}
 
@@ -208,8 +213,9 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	const method = isSplit ? "mixed" : body.payment_method;
 	await paySession(c.env.DB, id, method, finalAmount, body.notes ?? null, tenantId);
 
+	let achievements: any[] = [];
 	if (register && amountDue > 0) {
-		await recordPayment({
+		const payResult = await recordPayment({
 			db: c.env.DB,
 			tenantId,
 			registerId: register.id,
@@ -223,6 +229,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 			payments: body.payments,
 			customerId: session.customer_id,
 		});
+		achievements = payResult.achievements;
 	} else if (session.customer_id) {
 		// No register open but still update customer stats
 		const { updateCustomerStats } = await import("../../db/queries/customers");
@@ -239,7 +246,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	});
 
 	const updated = await getSessionById(c.env.DB, id, tenantId);
-	return c.json(updated);
+	return c.json({ ...updated, achievements });
 });
 
 rentalRoutes.post("/:id/extend", requirePermission("rentals.extend"), async (c) => {

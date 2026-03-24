@@ -345,7 +345,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 					banner.className = 'sk-goal-banner';
 					banner.innerHTML = '<div style="background:linear-gradient(135deg,#FFC107,${brandPalette.DEFAULT});padding:24px 40px;border-radius:24px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.25)">'
 						+ '<div style="font-size:48px;margin-bottom:8px">🎯🏆🎯</div>'
-						+ '<div style="font-family:Fredoka,sans-serif;font-size:24px;font-weight:700;color:white;text-shadow:1px 1px 2px rgba(0,0,0,0.2)">META ALCANCADA!</div>'
+						+ '<div style="font-family:Fredoka,sans-serif;font-size:24px;font-weight:700;color:white;text-shadow:1px 1px 2px rgba(0,0,0,0.2)">META ALCANÇADA!</div>'
 						+ '<div style="font-family:Quicksand,sans-serif;font-size:16px;color:white;margin-top:4px;opacity:0.95">' + (goalTitle || '') + '</div>'
 						+ '</div>';
 					document.body.appendChild(banner);

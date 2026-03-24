@@ -9,6 +9,7 @@ import type { DenominationMap } from "../lib/denominations";
 import { denomTotal } from "../lib/denominations";
 import { addTransaction, saveDenominations } from "../db/queries/cash-registers";
 import { updateCustomerStats } from "../db/queries/customers";
+import { checkGoalAchievements } from "../db/queries/sales-goals";
 
 // ── Types ──
 
@@ -91,7 +92,19 @@ async function recordDenominations(
  *
  * Skips transaction recording for courtesy and zero-amount payments.
  */
-export async function recordPayment(params: RecordPaymentParams): Promise<void> {
+export interface GoalAchieved {
+	goal_id: number;
+	title: string;
+	target_value: number;
+	current_value: number;
+	goal_type: string;
+}
+
+export interface PaymentResult {
+	achievements: GoalAchieved[];
+}
+
+export async function recordPayment(params: RecordPaymentParams): Promise<PaymentResult> {
 	const {
 		db,
 		tenantId,
@@ -113,7 +126,7 @@ export async function recordPayment(params: RecordPaymentParams): Promise<void> 
 		if (customerId) {
 			await updateCustomerStats(db, tenantId, customerId, 0);
 		}
-		return;
+		return { achievements: [] };
 	}
 
 	const isSplit = payments && payments.length >= 2;
@@ -174,6 +187,18 @@ export async function recordPayment(params: RecordPaymentParams): Promise<void> 
 	if (customerId) {
 		await updateCustomerStats(db, tenantId, customerId, amountCents);
 	}
+
+	// Check goal achievements after every payment
+	let achievements: GoalAchieved[] = [];
+	if (recordedBy) {
+		try {
+			achievements = await checkGoalAchievements(db, tenantId, recordedBy);
+		} catch {
+			// Goal check is non-critical — never block a payment
+		}
+	}
+
+	return { achievements };
 }
 
 /**

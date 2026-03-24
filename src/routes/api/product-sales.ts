@@ -89,7 +89,7 @@ productSaleRoutes.post("/", async (c) => {
 	await createSaleItems(c.env.DB, sale.id, resolvedItems);
 
 	// Record payment (handles single, split, zero-amount, and customer stats)
-	await recordPayment({
+	const payResult = await recordPayment({
 		db: c.env.DB,
 		tenantId,
 		registerId: register.id,
@@ -111,5 +111,5 @@ productSaleRoutes.post("/", async (c) => {
 	});
 
 	const fullSale = await getProductSaleById(c.env.DB, sale.id, tenantId);
-	return c.json(fullSale, 201);
+	return c.json({ ...fullSale, achievements: payResult.achievements }, 201);
 });

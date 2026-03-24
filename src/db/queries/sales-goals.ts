@@ -341,6 +341,33 @@ export async function checkGoalAchievements(
 	return achieved;
 }
 
+// ── Recent Achievements (for frontend celebration) ──
+
+/**
+ * Return goals achieved by this user in the last 30 seconds.
+ * Used by the frontend to trigger celebrations after payment,
+ * since checkGoalAchievements() already recorded them.
+ */
+export async function getRecentAchievements(
+	db: D1Database,
+	tenantId: number,
+	userId: number,
+): Promise<Array<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string }>> {
+	const { results } = await db
+		.prepare(
+			`SELECT sg.id AS goal_id, sg.title, sg.target_value, ga.achieved_value AS current_value, sg.goal_type
+			 FROM goal_achievements ga
+			 JOIN sales_goals sg ON sg.id = ga.goal_id
+			 WHERE sg.tenant_id = ? AND ga.user_id = ?
+			   AND ga.achieved_at >= datetime('now', '-30 seconds')
+			 ORDER BY ga.achieved_at DESC`,
+		)
+		.bind(tenantId, userId)
+		.all<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string }>();
+
+	return results;
+}
+
 // ── Report: Goal Performance Summary ──
 
 export interface GoalReportRow {
