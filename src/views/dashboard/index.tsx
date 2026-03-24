@@ -248,6 +248,22 @@ function updateTimerDisplays() {
 
 		if (timerEl) timerEl.textContent = formatTime(remaining);
 
+		// Update delivery time display
+		var deliveryEl = card.querySelector('.delivery-time');
+		if (deliveryEl) {
+			if (remaining !== null) {
+				var deliveryMs = Date.now() + remaining;
+				var dt = new Date(deliveryMs);
+				var hh = String(dt.getHours()).padStart(2, '0');
+				var mm = String(dt.getMinutes()).padStart(2, '0');
+				deliveryEl.textContent = 'Entrega prevista: ' + hh + ':' + mm;
+				deliveryEl.classList.remove('hidden');
+			} else {
+				deliveryEl.textContent = '';
+				deliveryEl.classList.add('hidden');
+			}
+		}
+
 		// Update overtime cost display
 		if (overtimeEl) {
 			var otCost = calcOvertimeCost(session, remaining);

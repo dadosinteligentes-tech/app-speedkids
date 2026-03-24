@@ -146,6 +146,7 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 					{statusText}
 				</div>
 				<div class="overtime-display text-xs font-display font-bold text-sk-danger mt-1 hidden"></div>
+				<div class="delivery-time text-xs text-sk-muted mt-1 font-body hidden"></div>
 				<div class="package-name text-xs text-sk-muted mt-0.5 font-body">
 					{session ? session.package_name : ""}
 				</div>

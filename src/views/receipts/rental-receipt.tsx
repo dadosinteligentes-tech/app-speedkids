@@ -22,6 +22,11 @@ export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, 
 	const baseAmount = session.amount_cents - (session.overtime_cents ?? 0);
 	const hasOvertime = (session.overtime_cents ?? 0) > 0;
 
+	// Horário previsto de entrega = início + duração do pacote
+	const startMs = new Date(session.start_time).getTime();
+	const deliveryMs = startMs + session.duration_minutes * 60 * 1000;
+	const deliveryTime = fmtTime(new Date(deliveryMs).toISOString());
+
 	return (
 		<ReceiptLayout title="Comprovante de Locacao" config={config}>
 			<div class="center bold mt">COMPROVANTE DE LOCACAO</div>
@@ -81,6 +86,7 @@ export const RentalReceipt: FC<RentalReceiptProps> = ({ session, attendantName, 
 
 			<div class="mt sub">
 				<div>Inicio: {fmtTime(session.start_time)}</div>
+				<div>Entrega prevista: {deliveryTime}</div>
 				{session.end_time && <div>Fim: {fmtTime(session.end_time)}</div>}
 			</div>
 		</ReceiptLayout>
