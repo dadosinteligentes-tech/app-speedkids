@@ -17,6 +17,7 @@ import { businessConfigRoutes } from "./routes/api/business-config";
 import { productRoutes } from "./routes/api/products";
 import { productSaleRoutes } from "./routes/api/product-sales";
 import { permissionRoutes } from "./routes/api/permissions";
+import { salesGoalRoutes } from "./routes/api/sales-goals";
 import { signupRoutes } from "./routes/api/signup";
 import { stripeWebhookRoutes } from "./routes/api/stripe-webhook";
 import { setupRoutes } from "./routes/api/setup";
@@ -31,6 +32,7 @@ import { rentalPages } from "./routes/pages/rentals";
 import { reportPages } from "./routes/pages/reports";
 import { receiptPages } from "./routes/pages/receipts";
 import { productPages } from "./routes/pages/products";
+import { salesGoalPages } from "./routes/pages/sales-goals";
 import { landingPages } from "./routes/pages/landing";
 import { platformPages } from "./routes/pages/platform";
 import { platformApiRoutes } from "./routes/api/platform";
@@ -66,6 +68,7 @@ app.route("/api/business-config", businessConfigRoutes);
 app.route("/api/products", productRoutes);
 app.route("/api/product-sales", productSaleRoutes);
 app.route("/api/permissions", permissionRoutes);
+app.route("/api/sales-goals", salesGoalRoutes);
 
 // Landing pages (public site)
 app.route("/landing", landingPages);
@@ -85,6 +88,7 @@ app.route("/shift", shiftPages);
 app.route("/cash", cashRegisterPages);
 app.route("/customers", customerPages);
 app.route("/products", productPages);
+app.route("/admin/goals", salesGoalPages);
 app.route("/receipts", receiptPages);
 
 export default app;

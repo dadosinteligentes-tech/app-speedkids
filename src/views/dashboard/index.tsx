@@ -591,6 +591,10 @@ const dashboardControllerScript = `
 				var sess = window.__SK_PAYING_SESSION__;
 				printBtn.classList.toggle('hidden', !(sess && sess.id));
 			}
+			// Check if any sales goals were achieved
+			if (typeof checkGoalAchievements === 'function') {
+				checkGoalAchievements();
+			}
 		}
 	}
 

@@ -26,6 +26,7 @@ const REPORT_NAV = [
 	{ href: "/admin/reports/shifts", label: "Turnos", roles: ["manager", "owner"] },
 	{ href: "/admin/reports/cancelled", label: "Cancelados", roles: ["manager", "owner"] },
 	{ href: "/admin/reports/detail", label: "Detalhamento", roles: ["manager", "owner"] },
+	{ href: "/admin/goals/report", label: "Metas", roles: ["manager", "owner"] },
 ];
 
 export const ReportLayout: FC<PropsWithChildren<ReportLayoutProps>> = ({

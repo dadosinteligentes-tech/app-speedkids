@@ -154,10 +154,47 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 						margin-top: -1px;
 					}
 
+					/* === Balloon celebration === */
+					@keyframes sk-balloon-rise {
+						0% { transform: translateY(100vh) scale(0.5) rotate(0deg); opacity: 0; }
+						10% { opacity: 1; }
+						90% { opacity: 1; }
+						100% { transform: translateY(-120vh) scale(1) rotate(15deg); opacity: 0; }
+					}
+					.sk-balloon {
+						position: fixed;
+						bottom: -80px;
+						z-index: 9999;
+						pointer-events: none;
+						font-size: 48px;
+						animation: sk-balloon-rise 3.5s ease-out forwards;
+					}
+					@keyframes sk-goal-banner-in {
+						0% { transform: scale(0.3) translateY(40px); opacity: 0; }
+						60% { transform: scale(1.1) translateY(-5px); opacity: 1; }
+						100% { transform: scale(1) translateY(0); opacity: 1; }
+					}
+					@keyframes sk-goal-banner-out {
+						0% { opacity: 1; transform: scale(1); }
+						100% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+					}
+					.sk-goal-banner {
+						position: fixed;
+						top: 50%;
+						left: 50%;
+						transform: translate(-50%, -50%);
+						z-index: 10000;
+						animation: sk-goal-banner-in 0.6s ease-out forwards;
+					}
+					.sk-goal-banner.fade-out {
+						animation: sk-goal-banner-out 0.4s ease-in forwards;
+					}
+
 					/* === Reduced motion === */
 					@media (prefers-reduced-motion: reduce) {
 						.card-wobble:hover, .btn-bounce:active, .sk-float,
-						.confetti-piece, .animate-sk-pulse, .modal-slide-up, .overlay-fade {
+						.confetti-piece, .animate-sk-pulse, .modal-slide-up, .overlay-fade,
+						.sk-balloon, .sk-goal-banner {
 							animation: none !important;
 						}
 					}
@@ -282,6 +319,59 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 						container.appendChild(piece);
 					}
 					setTimeout(function() { container.remove(); }, 4000);
+				}
+
+				/* Balloon celebration for goal achievements */
+				function celebrateGoal(goalTitle) {
+					var balloons = ['🎈','🎉','🎊','🏆','⭐'];
+					var container = document.createElement('div');
+					container.id = 'sk-balloons';
+					container.setAttribute('aria-hidden', 'true');
+					document.body.appendChild(container);
+
+					for (var i = 0; i < 15; i++) {
+						var balloon = document.createElement('span');
+						balloon.className = 'sk-balloon';
+						balloon.textContent = balloons[i % balloons.length];
+						balloon.style.left = (5 + Math.random() * 90) + 'vw';
+						balloon.style.animationDelay = (Math.random() * 1.5) + 's';
+						balloon.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+						balloon.style.fontSize = (36 + Math.random() * 24) + 'px';
+						container.appendChild(balloon);
+					}
+
+					/* Show banner */
+					var banner = document.createElement('div');
+					banner.className = 'sk-goal-banner';
+					banner.innerHTML = '<div style="background:linear-gradient(135deg,#FFC107,${brandPalette.DEFAULT});padding:24px 40px;border-radius:24px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.25)">'
+						+ '<div style="font-size:48px;margin-bottom:8px">🎯🏆🎯</div>'
+						+ '<div style="font-family:Fredoka,sans-serif;font-size:24px;font-weight:700;color:white;text-shadow:1px 1px 2px rgba(0,0,0,0.2)">META ALCANÇADA!</div>'
+						+ '<div style="font-family:Quicksand,sans-serif;font-size:16px;color:white;margin-top:4px;opacity:0.95">' + (goalTitle || '') + '</div>'
+						+ '</div>';
+					document.body.appendChild(banner);
+
+					triggerConfetti();
+
+					setTimeout(function() {
+						banner.classList.add('fade-out');
+						setTimeout(function() { banner.remove(); }, 500);
+					}, 3500);
+
+					setTimeout(function() { container.remove(); }, 5000);
+				}
+
+				/* Check goal achievements after a sale/payment */
+				function checkGoalAchievements() {
+					fetch('/api/sales-goals/check-achievements')
+						.then(function(r) { return r.ok ? r.json() : null; })
+						.then(function(data) {
+							if (data && data.achievements && data.achievements.length > 0) {
+								data.achievements.forEach(function(a, idx) {
+									setTimeout(function() { celebrateGoal(a.title); }, idx * 4500);
+								});
+							}
+						})
+						.catch(function() { /* silent */ });
 				}
 			</script>`}
 
