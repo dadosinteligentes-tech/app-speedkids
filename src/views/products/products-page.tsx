@@ -826,6 +826,10 @@ function submitSale(method, payDenoms, payments) {
 			showScreen('pay-success');
 			CART = {};
 			updateCartUI();
+			// Check if any sales goals were achieved
+			if (typeof checkGoalAchievements === 'function') {
+				checkGoalAchievements();
+			}
 		});
 	}).catch(function(e) { alert('Erro: ' + e.message); });
 }

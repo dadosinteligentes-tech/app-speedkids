@@ -395,3 +395,32 @@ reportApiRoutes.get("/cancelled/export", async (c) => {
 
 	return csvResponse(c, `cancelados-${from}-a-${to}.csv`, csv);
 });
+
+reportApiRoutes.get("/goals/export", async (c) => {
+	const tenantId = c.get('tenant_id');
+	const { from, to } = getDateRange(c);
+	const { getGoalsReport } = await import("../../db/queries/sales-goals");
+	const goals = await getGoalsReport(c.env.DB, tenantId, from, to);
+
+	const GOAL_TYPES: Record<string, string> = { revenue: "Receita", rental_count: "Qtd Locacoes", product_sale_count: "Qtd Vendas" };
+	const PERIODS: Record<string, string> = { daily: "Diaria", weekly: "Semanal", monthly: "Mensal", custom: "Personalizada" };
+
+	const csv = toCSV(
+		["Meta", "Tipo", "Periodo", "Responsavel", "Alvo", "Atual", "Progresso %", "Alcancada", "Inicio", "Fim", "Alcancada em"],
+		goals.map((g) => [
+			g.title,
+			GOAL_TYPES[g.goal_type] ?? g.goal_type,
+			PERIODS[g.period_type] ?? g.period_type,
+			g.user_name ?? "Equipe",
+			g.goal_type === "revenue" ? fmtMoney(g.target_value) : g.target_value,
+			g.goal_type === "revenue" ? fmtMoney(g.current_value) : g.current_value,
+			fmtPct(g.percentage),
+			g.achieved ? "Sim" : "Nao",
+			fmtDate(g.start_date),
+			fmtDate(g.end_date),
+			g.achieved_at ? fmtDateTime(g.achieved_at) : "",
+		]),
+	);
+
+	return csvResponse(c, `metas-${from}-a-${to}.csv`, csv);
+});

@@ -310,3 +310,35 @@ export interface Subscription {
 	created_at: string;
 	updated_at: string;
 }
+
+export interface SalesGoal {
+	id: number;
+	tenant_id: number;
+	title: string;
+	goal_type: "revenue" | "rental_count" | "product_sale_count";
+	period_type: "daily" | "weekly" | "monthly" | "custom";
+	target_value: number;
+	user_id: number | null;
+	start_date: string;
+	end_date: string;
+	active: number;
+	created_by: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface GoalAchievement {
+	id: number;
+	goal_id: number;
+	user_id: number;
+	achieved_at: string;
+	achieved_value: number;
+}
+
+export interface SalesGoalProgress extends SalesGoal {
+	current_value: number;
+	percentage: number;
+	achieved: boolean;
+	user_name: string | null;
+	created_by_name: string;
+}
