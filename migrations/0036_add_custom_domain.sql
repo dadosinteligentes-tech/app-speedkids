@@ -1,8 +1,3 @@
--- Add custom_domain column to tenants for vanity/custom domains (e.g. giro-kids.com)
-
-ALTER TABLE tenants ADD COLUMN custom_domain TEXT;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_custom_domain ON tenants(custom_domain) WHERE custom_domain IS NOT NULL;
-
--- Set giro-kids.com as custom domain for speedykids tenant
-UPDATE tenants SET custom_domain = 'giro-kids.com' WHERE slug = 'speedykids';
+-- No-op: replaced by domain migration approach in middleware
+-- Custom domains are handled at the platform level, not per-tenant
+-- giro-kids.com is the new APP_DOMAIN; dadosinteligentes.app.br becomes legacy with 301 redirects

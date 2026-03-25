@@ -10,7 +10,6 @@ export interface Tenant {
 	owner_email: string;
 	max_users: number;
 	max_assets: number;
-	custom_domain: string | null;
 	setup_completed: number;
 	created_at: string;
 	updated_at: string;
