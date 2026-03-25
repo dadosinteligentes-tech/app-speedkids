@@ -57,24 +57,48 @@ function toggleActive(id, current) {
 	});
 }
 
+var _resetAdminId = null;
 function resetPassword(id) {
-	var newPass = prompt('Digite a nova senha para este admin:');
-	if (!newPass) return;
-	fetch('/api/platform/superadmins/' + id + '/reset-password', {
+	_resetAdminId = id;
+	var modal = document.getElementById('reset-modal');
+	var input = document.getElementById('reset-password');
+	var errEl = document.getElementById('reset-error');
+	input.value = '';
+	errEl.classList.add('hidden');
+	document.getElementById('reset-btn').disabled = false;
+	document.getElementById('reset-btn').textContent = 'Redefinir senha';
+	modal.classList.remove('hidden');
+	setTimeout(function() { input.focus(); }, 100);
+}
+function hideResetForm() { document.getElementById('reset-modal').classList.add('hidden'); }
+function submitReset(e) {
+	e.preventDefault();
+	var newPass = document.getElementById('reset-password').value;
+	var errEl = document.getElementById('reset-error');
+	var btn = document.getElementById('reset-btn');
+	if (!newPass || newPass.length < 6) {
+		errEl.textContent = 'A senha deve ter pelo menos 6 caracteres';
+		errEl.classList.remove('hidden');
+		return;
+	}
+	btn.disabled = true;
+	btn.textContent = 'Salvando...';
+	errEl.classList.add('hidden');
+	fetch('/api/platform/superadmins/' + _resetAdminId + '/reset-password', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ password: newPass })
 	})
 	.then(function(r) {
-		if (r.ok) { showToast('Senha redefinida com sucesso'); }
-		else alert('Erro ao redefinir senha');
+		if (r.ok) { hideResetForm(); showToast('Senha redefinida com sucesso'); }
+		else { errEl.textContent = 'Erro ao redefinir senha'; errEl.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Redefinir senha'; }
 	});
 }
 `)}
 </script>`;
 
 	const createButton = html`
-		<button onclick="showCreateForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+		<button onclick="showCreateForm()" class="bg-sk-blue hover:bg-sk-blue-dark text-white px-4 py-2 rounded-sk text-sm font-medium font-display transition-colors shadow-sk-sm">
 			+ Novo Admin
 		</button>
 	`;
@@ -88,39 +112,39 @@ function resetPassword(id) {
 			bodyScripts={script}
 		>
 			{/* Admins Table */}
-			<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-				<div class="px-6 py-4 border-b flex items-center justify-between">
-					<h2 class="font-semibold text-gray-900">Administradores</h2>
-					<span class="text-xs text-gray-400">{admins.length} registros</span>
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+				<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+					<h2 class="font-semibold font-display text-sk-text">Administradores</h2>
+					<span class="text-xs text-sk-muted font-body">{admins.length} registros</span>
 				</div>
 				<div class="overflow-x-auto">
-					<table class="w-full text-sm">
+					<table class="w-full text-sm font-body">
 						<thead>
-							<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-								<th class="px-5 py-3 font-medium">Nome</th>
-								<th class="px-5 py-3 font-medium">Email</th>
-								<th class="px-5 py-3 font-medium text-center">Status</th>
-								<th class="px-5 py-3 font-medium">Criado em</th>
-								<th class="px-5 py-3 font-medium text-right">Acoes</th>
+							<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+								<th class="px-5 py-3 font-medium font-display">Nome</th>
+								<th class="px-5 py-3 font-medium font-display">Email</th>
+								<th class="px-5 py-3 font-medium font-display text-center">Status</th>
+								<th class="px-5 py-3 font-medium font-display">Criado em</th>
+								<th class="px-5 py-3 font-medium font-display text-right">Acoes</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y">
 							{admins.map((a) => (
-								<tr class="hover:bg-blue-50/30 transition-colors">
-									<td class="px-5 py-3 font-medium text-gray-900">{a.name}</td>
-									<td class="px-5 py-3 text-gray-600">{a.email}</td>
+								<tr class="hover:bg-sk-blue-light/30 transition-colors">
+									<td class="px-5 py-3 font-medium text-sk-text">{a.name}</td>
+									<td class="px-5 py-3 text-sk-muted">{a.email}</td>
 									<td class="px-5 py-3 text-center">
-										<span class={`inline-block w-2.5 h-2.5 rounded-full ${a.active ? "bg-green-500" : "bg-red-500"}`} title={a.active ? "Ativo" : "Inativo"}></span>
+										<span class={`inline-block w-2.5 h-2.5 rounded-full ${a.active ? "bg-sk-green" : "bg-sk-danger"}`} title={a.active ? "Ativo" : "Inativo"}></span>
 									</td>
-									<td class="px-5 py-3 text-gray-500">{fmtDate(a.created_at)}</td>
+									<td class="px-5 py-3 text-sk-muted">{fmtDate(a.created_at)}</td>
 									<td class="px-5 py-3 text-right">
 										<div class="flex items-center justify-end gap-2">
 											{a.active ? (
-												<button onclick={`toggleActive(${a.id},1)`} class="text-red-500 hover:text-red-700 text-xs font-medium">Desativar</button>
+												<button onclick={`toggleActive(${a.id},1)`} class="text-sk-danger hover:text-sk-danger/80 text-xs font-medium font-display">Desativar</button>
 											) : (
-												<button onclick={`toggleActive(${a.id},0)`} class="text-green-600 hover:text-green-800 text-xs font-medium">Ativar</button>
+												<button onclick={`toggleActive(${a.id},0)`} class="text-sk-green hover:text-sk-green-dark text-xs font-medium font-display">Ativar</button>
 											)}
-											<button onclick={`resetPassword(${a.id})`} class="text-blue-600 hover:text-blue-800 text-xs font-medium">Reset Senha</button>
+											<button onclick={`resetPassword(${a.id})`} class="text-sk-blue hover:text-sk-blue-dark text-xs font-medium font-display">Reset Senha</button>
 										</div>
 									</td>
 								</tr>
@@ -128,7 +152,7 @@ function resetPassword(id) {
 						</tbody>
 					</table>
 					{admins.length === 0 && (
-						<div class="text-center py-12 text-gray-400">
+						<div class="text-center py-12 text-sk-muted font-body">
 							<p class="text-lg mb-2">Nenhum admin cadastrado</p>
 							<p class="text-sm">Crie o primeiro admin clicando em "+ Novo Admin"</p>
 						</div>
@@ -138,28 +162,54 @@ function resetPassword(id) {
 
 			{/* Create Admin Modal */}
 			<div id="create-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-				<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fade-in">
+				<div class="bg-sk-surface rounded-sk-lg shadow-sk-xl w-full max-w-md p-6 fade-in">
 					<div class="flex items-center justify-between mb-4">
-						<h3 class="text-lg font-bold">Novo Admin</h3>
-						<button onclick="hideCreateForm()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+						<h3 class="text-lg font-bold font-display">Novo Admin</h3>
+						<button onclick="hideCreateForm()" class="text-sk-muted hover:text-sk-muted text-xl">&times;</button>
 					</div>
-					<div id="create-error" class="hidden mb-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm"></div>
+					<div id="create-error" class="hidden mb-3 p-3 bg-sk-danger-light text-sk-danger rounded-sk text-sm font-body"></div>
 					<form onsubmit="createAdmin(event)" class="space-y-3">
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-							<input id="new-name" type="text" required class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+							<label class="block text-sm font-medium font-display text-sk-text mb-1">Nome</label>
+							<input id="new-name" type="text" required class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
 						</div>
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-							<input id="new-email" type="email" required class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+							<label class="block text-sm font-medium font-display text-sk-text mb-1">Email</label>
+							<input id="new-email" type="email" required class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
 						</div>
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-							<input id="new-password" type="text" required class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Gere uma senha segura" />
+							<label class="block text-sm font-medium font-display text-sk-text mb-1">Senha</label>
+							<input id="new-password" type="text" required class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" placeholder="Gere uma senha segura" />
 						</div>
 						<div class="flex gap-2 pt-2">
-							<button type="submit" id="create-btn" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">Criar Admin</button>
-							<button type="button" onclick="hideCreateForm()" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+							<button type="submit" id="create-btn" class="flex-1 py-2.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-medium font-display text-sm transition-colors">Criar Admin</button>
+							<button type="button" onclick="hideCreateForm()" class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-medium font-display text-sm transition-colors">Cancelar</button>
+						</div>
+					</form>
+				</div>
+			</div>
+			{/* Reset Password Modal */}
+			<div id="reset-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-sk-lg shadow-sk-xl w-full max-w-sm p-6 fade-in">
+					<div class="flex items-center justify-between mb-4">
+						<div class="flex items-center gap-2">
+							<div class="bg-sk-blue-light w-10 h-10 rounded-sk flex items-center justify-center">
+								<span class="text-lg">🔑</span>
+							</div>
+							<h3 class="text-lg font-bold font-display text-sk-text">Redefinir senha</h3>
+						</div>
+						<button onclick="hideResetForm()" class="text-sk-muted hover:text-sk-text text-xl">&times;</button>
+					</div>
+					<p class="text-sm text-sk-muted font-body mb-4">Digite a nova senha para este administrador.</p>
+					<div id="reset-error" class="hidden mb-3 p-3 bg-sk-danger-light text-sk-danger rounded-sk text-sm font-body"></div>
+					<form onsubmit="submitReset(event)" class="space-y-4">
+						<div>
+							<label class="block text-sm font-medium font-display text-sk-text mb-1">Nova senha</label>
+							<input id="reset-password" type="text" required minlength={6} class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue text-base outline-none transition-colors" placeholder="Mínimo 6 caracteres" />
+						</div>
+						<div class="flex gap-2">
+							<button type="submit" id="reset-btn" class="btn-bounce flex-1 py-2.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-display font-bold text-sm transition-colors">Redefinir senha</button>
+							<button type="button" onclick="hideResetForm()" class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-display font-medium text-sm transition-colors">Cancelar</button>
 						</div>
 					</form>
 				</div>

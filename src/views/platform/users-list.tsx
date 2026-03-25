@@ -23,53 +23,53 @@ export const PlatformUsersList: FC<UsersListProps> = ({ users, user }) => {
 			user={user}
 			breadcrumb={[{ label: "Dashboard", href: "/platform" }, { label: "Usuarios" }]}
 		>
-			<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-				<div class="px-6 py-4 border-b flex items-center justify-between">
-					<h2 class="font-semibold text-gray-900">Usuarios</h2>
-					<span class="text-xs text-gray-400">{users.length} registros</span>
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+				<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+					<h2 class="font-display font-semibold text-sk-text">Usuarios</h2>
+					<span class="font-body text-xs text-sk-muted">{users.length} registros</span>
 				</div>
 				<div class="overflow-x-auto">
-					<table class="w-full text-sm">
+					<table class="w-full text-sm font-body">
 						<thead>
-							<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-								<th class="px-5 py-3 font-medium">Nome</th>
-								<th class="px-5 py-3 font-medium">Email</th>
-								<th class="px-5 py-3 font-medium">Tenant</th>
-								<th class="px-5 py-3 font-medium">Perfil</th>
-								<th class="px-5 py-3 font-medium text-center">Status</th>
-								<th class="px-5 py-3 font-medium">Ultimo Login</th>
+							<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+								<th class="px-5 py-3 font-display font-medium">Nome</th>
+								<th class="px-5 py-3 font-display font-medium">Email</th>
+								<th class="px-5 py-3 font-display font-medium">Tenant</th>
+								<th class="px-5 py-3 font-display font-medium">Perfil</th>
+								<th class="px-5 py-3 font-display font-medium text-center">Status</th>
+								<th class="px-5 py-3 font-display font-medium">Ultimo Login</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y">
 							{users.map((u) => (
-								<tr class="hover:bg-blue-50/30 transition-colors">
-									<td class="px-5 py-3 font-medium text-gray-900">{u.name}</td>
-									<td class="px-5 py-3 text-gray-500">{u.email}</td>
+								<tr class="hover:bg-sk-blue-light/30 transition-colors">
+									<td class="px-5 py-3 font-display font-medium text-sk-text">{u.name}</td>
+									<td class="px-5 py-3 font-body text-sk-muted">{u.email}</td>
 									<td class="px-5 py-3">
-										<a href={`/platform/tenants/${u.id}`} class="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+										<a href={`/platform/tenants/${u.id}`} class="font-display text-sk-blue hover:text-sk-blue-dark font-medium transition-colors">
 											{u.tenant_name}
 										</a>
-										<p class="text-xs text-gray-400">{u.tenant_slug}</p>
+										<p class="font-body text-xs text-sk-muted">{u.tenant_slug}</p>
 									</td>
 									<td class="px-5 py-3">
-										<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">
+										<span class="bg-sk-yellow-light text-sk-yellow-dark px-2 py-0.5 rounded text-xs font-display font-medium">
 											{ROLE_LABELS[u.role] || u.role}
 										</span>
 									</td>
 									<td class="px-5 py-3 text-center">
 										{u.active
-											? <span class="inline-block w-2 h-2 rounded-full bg-green-500" title="Ativo"></span>
-											: <span class="inline-block w-2 h-2 rounded-full bg-red-500" title="Inativo"></span>
+											? <span class="inline-block w-2 h-2 rounded-full bg-sk-green" title="Ativo"></span>
+											: <span class="inline-block w-2 h-2 rounded-full bg-sk-danger" title="Inativo"></span>
 										}
 									</td>
-									<td class="px-5 py-3 text-gray-400 text-xs">{daysAgo(u.last_login)}</td>
+									<td class="px-5 py-3 font-body text-sk-muted text-xs">{daysAgo(u.last_login)}</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
 					{users.length === 0 && (
-						<div class="text-center py-12 text-gray-400">
-							<p class="text-sm">Nenhum usuario encontrado</p>
+						<div class="text-center py-12 text-sk-muted">
+							<p class="font-body text-sm">Nenhum usuario encontrado</p>
 						</div>
 					)}
 				</div>

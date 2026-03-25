@@ -16,7 +16,7 @@ function fmtBRL(cents: number): string {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-	starter: "bg-gray-100 text-gray-600",
+	starter: "bg-sk-bg text-sk-muted",
 	pro: "bg-blue-100 text-blue-700",
 	enterprise: "bg-purple-100 text-purple-700",
 };
@@ -74,10 +74,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function showSection(name) {
 	document.querySelectorAll('[data-section]').forEach(function(el) { el.classList.add('hidden'); });
 	document.querySelectorAll('[data-section-btn]').forEach(function(el) {
-		el.className = el.className.replace('border-blue-500 text-blue-600', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+		el.className = el.className.replace('border-sk-blue text-sk-blue', 'border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border');
 	});
 	document.getElementById('section-' + name).classList.remove('hidden');
-	document.getElementById('btn-' + name).className = document.getElementById('btn-' + name).className.replace('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', 'border-blue-500 text-blue-600');
+	document.getElementById('btn-' + name).className = document.getElementById('btn-' + name).className.replace('border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border', 'border-sk-blue text-sk-blue');
 }
 `)}
 		</script>
@@ -94,21 +94,21 @@ function showSection(name) {
 			bodyScripts={chartScript}
 		>
 			{/* Tabs */}
-			<div class="border-b mb-6">
+			<div class="border-b border-sk-border/30 mb-6">
 				<nav class="flex gap-6">
-					<button id="btn-revenue" data-section-btn onclick="showSection('revenue')" class="pb-3 text-sm font-medium border-b-2 border-blue-500 text-blue-600 transition-colors">
+					<button id="btn-revenue" data-section-btn onclick="showSection('revenue')" class="pb-3 text-sm font-medium font-display border-b-2 border-sk-blue text-sk-blue transition-colors">
 						Receita
 					</button>
-					<button id="btn-growth" data-section-btn onclick="showSection('growth')" class="pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+					<button id="btn-growth" data-section-btn onclick="showSection('growth')" class="pb-3 text-sm font-medium font-display border-b-2 border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border transition-colors">
 						Crescimento
 					</button>
-					<button id="btn-top" data-section-btn onclick="showSection('top')" class="pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+					<button id="btn-top" data-section-btn onclick="showSection('top')" class="pb-3 text-sm font-medium font-display border-b-2 border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border transition-colors">
 						Top Tenants
 					</button>
-					<button id="btn-active" data-section-btn onclick="showSection('active')" class="pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+					<button id="btn-active" data-section-btn onclick="showSection('active')" class="pb-3 text-sm font-medium font-display border-b-2 border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border transition-colors">
 						Ativos ({activeTenants.length})
 					</button>
-					<button id="btn-churn" data-section-btn onclick="showSection('churn')" class="pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+					<button id="btn-churn" data-section-btn onclick="showSection('churn')" class="pb-3 text-sm font-medium font-display border-b-2 border-transparent text-sk-muted hover:text-sk-text hover:border-sk-border transition-colors">
 						Risco de Churn ({inactiveTenants.length})
 					</button>
 				</nav>
@@ -116,30 +116,30 @@ function showSection(name) {
 
 			{/* Section: Revenue */}
 			<div id="section-revenue" data-section>
-				<div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
-					<h2 class="font-semibold text-gray-900 mb-4">Receita por Periodo</h2>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 p-6 mb-6">
+					<h2 class="font-semibold font-display text-sk-text mb-4">Receita por Periodo</h2>
 					<div class="w-full" style="max-height:360px;">
 						<canvas id="revenueChart"></canvas>
 					</div>
 				</div>
 
-				<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-					<div class="px-6 py-4 border-b flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Detalhamento</h2>
-						<span class="text-xs text-gray-400">{revenue.length} periodos</span>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+					<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+						<h2 class="font-semibold font-display text-sk-text">Detalhamento</h2>
+						<span class="text-xs font-body text-sk-muted">{revenue.length} periodos</span>
 					</div>
 					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
+						<table class="w-full text-sm font-body">
 							<thead>
-								<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-									<th class="px-5 py-3 font-medium">Periodo</th>
-									<th class="px-5 py-3 font-medium text-right">Receita</th>
-									<th class="px-5 py-3 font-medium text-right">Locacoes</th>
+								<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+									<th class="px-5 py-3 font-medium font-display">Periodo</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Receita</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Locacoes</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{revenue.map((r) => (
-									<tr class="hover:bg-blue-50/30 transition-colors">
+									<tr class="hover:bg-sk-blue-light/30 transition-colors">
 										<td class="px-5 py-3 font-medium">{r.period}</td>
 										<td class="px-5 py-3 text-right font-medium text-green-700">{fmtBRL(r.revenue_cents)}</td>
 										<td class="px-5 py-3 text-right">{r.rental_count}</td>
@@ -147,32 +147,32 @@ function showSection(name) {
 								))}
 							</tbody>
 						</table>
-						{revenue.length === 0 && <p class="text-center text-gray-400 py-8 text-sm">Nenhum dado de receita</p>}
+						{revenue.length === 0 && <p class="text-center text-sk-muted py-8 text-sm font-body">Nenhum dado de receita</p>}
 					</div>
 				</div>
 			</div>
 
 			{/* Section: Tenant Growth */}
 			<div id="section-growth" data-section class="hidden">
-				<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-					<div class="px-6 py-4 border-b flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Crescimento de Tenants</h2>
-						<span class="text-xs text-gray-400">{tenantGrowth.length} registros</span>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+					<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+						<h2 class="font-semibold font-display text-sk-text">Crescimento de Tenants</h2>
+						<span class="text-xs font-body text-sk-muted">{tenantGrowth.length} registros</span>
 					</div>
 					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
+						<table class="w-full text-sm font-body">
 							<thead>
-								<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-									<th class="px-5 py-3 font-medium">Data</th>
-									<th class="px-5 py-3 font-medium text-right">Novos</th>
-									<th class="px-5 py-3 font-medium text-right">Total Acumulado</th>
+								<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+									<th class="px-5 py-3 font-medium font-display">Data</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Novos</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Total Acumulado</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{tenantGrowth.map((g) => {
 									runningTotal += g.count;
 									return (
-										<tr class="hover:bg-blue-50/30 transition-colors">
+										<tr class="hover:bg-sk-blue-light/30 transition-colors">
 											<td class="px-5 py-3 font-medium">{g.date}</td>
 											<td class="px-5 py-3 text-right">{g.count}</td>
 											<td class="px-5 py-3 text-right font-medium text-blue-700">{runningTotal}</td>
@@ -181,40 +181,40 @@ function showSection(name) {
 								})}
 							</tbody>
 						</table>
-						{tenantGrowth.length === 0 && <p class="text-center text-gray-400 py-8 text-sm">Nenhum dado de crescimento</p>}
+						{tenantGrowth.length === 0 && <p class="text-center text-sk-muted py-8 text-sm font-body">Nenhum dado de crescimento</p>}
 					</div>
 				</div>
 			</div>
 
 			{/* Section: Top Tenants by Revenue */}
 			<div id="section-top" data-section class="hidden">
-				<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-					<div class="px-6 py-4 border-b flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Top Tenants por Receita</h2>
-						<span class="text-xs text-gray-400">{topTenants.length} tenants</span>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+					<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+						<h2 class="font-semibold font-display text-sk-text">Top Tenants por Receita</h2>
+						<span class="text-xs font-body text-sk-muted">{topTenants.length} tenants</span>
 					</div>
 					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
+						<table class="w-full text-sm font-body">
 							<thead>
-								<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-									<th class="px-5 py-3 font-medium">#</th>
-									<th class="px-5 py-3 font-medium">Tenant</th>
-									<th class="px-5 py-3 font-medium">Plano</th>
-									<th class="px-5 py-3 font-medium text-right">Receita</th>
-									<th class="px-5 py-3 font-medium text-right">Locacoes</th>
+								<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+									<th class="px-5 py-3 font-medium font-display">#</th>
+									<th class="px-5 py-3 font-medium font-display">Tenant</th>
+									<th class="px-5 py-3 font-medium font-display">Plano</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Receita</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Locacoes</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{topTenants.map((t, i) => {
 									const planColor = PLAN_COLORS[t.plan] || PLAN_COLORS.starter;
 									return (
-										<tr class="hover:bg-blue-50/30 transition-colors">
-											<td class="px-5 py-3 text-gray-400 font-medium">{i + 1}</td>
+										<tr class="hover:bg-sk-blue-light/30 transition-colors">
+											<td class="px-5 py-3 text-sk-muted font-medium">{i + 1}</td>
 											<td class="px-5 py-3">
-												<a href={`/platform/tenants/${t.id}`} class="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+												<a href={`/platform/tenants/${t.id}`} class="font-medium text-sk-text hover:text-sk-blue transition-colors">
 													{t.name}
 												</a>
-												<p class="text-xs text-gray-400">{t.slug}</p>
+												<p class="text-xs text-sk-muted">{t.slug}</p>
 											</td>
 											<td class="px-5 py-3">
 												<span class={`${planColor} px-2 py-0.5 rounded text-xs font-medium`}>
@@ -228,81 +228,81 @@ function showSection(name) {
 								})}
 							</tbody>
 						</table>
-						{topTenants.length === 0 && <p class="text-center text-gray-400 py-8 text-sm">Nenhum dado</p>}
+						{topTenants.length === 0 && <p class="text-center text-sk-muted py-8 text-sm font-body">Nenhum dado</p>}
 					</div>
 				</div>
 			</div>
 
 			{/* Section: Active Tenants */}
 			<div id="section-active" data-section class="hidden">
-				<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-					<div class="px-6 py-4 border-b flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Tenants Ativos</h2>
-						<span class="text-xs text-gray-400">{activeTenants.length} tenants</span>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+					<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+						<h2 class="font-semibold font-display text-sk-text">Tenants Ativos</h2>
+						<span class="text-xs font-body text-sk-muted">{activeTenants.length} tenants</span>
 					</div>
 					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
+						<table class="w-full text-sm font-body">
 							<thead>
-								<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-									<th class="px-5 py-3 font-medium">Nome</th>
-									<th class="px-5 py-3 font-medium">Slug</th>
-									<th class="px-5 py-3 font-medium">Ultima Atividade</th>
-									<th class="px-5 py-3 font-medium text-right">Logins</th>
+								<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+									<th class="px-5 py-3 font-medium font-display">Nome</th>
+									<th class="px-5 py-3 font-medium font-display">Slug</th>
+									<th class="px-5 py-3 font-medium font-display">Ultima Atividade</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Logins</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{activeTenants.map((t) => (
-									<tr class="hover:bg-blue-50/30 transition-colors">
+									<tr class="hover:bg-sk-blue-light/30 transition-colors">
 										<td class="px-5 py-3">
-											<a href={`/platform/tenants/${t.id}`} class="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+											<a href={`/platform/tenants/${t.id}`} class="font-medium text-sk-text hover:text-sk-blue transition-colors">
 												{t.name}
 											</a>
 										</td>
-										<td class="px-5 py-3 text-gray-500">{t.slug}</td>
-										<td class="px-5 py-3 text-gray-400 text-xs tabular-nums">{t.last_activity?.slice(0, 16).replace("T", " ")}</td>
+										<td class="px-5 py-3 text-sk-muted">{t.slug}</td>
+										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums">{t.last_activity?.slice(0, 16).replace("T", " ")}</td>
 										<td class="px-5 py-3 text-right font-medium">{t.login_count}</td>
 									</tr>
 								))}
 							</tbody>
 						</table>
-						{activeTenants.length === 0 && <p class="text-center text-gray-400 py-8 text-sm">Nenhum tenant ativo</p>}
+						{activeTenants.length === 0 && <p class="text-center text-sk-muted py-8 text-sm font-body">Nenhum tenant ativo</p>}
 					</div>
 				</div>
 			</div>
 
 			{/* Section: Churn Risk (Inactive) */}
 			<div id="section-churn" data-section class="hidden">
-				<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-					<div class="px-6 py-4 border-b flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Risco de Churn (Inativos)</h2>
-						<span class="text-xs text-gray-400">{inactiveTenants.length} tenants</span>
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
+					<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
+						<h2 class="font-semibold font-display text-sk-text">Risco de Churn (Inativos)</h2>
+						<span class="text-xs font-body text-sk-muted">{inactiveTenants.length} tenants</span>
 					</div>
 					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
+						<table class="w-full text-sm font-body">
 							<thead>
-								<tr class="bg-gray-50 border-b text-left text-xs text-gray-500 uppercase tracking-wider">
-									<th class="px-5 py-3 font-medium">Nome</th>
-									<th class="px-5 py-3 font-medium">Slug</th>
-									<th class="px-5 py-3 font-medium">Ultima Atividade</th>
-									<th class="px-5 py-3 font-medium text-right">Dias Inativo</th>
+								<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
+									<th class="px-5 py-3 font-medium font-display">Nome</th>
+									<th class="px-5 py-3 font-medium font-display">Slug</th>
+									<th class="px-5 py-3 font-medium font-display">Ultima Atividade</th>
+									<th class="px-5 py-3 font-medium font-display text-right">Dias Inativo</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y">
 								{inactiveTenants.map((t) => {
 									const isHighRisk = t.days_inactive > 60;
 									return (
-										<tr class={`${isHighRisk ? "bg-red-50/50 hover:bg-red-50" : "hover:bg-blue-50/30"} transition-colors`}>
+										<tr class={`${isHighRisk ? "bg-sk-danger-light/50 hover:bg-sk-danger-light" : "hover:bg-sk-blue-light/30"} transition-colors`}>
 											<td class="px-5 py-3">
-												<a href={`/platform/tenants/${t.id}`} class="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+												<a href={`/platform/tenants/${t.id}`} class="font-medium text-sk-text hover:text-sk-blue transition-colors">
 													{t.name}
 												</a>
 											</td>
-											<td class="px-5 py-3 text-gray-500">{t.slug}</td>
-											<td class="px-5 py-3 text-gray-400 text-xs tabular-nums">
-												{t.last_activity ? t.last_activity.slice(0, 16).replace("T", " ") : <span class="text-gray-300">Nunca</span>}
+											<td class="px-5 py-3 text-sk-muted">{t.slug}</td>
+											<td class="px-5 py-3 text-sk-muted text-xs tabular-nums">
+												{t.last_activity ? t.last_activity.slice(0, 16).replace("T", " ") : <span class="text-sk-border">Nunca</span>}
 											</td>
 											<td class="px-5 py-3 text-right">
-												<span class={`font-medium ${isHighRisk ? "text-red-600" : "text-yellow-600"}`}>
+												<span class={`font-medium ${isHighRisk ? "text-sk-danger" : "text-yellow-600"}`}>
 													{t.days_inactive}d
 												</span>
 											</td>
@@ -311,7 +311,7 @@ function showSection(name) {
 								})}
 							</tbody>
 						</table>
-						{inactiveTenants.length === 0 && <p class="text-center text-gray-400 py-8 text-sm">Nenhum tenant inativo</p>}
+						{inactiveTenants.length === 0 && <p class="text-center text-sk-muted py-8 text-sm font-body">Nenhum tenant inativo</p>}
 					</div>
 				</div>
 			</div>

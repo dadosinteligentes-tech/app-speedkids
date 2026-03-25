@@ -15,9 +15,9 @@ function fmtBRL(cents: number): string {
 const PLAN_ORDER = ["starter", "pro", "enterprise"] as const;
 
 const PLAN_STYLES: Record<string, { ring: string; badge: string }> = {
-	starter: { ring: "", badge: "bg-gray-100 text-gray-600" },
-	pro: { ring: "ring-2 ring-blue-200", badge: "bg-blue-100 text-blue-700" },
-	enterprise: { ring: "", badge: "bg-purple-100 text-purple-700" },
+	starter: { ring: "", badge: "bg-sk-yellow-light text-sk-yellow-dark" },
+	pro: { ring: "ring-2 ring-sk-blue", badge: "bg-sk-blue-light text-sk-blue-dark" },
+	enterprise: { ring: "", badge: "bg-sk-purple-light text-sk-purple" },
 };
 
 export const Plans: FC<PlansProps> = ({ plans, user }) => {
@@ -93,28 +93,28 @@ function savePlan(key) {
 					if (!plan) return null;
 					const style = PLAN_STYLES[key] || PLAN_STYLES.starter;
 					return (
-						<div id={`card-${key}`} class={`bg-white rounded-xl shadow-sm border p-6 ${style.ring}`}>
+						<div id={`card-${key}`} class={`bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 p-6 ${style.ring}`}>
 							{/* Header */}
 							<div class="flex items-center justify-between mb-4">
-								<span class={`${style.badge} px-3 py-1 rounded-lg text-sm font-semibold`}>
+								<span class={`${style.badge} px-3 py-1 rounded-sk text-sm font-semibold font-display`}>
 									{plan.label}
 								</span>
 							</div>
 
 							{/* View Mode */}
 							<div class="plan-view">
-								<p class="text-3xl font-bold text-gray-900 mb-1">{fmtBRL(plan.priceCents)}<span class="text-sm font-normal text-gray-400">/mes</span></p>
+								<p class="text-3xl font-bold text-sk-text font-display mb-1">{fmtBRL(plan.priceCents)}<span class="text-sm font-normal text-sk-muted font-body">/mes</span></p>
 								<div class="mt-4 space-y-2">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-gray-500">Max. usuarios</span>
-										<span class="font-medium text-gray-900">{plan.maxUsers}</span>
+										<span class="text-sk-muted font-body">Max. usuarios</span>
+										<span class="font-medium text-sk-text font-body">{plan.maxUsers}</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-gray-500">Max. ativos</span>
-										<span class="font-medium text-gray-900">{plan.maxAssets}</span>
+										<span class="text-sk-muted font-body">Max. ativos</span>
+										<span class="font-medium text-sk-text font-body">{plan.maxAssets}</span>
 									</div>
 								</div>
-								<button onclick={`toggleEdit('${key}')`} class="mt-5 w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors">
+								<button onclick={`toggleEdit('${key}')`} class="mt-5 w-full py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-medium font-display text-sm transition-colors">
 									Editar
 								</button>
 							</div>
@@ -123,21 +123,21 @@ function savePlan(key) {
 							<div class="plan-edit hidden">
 								<div class="space-y-3">
 									<div>
-										<label class="block text-sm font-medium text-gray-700 mb-1">Preco (R$)</label>
-										<input id={`price-${key}`} type="number" step="0.01" min="0" class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+										<label class="block text-sm font-medium text-sk-text font-display mb-1">Preco (R$)</label>
+										<input id={`price-${key}`} type="number" step="0.01" min="0" class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
 									</div>
 									<div>
-										<label class="block text-sm font-medium text-gray-700 mb-1">Max. usuarios</label>
-										<input id={`users-${key}`} type="number" min="1" class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+										<label class="block text-sm font-medium text-sk-text font-display mb-1">Max. usuarios</label>
+										<input id={`users-${key}`} type="number" min="1" class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
 									</div>
 									<div>
-										<label class="block text-sm font-medium text-gray-700 mb-1">Max. ativos</label>
-										<input id={`assets-${key}`} type="number" min="1" class="w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+										<label class="block text-sm font-medium text-sk-text font-display mb-1">Max. ativos</label>
+										<input id={`assets-${key}`} type="number" min="1" class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
 									</div>
 								</div>
 								<div class="flex gap-2 mt-4">
-									<button id={`save-btn-${key}`} onclick={`savePlan('${key}')`} class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">Salvar</button>
-									<button onclick={`toggleEdit('${key}')`} class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+									<button id={`save-btn-${key}`} onclick={`savePlan('${key}')`} class="flex-1 py-2.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-medium font-display text-sm transition-colors">Salvar</button>
+									<button onclick={`toggleEdit('${key}')`} class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-medium font-display text-sm transition-colors">Cancelar</button>
 								</div>
 							</div>
 						</div>
