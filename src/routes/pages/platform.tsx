@@ -9,6 +9,7 @@ import {
 	getAllUsersAcrossTenants, getSubscriptionDetails,
 } from "../../db/queries/platform";
 import { PlatformDashboard } from "../../views/platform/dashboard";
+import { PlatformLoginPage } from "../../views/platform/login";
 import { TenantDetail } from "../../views/platform/tenant-detail";
 import { Superadmins } from "../../views/platform/superadmins";
 import { Plans } from "../../views/platform/plans";
@@ -18,6 +19,11 @@ import { PlatformSubscriptions } from "../../views/platform/subscriptions";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 
 export const platformPages = new Hono<AppEnv>();
+
+// Login page — public, before admin middleware
+platformPages.get("/login", (c) => {
+	return c.html(<PlatformLoginPage />);
+});
 
 platformPages.use("*", platformAdminMiddleware);
 

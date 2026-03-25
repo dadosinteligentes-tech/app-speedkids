@@ -3,7 +3,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../types";
 import { getAuthSession } from "../db/queries/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/signup", "/api/stripe/webhook", "/landing", "/signup"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/platform-login", "/api/signup", "/api/stripe/webhook", "/landing", "/signup", "/platform/login"];
 
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 	const path = new URL(c.req.url).pathname;
@@ -13,16 +13,22 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 		return next();
 	}
 
-	// No tenant = bare domain (e.g. giro-kids.com) — redirect to landing page
 	const tenant = c.get("tenant");
+	const sessionId = getCookie(c, "sk_session");
+
+	// No tenant = bare domain (e.g. giro-kids.com)
 	if (!tenant) {
 		if (path === "/" || path === "") {
+			// If logged in as platform admin, go to dashboard; otherwise landing
+			if (sessionId) {
+				const session = await getAuthSession(c.env.DB, sessionId);
+				if (session) {
+					return c.redirect("/platform");
+				}
+			}
 			return c.redirect("/landing");
 		}
-		// Allow other public/API paths to proceed without tenant
 	}
-
-	const sessionId = getCookie(c, "sk_session");
 
 	if (!sessionId) {
 		if (path.startsWith("/api/")) {

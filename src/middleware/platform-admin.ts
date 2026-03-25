@@ -12,7 +12,7 @@ export const platformAdminMiddleware = createMiddleware<AppEnv>(async (c, next) 
 	if (!user) {
 		const path = new URL(c.req.url).pathname;
 		if (path.startsWith("/api/")) return c.json({ error: "Unauthorized" }, 401);
-		return c.redirect("/login");
+		return c.redirect("/platform/login");
 	}
 
 	// Check 1: user belongs to _platform tenant

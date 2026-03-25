@@ -63,6 +63,53 @@ authRoutes.post("/login", async (c) => {
 	});
 });
 
+// Platform admin login — authenticates directly against the _platform tenant
+authRoutes.post("/platform-login", async (c) => {
+	const body = await validateJson(c, loginSchema);
+
+	const platformTenant = await c.env.DB
+		.prepare("SELECT id FROM tenants WHERE slug = '_platform'")
+		.first<{ id: number }>();
+
+	if (!platformTenant) {
+		return c.json({ error: "Plataforma não configurada" }, 500);
+	}
+
+	const user = await getUserByEmail(c.env.DB, platformTenant.id, body.email);
+	if (!user) {
+		return c.json({ error: "Email ou senha inválidos" }, 401);
+	}
+
+	const valid = await verifyPassword(body.password, user.salt, user.password_hash);
+	if (!valid) {
+		return c.json({ error: "Email ou senha inválidos" }, 401);
+	}
+
+	const session = await createAuthSession(c.env.DB, user.id);
+	if (!session) {
+		return c.json({ error: "Erro ao criar sessão" }, 500);
+	}
+
+	setCookie(c, "sk_session", session.id, {
+		path: "/",
+		httpOnly: true,
+		secure: true,
+		sameSite: "Lax",
+		maxAge: 60 * 60 * 24,
+	});
+
+	c.set("user", { id: user.id, name: user.name, email: user.email, role: user.role, tenant_id: user.tenant_id });
+	await auditLog(c, "auth.platform_login", "auth", user.id);
+
+	return c.json({
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+		redirect: "/platform",
+	});
+});
+
 authRoutes.post("/logout", async (c) => {
 	const sessionId = getCookie(c, "sk_session");
 	if (sessionId) {
