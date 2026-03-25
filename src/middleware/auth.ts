@@ -13,6 +13,15 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 		return next();
 	}
 
+	// No tenant = bare domain (e.g. giro-kids.com) — redirect to landing page
+	const tenant = c.get("tenant");
+	if (!tenant) {
+		if (path === "/" || path === "") {
+			return c.redirect("/landing");
+		}
+		// Allow other public/API paths to proceed without tenant
+	}
+
 	const sessionId = getCookie(c, "sk_session");
 
 	if (!sessionId) {
