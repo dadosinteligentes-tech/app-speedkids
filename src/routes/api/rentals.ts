@@ -94,7 +94,7 @@ rentalRoutes.post("/start", async (c) => {
 		const amount = isCourtesy ? 0 : Math.max(0, pkg.price_cents - prepaidDiscount);
 		const method = isSplit ? "mixed" : (body.payment_method ?? "cash");
 
-		await paySession(c.env.DB, sessionId, method, amount, null, tenantId);
+		await paySession(c.env.DB, sessionId, method, amount, null, tenantId, prepaidDiscount, body.promotion_id);
 
 		let payResult = { achievements: [] as any[] };
 		if (amount > 0) {
@@ -211,7 +211,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	}
 
 	const method = isSplit ? "mixed" : body.payment_method;
-	await paySession(c.env.DB, id, method, finalAmount, body.notes ?? null, tenantId);
+	await paySession(c.env.DB, id, method, finalAmount, body.notes ?? null, tenantId, discount, body.promotion_id);
 
 	let achievements: any[] = [];
 	if (register && amountDue > 0) {

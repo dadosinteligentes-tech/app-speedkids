@@ -19,6 +19,7 @@ const NAV_ITEMS = [
 	{ href: "/admin/customers", label: "Clientes", icon: "👥", roles: ["manager", "owner"] },
 	{ href: "/admin/reports", label: "Relatórios", icon: "📊", roles: ["manager", "owner"] },
 	{ href: "/admin/goals", label: "Metas", icon: "🎯", roles: ["manager", "owner"] },
+	{ href: "/admin/promotions", label: "Promoções", icon: "🏷️", roles: ["manager", "owner"] },
 	{ href: "/admin/batteries", label: "Baterias", icon: "🔋", roles: ["manager", "owner"] },
 	{ href: "/admin/logs", label: "Logs", icon: "📋", roles: ["manager", "owner"] },
 	{ href: "/admin/users", label: "Usuários", icon: "👤", roles: ["owner"] },

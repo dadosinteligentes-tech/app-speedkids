@@ -172,12 +172,17 @@ export async function paySession(
 	finalAmountCents: number,
 	notes: string | null,
 	tenantId: number,
+	discountCents?: number,
+	promotionId?: number | null,
 ): Promise<void> {
 	await db
 		.prepare(
-			"UPDATE rental_sessions SET paid = 1, payment_method = ?, amount_cents = ?, notes = COALESCE(?, notes), updated_at = datetime('now') WHERE id = ? AND tenant_id = ?",
+			`UPDATE rental_sessions
+			 SET paid = 1, payment_method = ?, amount_cents = ?, notes = COALESCE(?, notes),
+			     discount_cents = ?, promotion_id = ?, updated_at = datetime('now')
+			 WHERE id = ? AND tenant_id = ?`,
 		)
-		.bind(paymentMethod, finalAmountCents, notes, id, tenantId)
+		.bind(paymentMethod, finalAmountCents, notes, discountCents ?? 0, promotionId ?? null, id, tenantId)
 		.run();
 }
 

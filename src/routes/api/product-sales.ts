@@ -81,6 +81,7 @@ productSaleRoutes.post("/", async (c) => {
 		attendant_id: user.id,
 		total_cents: totalCents,
 		discount_cents: discountCents,
+		promotion_id: body.promotion_id ?? null,
 		payment_method: paymentMethod,
 		notes: body.notes,
 	});

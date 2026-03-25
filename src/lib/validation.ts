@@ -33,6 +33,7 @@ export const rentalStartSchema = z.object({
 	payment_method: z.enum(["cash", "credit", "debit", "pix", "courtesy", "mixed"]).optional(),
 	paid: z.boolean().optional(),
 	discount_cents: z.number().int().min(0).optional(),
+	promotion_id: z.number().int().positive().optional(),
 	payment_denominations: denomMapSchema,
 	change_denominations: denomMapSchema,
 	payments: z.array(paymentItemSchema).min(2).optional(),
@@ -41,6 +42,7 @@ export const rentalStartSchema = z.object({
 export const rentalPaySchema = z.object({
 	payment_method: z.enum(["cash", "credit", "debit", "pix", "courtesy", "mixed"]),
 	discount_cents: z.number().int().min(0).optional(),
+	promotion_id: z.number().int().positive().optional(),
 	notes: z.string().max(500).optional(),
 	payment_denominations: denomMapSchema,
 	change_denominations: denomMapSchema,
@@ -95,6 +97,7 @@ export const productSaleSchema = z.object({
 	customer_id: z.number().int().positive().optional(),
 	notes: z.string().max(500).optional(),
 	discount_cents: z.number().int().min(0).optional(),
+	promotion_id: z.number().int().positive().optional(),
 	payment_denominations: denomMapSchema,
 	change_denominations: denomMapSchema,
 	payments: z.array(paymentItemSchema).min(2).optional(),
@@ -160,6 +163,23 @@ export const customerSchema = z.object({
 	cpf: z.string().max(14).optional().nullable(),
 	instagram: z.string().max(100).optional().nullable(),
 	notes: z.string().max(500).optional().nullable(),
+});
+
+// ── Promotions ──
+
+export const promotionSchema = z.object({
+	name: z.string().min(1).max(100),
+	description: z.string().max(500).optional().nullable(),
+	discount_type: z.enum(["percentage", "fixed"]),
+	discount_value: z.number().int().positive(),
+});
+
+export const promotionUpdateSchema = z.object({
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().max(500).optional().nullable(),
+	discount_type: z.enum(["percentage", "fixed"]).optional(),
+	discount_value: z.number().int().positive().optional(),
+	active: z.number().int().min(0).max(1).optional(),
 });
 
 // ── Sales Goals ──

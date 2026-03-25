@@ -381,12 +381,70 @@ function clearPsCustomer() {
 	document.getElementById('ps-customer-input').value = '';
 }
 
-// ── Discount ─────────────────────────────────────────────────────
+// ── Promoções / Discount ─────────────────────────────────────────
+var __PS_PROMOTIONS__ = [];
+var __PS_PROMOTION_ID__ = null;
+
+// Load promotions
+fetch('/api/promotions/active', { credentials: 'same-origin' })
+	.then(function(r) { return r.json(); })
+	.then(function(data) { __PS_PROMOTIONS__ = data || []; })
+	.catch(function() {});
+
+function populatePsPromoSelect() {
+	var sel = document.getElementById('ps-discount-promo');
+	if (!sel) return;
+	while (sel.options.length > 1) sel.remove(1);
+	__PS_PROMOTIONS__.forEach(function(p) {
+		var opt = document.createElement('option');
+		opt.value = p.id;
+		var label = p.discount_type === 'percentage' ? p.discount_value + '%' : fmtBRL(p.discount_value);
+		opt.textContent = p.name + ' (' + label + ')';
+		sel.appendChild(opt);
+	});
+}
+
 function togglePsDiscount() {
 	var fields = document.getElementById('ps-discount-fields');
 	fields.classList.toggle('hidden');
 	if (!fields.classList.contains('hidden')) {
+		populatePsPromoSelect();
 		document.getElementById('ps-discount-value').focus();
+	}
+}
+
+function selectPsPromotion(promoId) {
+	var manual = document.getElementById('ps-discount-manual');
+	if (!promoId) {
+		__PS_PROMOTION_ID__ = null;
+		if (manual) manual.classList.remove('hidden');
+		return;
+	}
+	var promo = __PS_PROMOTIONS__.find(function(p) { return p.id == promoId; });
+	if (!promo) return;
+	__PS_PROMOTION_ID__ = promo.id;
+	if (manual) manual.classList.add('hidden');
+
+	var subtotal = getCartTotal();
+	var discount = promo.discount_type === 'percentage'
+		? Math.round(subtotal * promo.discount_value / 100)
+		: promo.discount_value;
+	discount = Math.min(discount, subtotal);
+	PS_DISCOUNT = discount;
+
+	var finalAmount = subtotal - discount;
+	window.__PS_TOTAL__ = finalAmount;
+	document.getElementById('pay-total').textContent = finalAmount > 0 ? fmtBRL(finalAmount) : 'CORTESIA';
+	document.getElementById('pay-original').textContent = fmtBRL(subtotal);
+	document.getElementById('pay-original').classList.remove('hidden');
+	document.getElementById('ps-discount-remove-btn').classList.remove('hidden');
+	document.getElementById('ps-discount-applied').textContent = '(-' + fmtBRL(discount) + ')';
+	document.getElementById('ps-discount-applied').classList.remove('hidden');
+	var courtesyBtn = document.getElementById('ps-courtesy-btn');
+	var payBtns = document.getElementById('ps-pay-buttons');
+	if (courtesyBtn && payBtns) {
+		if (finalAmount <= 0) { courtesyBtn.classList.remove('hidden'); payBtns.classList.add('hidden'); }
+		else { courtesyBtn.classList.add('hidden'); payBtns.classList.remove('hidden'); }
 	}
 }
 
@@ -400,6 +458,7 @@ function applyPsDiscount() {
 		: Math.round(val * 100);
 	discount = Math.min(discount, subtotal);
 	PS_DISCOUNT = discount;
+	__PS_PROMOTION_ID__ = null;
 
 	var finalAmount = subtotal - discount;
 	window.__PS_TOTAL__ = finalAmount;
@@ -409,22 +468,17 @@ function applyPsDiscount() {
 	document.getElementById('ps-discount-remove-btn').classList.remove('hidden');
 	document.getElementById('ps-discount-applied').textContent = '(-' + fmtBRL(discount) + ')';
 	document.getElementById('ps-discount-applied').classList.remove('hidden');
-	// Show/hide courtesy button for 100% discount
 	var courtesyBtn = document.getElementById('ps-courtesy-btn');
 	var payBtns = document.getElementById('ps-pay-buttons');
 	if (courtesyBtn && payBtns) {
-		if (finalAmount <= 0) {
-			courtesyBtn.classList.remove('hidden');
-			payBtns.classList.add('hidden');
-		} else {
-			courtesyBtn.classList.add('hidden');
-			payBtns.classList.remove('hidden');
-		}
+		if (finalAmount <= 0) { courtesyBtn.classList.remove('hidden'); payBtns.classList.add('hidden'); }
+		else { courtesyBtn.classList.add('hidden'); payBtns.classList.remove('hidden'); }
 	}
 }
 
 function removePsDiscount() {
 	PS_DISCOUNT = 0;
+	__PS_PROMOTION_ID__ = null;
 	var subtotal = getCartTotal();
 	window.__PS_TOTAL__ = subtotal;
 	document.getElementById('pay-total').textContent = fmtBRL(subtotal);
@@ -433,7 +487,10 @@ function removePsDiscount() {
 	document.getElementById('ps-discount-remove-btn').classList.add('hidden');
 	document.getElementById('ps-discount-applied').classList.add('hidden');
 	document.getElementById('ps-discount-value').value = '';
-	// Restore payment buttons
+	var promoSel = document.getElementById('ps-discount-promo');
+	if (promoSel) promoSel.value = '';
+	var manual = document.getElementById('ps-discount-manual');
+	if (manual) manual.classList.remove('hidden');
 	var courtesyBtn = document.getElementById('ps-courtesy-btn');
 	var payBtns = document.getElementById('ps-pay-buttons');
 	if (courtesyBtn) courtesyBtn.classList.add('hidden');
@@ -793,6 +850,7 @@ function submitSale(method, payDenoms, payments) {
 	for (var id in CART) items.push({ product_id: Number(id), quantity: CART[id] });
 	var payload = { items: items, payment_method: method };
 	if (PS_DISCOUNT > 0) payload.discount_cents = PS_DISCOUNT;
+	if (__PS_PROMOTION_ID__) payload.promotion_id = __PS_PROMOTION_ID__;
 	if (__PS_CUSTOMER_ID__) payload.customer_id = __PS_CUSTOMER_ID__;
 	var notesEl = document.getElementById('ps-notes');
 	if (notesEl && notesEl.value.trim()) payload.notes = notesEl.value.trim();
@@ -1048,16 +1106,22 @@ function closeSuccess() { closePayment(); }
 									Remover desconto
 								</button>
 							</div>
-							<div id="ps-discount-fields" class="hidden mt-2 flex gap-2 items-end">
-								<select id="ps-discount-type" class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body">
-									<option value="pct">%</option>
-									<option value="fixed">R$</option>
+							<div id="ps-discount-fields" class="hidden mt-2 space-y-2">
+								<select id="ps-discount-promo" onchange="selectPsPromotion(this.value)"
+									class="w-full px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20">
+									<option value="">Desconto manual</option>
 								</select>
-								<input id="ps-discount-value" type="number" min="0" step="0.01" placeholder="Valor"
-									class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20" />
-								<button onclick="applyPsDiscount()" class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark">
-									Aplicar
-								</button>
+								<div id="ps-discount-manual" class="flex gap-2 items-end">
+									<select id="ps-discount-type" class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body">
+										<option value="pct">%</option>
+										<option value="fixed">R$</option>
+									</select>
+									<input id="ps-discount-value" type="number" min="0" step="0.01" placeholder="Valor"
+										class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20" />
+									<button onclick="applyPsDiscount()" class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark">
+										Aplicar
+									</button>
+								</div>
 							</div>
 						</div>
 

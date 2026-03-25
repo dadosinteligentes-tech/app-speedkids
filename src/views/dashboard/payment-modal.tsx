@@ -88,7 +88,7 @@ export const PaymentModal: FC = () => (
 					Nenhum caixa aberto! O pagamento nao sera registrado no caixa.
 				</div>
 
-				{/* Desconto (colapsável) */}
+				{/* Desconto / Promoção */}
 				<div class="mb-3">
 					<div class="flex items-center gap-2">
 						<button
@@ -105,28 +105,37 @@ export const PaymentModal: FC = () => (
 							Remover desconto
 						</button>
 					</div>
-					<div id="discount-fields" class="hidden mt-2 flex gap-2 items-end">
+					<div id="discount-fields" class="hidden mt-2 space-y-2">
 						<select
-							id="discount-type"
-							class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body"
+							id="discount-promo"
+							onchange="selectPromotion(this.value)"
+							class="w-full px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
 						>
-							<option value="pct">%</option>
-							<option value="fixed">R$</option>
+							<option value="">Desconto manual</option>
 						</select>
-						<input
-							id="discount-value"
-							type="number"
-							min="0"
-							step="0.01"
-							placeholder="Valor"
-							class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
-						/>
-						<button
-							onclick="applyDiscount()"
-							class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark"
-						>
-							Aplicar
-						</button>
+						<div id="discount-manual" class="flex gap-2 items-end">
+							<select
+								id="discount-type"
+								class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body"
+							>
+								<option value="pct">%</option>
+								<option value="fixed">R$</option>
+							</select>
+							<input
+								id="discount-value"
+								type="number"
+								min="0"
+								step="0.01"
+								placeholder="Valor"
+								class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
+							/>
+							<button
+								onclick="applyDiscount()"
+								class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark"
+							>
+								Aplicar
+							</button>
+						</div>
 					</div>
 				</div>
 

@@ -21,6 +21,8 @@ import { getAllPermissions, getAllRolePermissions } from "../../db/queries/permi
 import { PermissionsMatrix } from "../../views/admin/permissions-matrix";
 import { MyPlan } from "../../views/admin/my-plan";
 import { getLimitsForPlan, getTenantUsage } from "../../lib/plan-limits";
+import { getPromotionUsageStats } from "../../db/queries/promotions";
+import { PromotionsList } from "../../views/admin/promotions-list";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -107,6 +109,16 @@ adminPages.get("/permissions", requireRole("owner"), async (c) => {
 	]);
 	const user = c.get("user");
 	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+});
+
+// Promotions management
+adminPages.get("/promotions", requirePermission("promotions.manage"), async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const promotions = await getPromotionUsageStats(c.env.DB, tenantId);
+	const user = c.get("user");
+	return c.html(<PromotionsList promotions={promotions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // My plan page

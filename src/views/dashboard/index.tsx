@@ -802,6 +802,7 @@ const dashboardControllerScript = `
 			window.__SK_SELECTED_PACKAGE__ = prepaid.packageId;
 			var prepaidPayData = { payment_method: method };
 			if (prepaidDiscount > 0) prepaidPayData.discount_cents = prepaidDiscount;
+			if (window.__SK_PROMOTION_ID__) prepaidPayData.promotion_id = window.__SK_PROMOTION_ID__;
 			startRental(prepaid.customerId, prepaid.childId, prepaidPayData);
 			// Show success
 			var finalPrepaidAmount = session.amount_cents - prepaidDiscount;
@@ -833,6 +834,7 @@ const dashboardControllerScript = `
 		var discount = window.__SK_DISCOUNT__ || 0;
 		var body = { payment_method: method };
 		if (discount > 0) body.discount_cents = discount;
+		if (window.__SK_PROMOTION_ID__) body.promotion_id = window.__SK_PROMOTION_ID__;
 
 		setPaymentButtonsEnabled(false);
 		api('POST', '/rentals/' + session.id + '/pay', body)
@@ -858,13 +860,65 @@ const dashboardControllerScript = `
 			});
 	};
 
-	// ---- Desconto ----
+	// ---- Promoções / Desconto ----
+	window.__SK_PROMOTIONS__ = [];
+	window.__SK_PROMOTION_ID__ = null;
+
+	// Load promotions on page load
+	api('GET', '/promotions/active').then(function(promos) {
+		window.__SK_PROMOTIONS__ = promos || [];
+	}).catch(function() {});
+
+	function populatePromoSelect(selectId) {
+		var sel = document.getElementById(selectId);
+		if (!sel) return;
+		// Clear existing options except first
+		while (sel.options.length > 1) sel.remove(1);
+		(window.__SK_PROMOTIONS__ || []).forEach(function(p) {
+			var opt = document.createElement('option');
+			opt.value = p.id;
+			var label = p.discount_type === 'percentage' ? p.discount_value + '%' : fmtBRL(p.discount_value);
+			opt.textContent = p.name + ' (' + label + ')';
+			opt.dataset.type = p.discount_type;
+			opt.dataset.value = p.discount_value;
+			sel.appendChild(opt);
+		});
+	}
+
 	window.toggleDiscount = function() {
 		var fields = document.getElementById('discount-fields');
 		fields.classList.toggle('hidden');
 		if (!fields.classList.contains('hidden')) {
+			populatePromoSelect('discount-promo');
 			document.getElementById('discount-value').focus();
 		}
+	};
+
+	window.selectPromotion = function(promoId) {
+		var manual = document.getElementById('discount-manual');
+		if (!promoId) {
+			window.__SK_PROMOTION_ID__ = null;
+			manual.classList.remove('hidden');
+			return;
+		}
+		var promo = (window.__SK_PROMOTIONS__ || []).find(function(p) { return p.id == promoId; });
+		if (!promo) return;
+		window.__SK_PROMOTION_ID__ = promo.id;
+		manual.classList.add('hidden');
+
+		var session = window.__SK_PAYING_SESSION__;
+		if (!session) return;
+		var discount = promo.discount_type === 'percentage'
+			? Math.round(session.amount_cents * promo.discount_value / 100)
+			: promo.discount_value;
+		discount = Math.min(discount, session.amount_cents);
+		window.__SK_DISCOUNT__ = discount;
+
+		var finalAmount = session.amount_cents - discount;
+		document.getElementById('payment-amount').textContent = fmtBRL(finalAmount);
+		document.getElementById('payment-original').textContent = fmtBRL(session.amount_cents);
+		document.getElementById('payment-original').classList.remove('hidden');
+		document.getElementById('discount-remove-btn').classList.remove('hidden');
 	};
 
 	window.applyDiscount = function() {
@@ -878,6 +932,7 @@ const dashboardControllerScript = `
 			: Math.round(val * 100);
 		discount = Math.min(discount, session.amount_cents);
 		window.__SK_DISCOUNT__ = discount;
+		window.__SK_PROMOTION_ID__ = null;
 
 		var finalAmount = session.amount_cents - discount;
 		document.getElementById('payment-amount').textContent = fmtBRL(finalAmount);
@@ -888,6 +943,7 @@ const dashboardControllerScript = `
 
 	window.removeDiscount = function() {
 		window.__SK_DISCOUNT__ = 0;
+		window.__SK_PROMOTION_ID__ = null;
 		var session = window.__SK_PAYING_SESSION__;
 		if (session) {
 			document.getElementById('payment-amount').textContent = fmtBRL(session.amount_cents);
@@ -896,6 +952,10 @@ const dashboardControllerScript = `
 		document.getElementById('discount-fields').classList.add('hidden');
 		document.getElementById('discount-remove-btn').classList.add('hidden');
 		document.getElementById('discount-value').value = '';
+		var promoSel = document.getElementById('discount-promo');
+		if (promoSel) promoSel.value = '';
+		var manual = document.getElementById('discount-manual');
+		if (manual) manual.classList.remove('hidden');
 	};
 
 	// ---- Cortesia ----
@@ -1221,6 +1281,7 @@ const dashboardControllerScript = `
 				change_denominations: changeDenoms
 			};
 			if (discount > 0) cashPrepaidPayData.discount_cents = discount;
+			if (window.__SK_PROMOTION_ID__) cashPrepaidPayData.promotion_id = window.__SK_PROMOTION_ID__;
 			startRental(prepaid.customerId, prepaid.childId, cashPrepaidPayData);
 
 			var cashPrepaidFinal = session.amount_cents - discount;
@@ -1253,6 +1314,7 @@ const dashboardControllerScript = `
 			change_denominations: changeDenoms,
 		};
 		if (discount > 0) body.discount_cents = discount;
+		if (window.__SK_PROMOTION_ID__) body.promotion_id = window.__SK_PROMOTION_ID__;
 
 		api('POST', '/rentals/' + session.id + '/pay', body)
 			.then(function() {

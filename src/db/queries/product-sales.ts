@@ -15,13 +15,14 @@ export async function createProductSale(
 		attendant_id: number | null;
 		total_cents: number;
 		discount_cents: number;
+		promotion_id?: number | null;
 		payment_method: string;
 		notes?: string;
 	},
 ): Promise<ProductSale | null> {
 	return db
 		.prepare(
-			"INSERT INTO product_sales (tenant_id, cash_register_id, customer_id, attendant_id, total_cents, discount_cents, payment_method, paid, notes) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) RETURNING *",
+			"INSERT INTO product_sales (tenant_id, cash_register_id, customer_id, attendant_id, total_cents, discount_cents, promotion_id, payment_method, paid, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?) RETURNING *",
 		)
 		.bind(
 			params.tenant_id,
@@ -30,6 +31,7 @@ export async function createProductSale(
 			params.attendant_id,
 			params.total_cents,
 			params.discount_cents,
+			params.promotion_id ?? null,
 			params.payment_method,
 			params.notes ?? null,
 		)

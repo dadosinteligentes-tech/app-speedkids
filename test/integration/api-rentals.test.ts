@@ -83,7 +83,9 @@ async function applyMigrations(db: D1Database) {
 				start_time TEXT NOT NULL, pause_time TEXT, total_paused_ms INTEGER DEFAULT 0,
 				end_time TEXT, duration_minutes INTEGER NOT NULL, amount_cents INTEGER NOT NULL,
 				overtime_minutes INTEGER DEFAULT 0, overtime_cents INTEGER DEFAULT 0,
-				payment_method TEXT, paid INTEGER DEFAULT 0, notes TEXT,
+				payment_method TEXT, paid INTEGER DEFAULT 0,
+				promotion_id INTEGER, discount_cents INTEGER DEFAULT 0,
+				notes TEXT,
 				created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
 			)
 		`),

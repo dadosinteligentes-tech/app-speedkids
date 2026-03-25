@@ -106,6 +106,8 @@ export interface RentalSession {
 	overtime_cents: number;
 	payment_method: "cash" | "credit" | "debit" | "pix" | "mixed" | null;
 	paid: number;
+	promotion_id: number | null;
+	discount_cents: number;
 	notes: string | null;
 	created_at: string;
 	updated_at: string;
@@ -225,6 +227,7 @@ export interface ProductSale {
 	attendant_id: number | null;
 	total_cents: number;
 	discount_cents: number;
+	promotion_id: number | null;
 	payment_method: "cash" | "credit" | "debit" | "pix" | "mixed" | null;
 	paid: number;
 	notes: string | null;
@@ -307,6 +310,18 @@ export interface Subscription {
 	status: "active" | "past_due" | "cancelled" | "trialing";
 	current_period_start: string | null;
 	current_period_end: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface Promotion {
+	id: number;
+	tenant_id: number;
+	name: string;
+	description: string | null;
+	discount_type: "percentage" | "fixed";
+	discount_value: number;
+	active: number;
 	created_at: string;
 	updated_at: string;
 }
