@@ -5,12 +5,13 @@ import { createCheckoutSession } from "../../lib/stripe";
 
 export const signupRoutes = new Hono<AppEnv>();
 
-// Plan → Stripe Price ID mapping (set these in Cloudflare dashboard)
-const PLAN_PRICES: Record<string, string> = {
-	starter: "price_starter", // Replace with actual Stripe Price IDs
-	pro: "price_pro",
-	enterprise: "price_enterprise",
-};
+function getPlanPrices(env: { STRIPE_PRICE_STARTER: string; STRIPE_PRICE_PRO: string; STRIPE_PRICE_ENTERPRISE: string }): Record<string, string> {
+	return {
+		starter: env.STRIPE_PRICE_STARTER,
+		pro: env.STRIPE_PRICE_PRO,
+		enterprise: env.STRIPE_PRICE_ENTERPRISE,
+	};
+}
 
 // Check slug availability
 signupRoutes.get("/check-slug/:slug", async (c) => {
@@ -41,24 +42,26 @@ signupRoutes.post("/checkout", async (c) => {
 		return c.json({ error: "Este subdominio nao esta disponivel" }, 400);
 	}
 
-	const priceId = PLAN_PRICES[body.plan];
+	const priceId = getPlanPrices(c.env)[body.plan];
 	if (!priceId) {
 		return c.json({ error: "Plano invalido" }, 400);
 	}
 
-	const domain = c.env.APP_DOMAIN || "dadosinteligentes.app.br";
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
 
 	try {
 		const session = await createCheckoutSession(c.env.STRIPE_SECRET_KEY, {
 			priceId,
-			successUrl: `https://www.${domain}/signup/success?session_id={CHECKOUT_SESSION_ID}`,
-			cancelUrl: `https://www.${domain}/signup/cancelled`,
+			successUrl: `https://${domain}/landing/signup/success?session_id={CHECKOUT_SESSION_ID}`,
+			cancelUrl: `https://${domain}/landing#planos`,
 			customerEmail: body.ownerEmail,
+			trialPeriodDays: 30,
 			metadata: {
 				tenant_slug: slug,
 				tenant_name: body.businessName,
 				owner_name: body.ownerName,
 				owner_email: body.ownerEmail,
+				plan: body.plan,
 			},
 		});
 

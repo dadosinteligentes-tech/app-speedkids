@@ -18,6 +18,7 @@ import { productRoutes } from "./routes/api/products";
 import { productSaleRoutes } from "./routes/api/product-sales";
 import { permissionRoutes } from "./routes/api/permissions";
 import { salesGoalRoutes } from "./routes/api/sales-goals";
+import { billingRoutes } from "./routes/api/billing";
 import { signupRoutes } from "./routes/api/signup";
 import { stripeWebhookRoutes } from "./routes/api/stripe-webhook";
 import { setupRoutes } from "./routes/api/setup";
@@ -69,6 +70,7 @@ app.route("/api/products", productRoutes);
 app.route("/api/product-sales", productSaleRoutes);
 app.route("/api/permissions", permissionRoutes);
 app.route("/api/sales-goals", salesGoalRoutes);
+app.route("/api/billing", billingRoutes);
 
 // Landing pages (public site)
 app.route("/landing", landingPages);

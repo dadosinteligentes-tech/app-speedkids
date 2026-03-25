@@ -10,16 +10,14 @@ export const LandingPage: FC<LandingPageProps> = ({ domain, stripePublishableKey
 	const signupScript = html`<script>
 ${raw(`
 var selectedPlan = 'pro';
+var planLabels = { starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise' };
 
-function selectPlan(plan) {
+function choosePlan(plan) {
 	selectedPlan = plan;
-	document.querySelectorAll('.plan-card').forEach(function(el) {
-		el.classList.remove('ring-2', 'ring-sk-orange', 'border-sk-orange');
-		el.classList.add('border-sk-border');
-	});
-	var card = document.getElementById('plan-' + plan);
-	card.classList.add('ring-2', 'ring-sk-orange', 'border-sk-orange');
-	card.classList.remove('border-sk-border');
+	document.getElementById('selected-plan').value = plan;
+	var label = document.getElementById('plan-label');
+	if (label) label.textContent = 'Plano selecionado: ' + planLabels[plan];
+	document.querySelector('#cadastro').scrollIntoView({ behavior: 'smooth' });
 }
 
 var slugTimeout;
@@ -67,7 +65,7 @@ function submitSignup(e) {
 		businessName: document.getElementById('business-name').value.trim(),
 		ownerName: document.getElementById('owner-name').value.trim(),
 		ownerEmail: document.getElementById('owner-email').value.trim(),
-		plan: selectedPlan
+		plan: document.getElementById('selected-plan').value || 'pro'
 	};
 
 	fetch('/api/signup/checkout', {
@@ -95,7 +93,6 @@ function submitSignup(e) {
 }
 
 document.getElementById('signup-form').addEventListener('submit', submitSignup);
-selectPlan('pro');
 
 // Smooth scroll
 document.querySelectorAll('a[href^="#"]').forEach(function(a) {
@@ -188,21 +185,12 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						}
 						.animate-fade-up { animation: sk-fade-up 0.6s ease-out both; }
 
-						@keyframes sk-scale-in {
-							from { opacity: 0; transform: scale(0.9); }
-							to { opacity: 1; transform: scale(1); }
-						}
-						.animate-scale-in { animation: sk-scale-in 0.5s ease-out both; }
-
 						@keyframes sk-wave {
 							0%, 100% { transform: rotate(0deg); }
 							25% { transform: rotate(15deg); }
 							75% { transform: rotate(-10deg); }
 						}
 						.animate-wave { animation: sk-wave 1.5s ease-in-out infinite; transform-origin: 70% 70%; }
-
-						.plan-card { cursor: pointer; transition: all 0.25s ease; }
-						.plan-card:hover { transform: translateY(-4px); }
 
 						.wave-separator {
 							width: 100%; height: 40px;
@@ -215,13 +203,11 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 
 						@media (prefers-reduced-motion: reduce) {
 							.sk-float, .card-wobble:hover, .btn-bounce:active,
-							.animate-fade-up, .animate-scale-in, .animate-wave {
+							.animate-fade-up, .animate-wave {
 								animation: none !important;
 							}
 						}
 
-						/* Safelist for Tailwind CDN */
-						.hidden.ring-2.ring-sk-orange.border-sk-orange.border-sk-border {}
 					</style>
 				`}
 			</head>
@@ -346,9 +332,9 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 							</h2>
 							<p class="font-body text-sk-muted text-lg">Comece pequeno, cresça sem limites</p>
 						</div>
-						<div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+						<div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto items-start">
 							{/* Starter */}
-							<div id="plan-starter" class="plan-card card-wobble bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border animate-scale-in" style="animation-delay: 0.1s" onclick="selectPlan('starter')">
+							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border">
 								<div class="text-center mb-4">
 									<span class="text-3xl" aria-hidden="true">🌱</span>
 									<h3 class="font-display font-bold text-xl text-sk-text mt-2">Starter</h3>
@@ -358,16 +344,19 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 									<span class="font-display font-bold text-4xl text-sk-text">R$ 97</span>
 									<span class="font-body text-sk-muted text-sm">/mês</span>
 								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text">
+								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 3 usuários</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 15 brinquedos</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Locações e caixa</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Relatórios básicos</li>
 								</ul>
+								<button onclick="choosePlan('starter')" class="btn-touch btn-bounce block w-full py-3 bg-sk-yellow hover:bg-sk-yellow-dark text-sk-text text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
+									30 dias grátis
+								</button>
 							</div>
 
 							{/* Pro */}
-							<div id="plan-pro" class="plan-card card-wobble bg-sk-surface rounded-sk-lg p-6 shadow-sk-md border-2 ring-2 ring-sk-orange border-sk-orange relative animate-scale-in" style="animation-delay: 0.2s" onclick="selectPlan('pro')">
+							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-md border-2 ring-2 ring-sk-orange border-sk-orange relative">
 								<span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-sk-orange text-white text-xs font-display font-bold px-4 py-1 rounded-sk shadow-sk-sm">
 									Popular
 								</span>
@@ -380,17 +369,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 									<span class="font-display font-bold text-4xl text-sk-orange">R$ 197</span>
 									<span class="font-body text-sk-muted text-sm">/mês</span>
 								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text">
+								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 10 usuários</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 50 brinquedos</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Todos os relatórios</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Logo e cores personalizadas</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Suporte por chat</li>
 								</ul>
+								<button onclick="choosePlan('pro')" class="btn-touch btn-bounce block w-full py-3 bg-sk-orange hover:bg-sk-orange-dark text-white text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
+									30 dias grátis
+								</button>
 							</div>
 
 							{/* Enterprise */}
-							<div id="plan-enterprise" class="plan-card card-wobble bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border animate-scale-in" style="animation-delay: 0.3s" onclick="selectPlan('enterprise')">
+							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border">
 								<div class="text-center mb-4">
 									<span class="text-3xl" aria-hidden="true">🏢</span>
 									<h3 class="font-display font-bold text-xl text-sk-text mt-2">Enterprise</h3>
@@ -400,13 +392,16 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 									<span class="font-display font-bold text-4xl text-sk-text">R$ 397</span>
 									<span class="font-body text-sk-muted text-sm">/mês</span>
 								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text">
+								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Usuários ilimitados</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Brinquedos ilimitados</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Relatórios + exportação</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Suporte prioritário</li>
 									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Backup sob demanda</li>
 								</ul>
+								<button onclick="choosePlan('enterprise')" class="btn-touch btn-bounce block w-full py-3 bg-sk-blue hover:bg-sk-blue-dark text-white text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
+									30 dias grátis
+								</button>
 							</div>
 						</div>
 					</div>
@@ -422,9 +417,11 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						</div>
 
 						<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg p-8 border-2 border-sk-border/50">
+							<div id="plan-label" class="text-center mb-4 font-display font-bold text-sk-blue text-sm">Plano selecionado: Pro</div>
 							<div id="signup-error" class="hidden mb-4 p-3 bg-sk-danger-light border border-sk-danger/30 text-sk-danger rounded-sk font-body text-sm"></div>
 
 							<form id="signup-form" class="space-y-5">
+								<input type="hidden" id="selected-plan" value="pro" />
 								<div>
 									<label class="block text-sm font-display font-medium text-sk-text mb-1">Nome do estabelecimento</label>
 									<input id="business-name" type="text" required class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body focus:ring-2 focus:ring-sk-orange/30 focus:border-sk-orange text-base outline-none transition-colors" placeholder="Ex: AventuraPark" />
@@ -453,10 +450,10 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 									id="signup-btn"
 									class="btn-touch btn-bounce w-full py-4 bg-sk-orange hover:bg-sk-orange-dark text-white rounded-sk-lg font-display font-bold text-lg shadow-sk-md active:shadow-sk-sm disabled:opacity-50 transition-all"
 								>
-									Assinar e começar
+									Começar 30 dias grátis
 								</button>
 								<p class="font-body text-xs text-sk-muted text-center">
-									Ao assinar você concorda com nossos termos de uso. Cancele a qualquer momento.
+									30 dias grátis para testar. Sem cobrança durante o período de avaliação. Cancele a qualquer momento.
 								</p>
 							</form>
 						</div>

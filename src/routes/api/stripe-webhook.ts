@@ -62,6 +62,8 @@ stripeWebhookRoutes.post("/", async (c) => {
 			// Generate a random password — user will need to reset it or we send it via email
 			const tempPassword = crypto.randomUUID().slice(0, 12);
 
+			const plan = metadata.plan || "starter";
+
 			try {
 				const tenant = await provisionTenant(c.env.DB, {
 					slug,
@@ -69,15 +71,15 @@ stripeWebhookRoutes.post("/", async (c) => {
 					ownerName: ownerName || "Administrador",
 					ownerEmail,
 					ownerPassword: tempPassword,
-					plan: "pro",
+					plan,
 					stripeCustomerId: session.customer as string,
 					stripeSubscriptionId: session.subscription as string,
 				});
 
-				console.log(`Provisioned tenant ${tenant.slug} (id=${tenant.id}) for ${ownerEmail}`);
+				console.log(`Provisioned tenant ${tenant.slug} (id=${tenant.id}) for ${ownerEmail} [plan=${plan}]`);
 
 				// Send welcome email
-				const domain = c.env.APP_DOMAIN || "dadosinteligentes.app.br";
+				const domain = c.env.APP_DOMAIN || "giro-kids.com";
 				const welcomeEmail = buildWelcomeEmail({
 					ownerName: ownerName || "Administrador",
 					businessName: tenantName || slug,
@@ -88,7 +90,7 @@ stripeWebhookRoutes.post("/", async (c) => {
 				welcomeEmail.to = ownerEmail;
 				await sendEmail(
 					c.env.RESEND_API_KEY,
-					`Dados Inteligentes <noreply@${domain}>`,
+					`Giro Kids <noreply@${domain}>`,
 					welcomeEmail,
 				);
 			} catch (err) {
@@ -118,6 +120,51 @@ stripeWebhookRoutes.post("/", async (c) => {
 					sub.id,
 				)
 				.run();
+			break;
+		}
+
+		case "invoice.paid": {
+			const invoice = event.data.object as {
+				subscription: string;
+				customer: string;
+			};
+
+			if (invoice.subscription) {
+				// Ensure tenant stays active on successful payment
+				const subscription = await c.env.DB
+					.prepare("SELECT tenant_id FROM subscriptions WHERE stripe_subscription_id = ?")
+					.bind(invoice.subscription)
+					.first<{ tenant_id: number }>();
+
+				if (subscription) {
+					await c.env.DB
+						.prepare("UPDATE tenants SET status = 'active', updated_at = datetime('now') WHERE id = ? AND status = 'suspended'")
+						.bind(subscription.tenant_id)
+						.run();
+					await c.env.DB
+						.prepare("UPDATE subscriptions SET status = 'active', updated_at = datetime('now') WHERE stripe_subscription_id = ? AND status != 'active'")
+						.bind(invoice.subscription)
+						.run();
+				}
+			}
+			break;
+		}
+
+		case "invoice.payment_failed": {
+			const invoice = event.data.object as {
+				subscription: string;
+				customer: string;
+				attempt_count: number;
+			};
+
+			if (invoice.subscription) {
+				await c.env.DB
+					.prepare("UPDATE subscriptions SET status = 'past_due', updated_at = datetime('now') WHERE stripe_subscription_id = ?")
+					.bind(invoice.subscription)
+					.run();
+
+				console.warn(`Payment failed for subscription ${invoice.subscription} (attempt ${invoice.attempt_count})`);
+			}
 			break;
 		}
 

@@ -1,4 +1,5 @@
 import type { FC } from "hono/jsx";
+import { html, raw } from "hono/html";
 import type { Tenant } from "../../db/schema";
 import type { PlanLimits, TenantUsage } from "../../lib/plan-limits";
 import { AdminLayout } from "./layout";
@@ -23,8 +24,35 @@ function barColor(used: number, max: number): string {
 	return "bg-green-500";
 }
 
-export const MyPlan: FC<MyPlanProps> = ({ tenant, limits, usage, user, isPlatformAdmin }) => (
-	<AdminLayout title="Meu Plano" user={user} activeTab="/admin/plan" tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+export const MyPlan: FC<MyPlanProps> = ({ tenant, limits, usage, user, isPlatformAdmin }) => {
+	const billingScript = html`<script>
+${raw(`
+function openBillingPortal() {
+	var btn = document.getElementById('billing-btn');
+	btn.disabled = true;
+	btn.textContent = 'Abrindo...';
+	fetch('/api/billing/portal')
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+			if (data.url) {
+				window.open(data.url, '_blank');
+			} else {
+				alert(data.error || 'Erro ao abrir portal');
+			}
+			btn.disabled = false;
+			btn.textContent = 'Gerenciar assinatura';
+		})
+		.catch(function() {
+			alert('Erro de conexão');
+			btn.disabled = false;
+			btn.textContent = 'Gerenciar assinatura';
+		});
+}
+`)}
+</script>`;
+
+	return (
+	<AdminLayout title="Meu Plano" user={user} activeTab="/admin/plan" tenant={tenant} isPlatformAdmin={isPlatformAdmin} bodyScripts={billingScript}>
 		<div class="max-w-2xl">
 			<h2 class="text-xl font-display font-bold text-sk-text mb-6">Meu Plano</h2>
 
@@ -117,10 +145,22 @@ export const MyPlan: FC<MyPlanProps> = ({ tenant, limits, usage, user, isPlatfor
 						</tbody>
 					</table>
 				</div>
-				<p class="text-xs text-sk-muted mt-4">
-					Para alterar seu plano, entre em contato pelo email suporte@dadosinteligentes.com.br
-				</p>
+				{user?.role === "owner" && (
+					<div class="mt-6 pt-4 border-t border-sk-border/30">
+						<button
+							id="billing-btn"
+							onclick="openBillingPortal()"
+							class="btn-touch btn-bounce w-full py-3 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-display font-bold text-base shadow-sk-sm disabled:opacity-50 transition-colors"
+						>
+							Gerenciar assinatura
+						</button>
+						<p class="text-xs text-sk-muted mt-2 text-center font-body">
+							Altere seu plano, atualize forma de pagamento ou cancele sua assinatura.
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	</AdminLayout>
-);
+	);
+};

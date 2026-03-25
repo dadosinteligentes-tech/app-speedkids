@@ -57,6 +57,7 @@ export async function createCheckoutSession(
 		cancelUrl: string;
 		customerEmail: string;
 		metadata: Record<string, string>;
+		trialPeriodDays?: number;
 	},
 ): Promise<StripeCheckoutSession> {
 	const body: Record<string, string | number | undefined> = {
@@ -70,9 +71,23 @@ export async function createCheckoutSession(
 		"subscription_data[metadata][tenant_name]": params.metadata.tenant_name,
 		"subscription_data[metadata][owner_name]": params.metadata.owner_name,
 		"subscription_data[metadata][owner_email]": params.metadata.owner_email,
+		"subscription_data[metadata][plan]": params.metadata.plan,
+		"subscription_data[trial_period_days]": params.trialPeriodDays,
 	};
 
 	return stripeRequest<StripeCheckoutSession>(secretKey, "POST", "/checkout/sessions", body);
+}
+
+// Create a Stripe Billing Portal session for tenant self-service
+export async function createBillingPortalSession(
+	secretKey: string,
+	customerId: string,
+	returnUrl: string,
+): Promise<{ url: string }> {
+	return stripeRequest<{ url: string }>(secretKey, "POST", "/billing_portal/sessions", {
+		customer: customerId,
+		return_url: returnUrl,
+	});
 }
 
 export async function constructWebhookEvent(
