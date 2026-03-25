@@ -20,6 +20,7 @@ export default defineWorkersConfig({
 						STRIPE_WEBHOOK_SECRET: "whsec_fake",
 						STRIPE_PUBLISHABLE_KEY: "pk_test_fake",
 						APP_DOMAIN: "test.local",
+						APP_DOMAIN_LEGACY: "legacy.local",
 						PLATFORM_ADMIN_EMAILS: "admin@test.com",
 						RESEND_API_KEY: "",
 					},

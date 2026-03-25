@@ -7,7 +7,8 @@ export type Bindings = {
 	STRIPE_SECRET_KEY: string;
 	STRIPE_WEBHOOK_SECRET: string;
 	STRIPE_PUBLISHABLE_KEY: string;
-	APP_DOMAIN: string; // e.g. "dadosinteligentes.app.br"
+	APP_DOMAIN: string; // e.g. "giro-kids.com" — primary platform domain
+	APP_DOMAIN_LEGACY: string; // e.g. "dadosinteligentes.app.br" — old domain, redirects to APP_DOMAIN
 	PLATFORM_ADMIN_EMAILS: string; // comma-separated emails with SaaS admin access
 	RESEND_API_KEY: string; // Resend.com API key for transactional emails
 };

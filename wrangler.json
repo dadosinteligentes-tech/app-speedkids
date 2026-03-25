@@ -23,7 +23,8 @@
 		"enabled": true
 	},
 	"vars": {
-		"APP_DOMAIN": "dadosinteligentes.app.br",
+		"APP_DOMAIN": "giro-kids.com",
+		"APP_DOMAIN_LEGACY": "dadosinteligentes.app.br",
 		"STRIPE_PUBLISHABLE_KEY": "",
 		"PLATFORM_ADMIN_EMAILS": "admin@speedkids.com,contatoricardodiniz@gmail.com"
 	}

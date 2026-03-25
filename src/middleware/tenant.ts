@@ -3,6 +3,16 @@ import type { AppEnv } from "../types";
 import type { Tenant } from "../db/schema";
 import { setTimezone } from "../lib/timezone";
 
+/**
+ * Extract tenant slug from a host if it's a subdomain of the given domain.
+ * Returns null if host is the bare domain (landing page) or not a match.
+ */
+function extractSlug(host: string, domain: string): string | null {
+	if (host === domain || host === `www.${domain}`) return null;
+	if (!host.endsWith(`.${domain}`)) return null;
+	return host.replace(`.${domain}`, "");
+}
+
 export const tenantMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 	const host = (c.req.header("host") || "").toLowerCase();
 
@@ -23,36 +33,34 @@ export const tenantMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 		return next();
 	}
 
-	const appDomain = (c.env.APP_DOMAIN || "dadosinteligentes.app.br").toLowerCase();
-	const isSubdomain = host.endsWith(`.${appDomain}`);
+	const appDomain = (c.env.APP_DOMAIN || "giro-kids.com").toLowerCase();
+	const legacyDomain = (c.env.APP_DOMAIN_LEGACY || "").toLowerCase();
 
-	let tenant: Tenant | null = null;
-
-	if (isSubdomain) {
-		// Extract slug from subdomain (e.g. speedykids.dadosinteligentes.app.br → speedykids)
-		const slug = host.replace(`.${appDomain}`, "");
-
-		tenant = await c.env.DB.prepare(
-			"SELECT * FROM tenants WHERE slug = ? AND status = 'active'",
-		)
-			.bind(slug)
-			.first<Tenant>();
-
-		// If tenant has a custom domain, redirect to it
-		if (tenant?.custom_domain) {
-			const url = new URL(c.req.url);
-			url.hostname = tenant.custom_domain;
-			url.port = "";
-			return c.redirect(url.toString(), 301);
-		}
-	} else {
-		// Not a subdomain — try to resolve by custom domain
-		tenant = await c.env.DB.prepare(
-			"SELECT * FROM tenants WHERE custom_domain = ? AND status = 'active'",
-		)
-			.bind(host)
-			.first<Tenant>();
+	// ── Legacy domain redirect ──
+	// {slug}.dadosinteligentes.app.br → 301 → {slug}.giro-kids.com
+	// dadosinteligentes.app.br → 301 → giro-kids.com
+	if (legacyDomain && (host === legacyDomain || host === `www.${legacyDomain}` || host.endsWith(`.${legacyDomain}`))) {
+		const slug = extractSlug(host, legacyDomain);
+		const url = new URL(c.req.url);
+		url.hostname = slug ? `${slug}.${appDomain}` : appDomain;
+		url.port = "";
+		return c.redirect(url.toString(), 301);
 	}
+
+	// ── Primary domain ──
+	const slug = extractSlug(host, appDomain);
+
+	// Bare domain (giro-kids.com) — no tenant needed, serves landing page
+	if (!slug) {
+		return next();
+	}
+
+	// Subdomain — resolve tenant by slug
+	const tenant = await c.env.DB.prepare(
+		"SELECT * FROM tenants WHERE slug = ? AND status = 'active'",
+	)
+		.bind(slug)
+		.first<Tenant>();
 
 	if (!tenant) {
 		return c.text("Tenant not found", 404);
