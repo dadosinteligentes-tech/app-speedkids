@@ -8,6 +8,10 @@ describe("buildWelcomeEmail", () => {
 		slug: "parque-alegria",
 		domain: "speedkids.app",
 		tempPassword: "Abc12345",
+		plan: "pro",
+		planLabel: "Pro",
+		priceCents: 19700,
+		trialDays: 30,
 	};
 
 	it("returns object with to, subject, and html", () => {
@@ -36,10 +40,22 @@ describe("buildWelcomeEmail", () => {
 		const email = buildWelcomeEmail(params);
 		expect(email.html).toContain("Abc12345");
 	});
+
+	it("html contains plan details", () => {
+		const email = buildWelcomeEmail(params);
+		expect(email.html).toContain("Pro");
+		expect(email.html).toContain("197,00");
+		expect(email.html).toContain("30 dias");
+	});
+
+	it("html contains purchase section", () => {
+		const email = buildWelcomeEmail(params);
+		expect(email.html).toContain("Detalhes da sua assinatura");
+	});
 });
 
 describe("sendEmail", () => {
-	it("returns false and logs when apiKey is empty", async () => {
+	it("returns ok:false when apiKey is empty", async () => {
 		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		const result = await sendEmail(undefined, "noreply@test.com", {
@@ -48,12 +64,13 @@ describe("sendEmail", () => {
 			html: "<p>Hello</p>",
 		});
 
-		expect(result).toBe(false);
+		expect(result.ok).toBe(false);
+		expect(result.error).toBeDefined();
 		expect(consoleSpy).toHaveBeenCalled();
 		consoleSpy.mockRestore();
 	});
 
-	it("returns false and logs when apiKey is empty string", async () => {
+	it("returns ok:false when apiKey is empty string", async () => {
 		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		const result = await sendEmail("", "noreply@test.com", {
@@ -62,7 +79,7 @@ describe("sendEmail", () => {
 			html: "<p>Hello</p>",
 		});
 
-		expect(result).toBe(false);
+		expect(result.ok).toBe(false);
 		expect(consoleSpy).toHaveBeenCalled();
 		consoleSpy.mockRestore();
 	});

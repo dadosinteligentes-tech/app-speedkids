@@ -78,6 +78,14 @@ export async function createCheckoutSession(
 	return stripeRequest<StripeCheckoutSession>(secretKey, "POST", "/checkout/sessions", body);
 }
 
+// Retrieve a Checkout Session by ID
+export async function getCheckoutSession(
+	secretKey: string,
+	sessionId: string,
+): Promise<StripeCheckoutSession> {
+	return stripeRequest<StripeCheckoutSession>(secretKey, "GET", `/checkout/sessions/${sessionId}?expand[]=subscription`);
+}
+
 // Create a Stripe Billing Portal session for tenant self-service
 export async function createBillingPortalSession(
 	secretKey: string,

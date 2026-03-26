@@ -7,6 +7,7 @@ import {
 	getSuperadminUsers, getPlanDefinitions,
 	getRevenueOverTime, getTenantGrowth, getActiveTenants, getInactiveTenants, getTopTenantsByRevenue,
 	getAllUsersAcrossTenants, getSubscriptionDetails,
+	getExpiringTrials, getTenantEngagement, getDelinquentSubscriptions, getAbandonedCheckouts,
 } from "../../db/queries/platform";
 import { PlatformDashboard } from "../../views/platform/dashboard";
 import { PlatformLoginPage } from "../../views/platform/login";
@@ -16,6 +17,7 @@ import { Plans } from "../../views/platform/plans";
 import { PlatformReports } from "../../views/platform/reports";
 import { PlatformUsersList } from "../../views/platform/users-list";
 import { PlatformSubscriptions } from "../../views/platform/subscriptions";
+import { PlatformEmailLogs } from "../../views/platform/email-logs";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 
 export const platformPages = new Hono<AppEnv>();
@@ -29,13 +31,19 @@ platformPages.use("*", platformAdminMiddleware);
 
 // Dashboard
 platformPages.get("/", async (c) => {
-	const [stats, tenants] = await Promise.all([
-		getPlatformStats(c.env.DB),
-		getAllTenants(c.env.DB),
+	const db = c.env.DB;
+	const [stats, tenants, expiringTrials, engagement, delinquent, abandoned] = await Promise.all([
+		getPlatformStats(db),
+		getAllTenants(db),
+		getExpiringTrials(db, 7),
+		getTenantEngagement(db),
+		getDelinquentSubscriptions(db),
+		getAbandonedCheckouts(db),
 	]);
 	const user = c.get("user");
-	const domain = c.env.APP_DOMAIN || "dadosinteligentes.app.br";
-	return c.html(<PlatformDashboard stats={stats} tenants={tenants} user={user} domain={domain} />);
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	return c.html(<PlatformDashboard stats={stats} tenants={tenants} user={user} domain={domain}
+		expiringTrials={expiringTrials} engagement={engagement} delinquent={delinquent} abandoned={abandoned} />);
 });
 
 // Tenant detail
@@ -98,10 +106,32 @@ platformPages.get("/users", async (c) => {
 
 // Subscriptions
 platformPages.get("/subscriptions", async (c) => {
-	const [subscriptions, stats] = await Promise.all([
+	const [subscriptions, stats, plans] = await Promise.all([
 		getSubscriptionDetails(c.env.DB),
 		getPlatformStats(c.env.DB),
+		getPlanDefinitions(c.env.DB),
 	]);
 	const user = c.get("user");
-	return c.html(<PlatformSubscriptions subscriptions={subscriptions} user={user} mrr_cents={stats.mrr_cents} />);
+	return c.html(<PlatformSubscriptions subscriptions={subscriptions} user={user} mrr_cents={stats.mrr_cents} plans={plans} />);
+});
+
+// Email logs
+platformPages.get("/emails", async (c) => {
+	const db = c.env.DB;
+	const { results } = await db
+		.prepare(`
+			SELECT el.*, t.name as tenant_name, t.slug as tenant_slug
+			FROM email_logs el
+			LEFT JOIN tenants t ON t.id = el.tenant_id
+			ORDER BY el.created_at DESC
+			LIMIT 100
+		`)
+		.all<{
+			id: number; tenant_id: number | null; recipient: string; subject: string;
+			event_type: string; status: string; error_message: string | null;
+			metadata: string | null; created_at: string;
+			tenant_name: string | null; tenant_slug: string | null;
+		}>();
+	const user = c.get("user");
+	return c.html(<PlatformEmailLogs logs={results} user={user} />);
 });

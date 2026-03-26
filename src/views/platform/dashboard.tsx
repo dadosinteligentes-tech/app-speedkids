@@ -1,6 +1,6 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
-import type { PlatformStats, TenantWithStats } from "../../db/queries/platform";
+import type { PlatformStats, TenantWithStats, TrialExpiring, TenantEngagement, DelinquentSubscription, AbandonedCheckout } from "../../db/queries/platform";
 import { PlatformLayout } from "./layout";
 
 interface PlatformDashboardProps {
@@ -8,18 +8,14 @@ interface PlatformDashboardProps {
 	tenants: TenantWithStats[];
 	user: { name: string; email: string } | null;
 	domain: string;
+	expiringTrials: TrialExpiring[];
+	engagement: TenantEngagement[];
+	delinquent: DelinquentSubscription[];
+	abandoned: AbandonedCheckout[];
 }
 
 function fmtBRL(cents: number): string {
 	return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
-}
-
-function daysAgo(dateStr: string | null): string {
-	if (!dateStr) return "—";
-	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
-	if (diff === 0) return "Hoje";
-	if (diff === 1) return "Ontem";
-	return `${diff}d`;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -34,7 +30,16 @@ const PLAN_COLORS: Record<string, string> = {
 	enterprise: "bg-sk-purple-light text-sk-purple",
 };
 
-export const PlatformDashboard: FC<PlatformDashboardProps> = ({ stats, tenants, user, domain }) => {
+const HEALTH_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+	healthy: { bg: "bg-sk-green-light", text: "text-sk-green-dark", label: "Saudável" },
+	warning: { bg: "bg-sk-yellow-light", text: "text-sk-yellow-dark", label: "Atenção" },
+	critical: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Crítico" },
+};
+
+export const PlatformDashboard: FC<PlatformDashboardProps> = ({ stats, tenants, user, domain, expiringTrials, engagement, delinquent, abandoned }) => {
+	const criticalCount = engagement.filter((e) => e.health === "critical").length;
+	const warningCount = engagement.filter((e) => e.health === "warning").length;
+
 	const script = html`<script>
 ${raw(`
 function toggleTenant(id, action) {
@@ -86,32 +91,192 @@ function createTenant(e) {
 		<PlatformLayout title="Visão Geral" user={user} actions={createButton} bodyScripts={script}>
 			{/* KPIs */}
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-				<a href="#tenants-table" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md hover:border-sk-blue-light transition-all cursor-pointer block">
+				<a href="#tenants-table" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md transition-all cursor-pointer block">
 					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Tenants</p>
 					<p class="text-3xl font-display font-bold text-sk-text">{stats.total_tenants}</p>
 					<p class="text-xs text-sk-muted mt-1 font-body">
 						<span class="text-sk-green">{stats.active_tenants} ativos</span>
-						{stats.suspended_tenants > 0 && <span> · <span class="text-sk-danger">{stats.suspended_tenants} suspensos</span></span>}
+						{stats.suspended_tenants > 0 && <span> &middot; <span class="text-sk-danger">{stats.suspended_tenants} suspensos</span></span>}
 					</p>
 				</a>
-				<a href="/platform/users" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md hover:border-sk-blue-light transition-all cursor-pointer block">
+				<a href="/platform/users" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md transition-all cursor-pointer block">
 					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Usuários</p>
 					<p class="text-3xl font-display font-bold text-sk-text">{stats.total_users}</p>
 					<p class="text-xs text-sk-muted mt-1 font-body">em todos os tenants</p>
 				</a>
-				<a href="/platform/reports" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md hover:border-sk-blue-light transition-all cursor-pointer block">
+				<a href="/platform/reports" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md transition-all cursor-pointer block">
 					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Receita Total</p>
 					<p class="text-2xl font-display font-bold text-sk-text">{fmtBRL(stats.total_revenue_cents)}</p>
 					<p class="text-xs text-sk-muted mt-1 font-body">{stats.total_rentals} locações</p>
 				</a>
-				<a href="/platform/subscriptions" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-green-light hover:shadow-sk-md hover:border-sk-green transition-all cursor-pointer block">
+				<a href="/platform/subscriptions" class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-green-light hover:shadow-sk-md transition-all cursor-pointer block">
 					<p class="text-xs text-sk-green font-display font-medium uppercase tracking-wider mb-1">MRR</p>
 					<p class="text-2xl font-display font-bold text-sk-green-dark">{fmtBRL(stats.mrr_cents)}</p>
 					<p class="text-xs text-sk-muted mt-1 font-body">receita mensal recorrente</p>
 				</a>
 			</div>
 
-			{/* Tenants Table */}
+			{/* ── Alert Panels ── */}
+			<div class="grid md:grid-cols-2 gap-4 mb-6">
+
+				{/* 1. Trials Expirando */}
+				<div class={`bg-sk-surface rounded-sk shadow-sk-sm border-2 overflow-hidden ${expiringTrials.length > 0 ? "border-sk-orange" : "border-sk-border/50"}`}>
+					<div class="px-5 py-3 border-b border-sk-border/30 flex items-center justify-between">
+						<h3 class="font-display font-bold text-sm text-sk-text">Trials Expirando (7 dias)</h3>
+						{expiringTrials.length > 0 && (
+							<span class="bg-sk-orange text-white text-xs font-bold px-2 py-0.5 rounded-full">{expiringTrials.length}</span>
+						)}
+					</div>
+					{expiringTrials.length > 0 ? (
+						<div class="divide-y divide-sk-border/20">
+							{expiringTrials.map((t) => (
+								<div class="px-5 py-3 flex items-center justify-between">
+									<div>
+										<a href={`/platform/tenants/${t.tenant_id}`} class="font-display font-medium text-sm text-sk-text hover:text-sk-blue">{t.tenant_name}</a>
+										<p class="text-xs text-sk-muted font-body">{t.owner_email}</p>
+									</div>
+									<div class="text-right">
+										<span class={`font-display font-bold text-sm ${t.days_remaining <= 2 ? "text-sk-danger" : "text-sk-orange"}`}>
+											{t.days_remaining <= 0 ? "Expira hoje" : `${t.days_remaining}d restantes`}
+										</span>
+										<p class="text-xs text-sk-muted font-body">{t.rental_count} locações</p>
+									</div>
+								</div>
+							))}
+						</div>
+					) : (
+						<div class="px-5 py-6 text-center text-sk-muted text-sm font-body">Nenhum trial expirando em breve</div>
+					)}
+				</div>
+
+				{/* 2. Inadimplência */}
+				<div class={`bg-sk-surface rounded-sk shadow-sk-sm border-2 overflow-hidden ${delinquent.length > 0 ? "border-sk-danger" : "border-sk-border/50"}`}>
+					<div class="px-5 py-3 border-b border-sk-border/30 flex items-center justify-between">
+						<h3 class="font-display font-bold text-sm text-sk-text">Inadimplência</h3>
+						{delinquent.length > 0 && (
+							<span class="bg-sk-danger text-white text-xs font-bold px-2 py-0.5 rounded-full">{delinquent.length}</span>
+						)}
+					</div>
+					{delinquent.length > 0 ? (
+						<div class="divide-y divide-sk-border/20">
+							{delinquent.map((d) => (
+								<div class="px-5 py-3 flex items-center justify-between">
+									<div>
+										<a href={`/platform/tenants/${d.tenant_id}`} class="font-display font-medium text-sm text-sk-text hover:text-sk-blue">{d.tenant_name}</a>
+										<p class="text-xs text-sk-muted font-body">{d.owner_email}</p>
+									</div>
+									<div class="text-right flex items-center gap-2">
+										<div>
+											<span class="font-display font-bold text-sm text-sk-danger">{d.days_overdue}d atrasado</span>
+											<p class="text-xs text-sk-muted font-body">{d.status}</p>
+										</div>
+										<a href={`mailto:${d.owner_email}?subject=Problema no pagamento - ${d.tenant_name}`}
+											class="text-sk-blue hover:text-sk-blue-dark text-xs font-display" title="Enviar email">
+											Contatar
+										</a>
+									</div>
+								</div>
+							))}
+						</div>
+					) : (
+						<div class="px-5 py-6 text-center text-sk-green text-sm font-body">Nenhuma inadimplência</div>
+					)}
+				</div>
+			</div>
+
+			{/* ── Row 2: Engagement + Abandoned ── */}
+			<div class="grid md:grid-cols-2 gap-4 mb-6">
+
+				{/* 3. Engajamento */}
+				<div class={`bg-sk-surface rounded-sk shadow-sk-sm border-2 overflow-hidden ${criticalCount > 0 ? "border-sk-danger" : warningCount > 0 ? "border-sk-yellow" : "border-sk-border/50"}`}>
+					<div class="px-5 py-3 border-b border-sk-border/30 flex items-center justify-between">
+						<h3 class="font-display font-bold text-sm text-sk-text">Engajamento dos Tenants</h3>
+						<div class="flex gap-2">
+							{criticalCount > 0 && <span class="bg-sk-danger text-white text-xs font-bold px-2 py-0.5 rounded-full">{criticalCount} críticos</span>}
+							{warningCount > 0 && <span class="bg-sk-yellow text-sk-text text-xs font-bold px-2 py-0.5 rounded-full">{warningCount} atenção</span>}
+						</div>
+					</div>
+					<div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+						<table class="w-full text-xs font-body">
+							<thead class="bg-sk-bg sticky top-0">
+								<tr class="text-left text-sk-muted uppercase tracking-wider">
+									<th class="px-4 py-2 font-display font-medium">Tenant</th>
+									<th class="px-4 py-2 font-display font-medium text-center">7d</th>
+									<th class="px-4 py-2 font-display font-medium text-center">Último login</th>
+									<th class="px-4 py-2 font-display font-medium text-center">Saúde</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-sk-border/20">
+								{engagement.map((t) => {
+									const hb = HEALTH_BADGE[t.health];
+									return (
+										<tr class={t.health === "critical" ? "bg-sk-danger-light/30" : t.health === "warning" ? "bg-sk-yellow-light/30" : ""}>
+											<td class="px-4 py-2">
+												<a href={`/platform/tenants/${t.tenant_id}`} class="font-display font-medium text-sk-text hover:text-sk-blue">{t.tenant_name}</a>
+											</td>
+											<td class="px-4 py-2 text-center tabular-nums">
+												{t.rentals_7d > 0 ? <span class="text-sk-green-dark font-medium">{t.rentals_7d} loc.</span> : <span class="text-sk-muted">0</span>}
+											</td>
+											<td class="px-4 py-2 text-center text-sk-muted tabular-nums">
+												{t.days_since_login !== null
+													? (t.days_since_login === 0 ? "Hoje" : t.days_since_login === 1 ? "Ontem" : `${t.days_since_login}d`)
+													: "Nunca"
+												}
+											</td>
+											<td class="px-4 py-2 text-center">
+												<span class={`${hb.bg} ${hb.text} px-2 py-0.5 rounded text-xs font-medium font-display`}>{hb.label}</span>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+						{engagement.length === 0 && (
+							<div class="px-5 py-6 text-center text-sk-muted text-sm font-body">Nenhum tenant ativo</div>
+						)}
+					</div>
+				</div>
+
+				{/* 4. Checkouts Abandonados */}
+				<div class={`bg-sk-surface rounded-sk shadow-sk-sm border-2 overflow-hidden ${abandoned.length > 0 ? "border-sk-yellow" : "border-sk-border/50"}`}>
+					<div class="px-5 py-3 border-b border-sk-border/30 flex items-center justify-between">
+						<h3 class="font-display font-bold text-sm text-sk-text">Checkouts Abandonados</h3>
+						{abandoned.length > 0 && (
+							<span class="bg-sk-yellow text-sk-text text-xs font-bold px-2 py-0.5 rounded-full">{abandoned.length}</span>
+						)}
+					</div>
+					{abandoned.length > 0 ? (
+						<div class="divide-y divide-sk-border/20 max-h-[300px] overflow-y-auto">
+							{abandoned.map((a) => (
+								<div class="px-5 py-3 flex items-center justify-between">
+									<div>
+										<p class="font-display font-medium text-sm text-sk-text">{a.business_name}</p>
+										<p class="text-xs text-sk-muted font-body">{a.owner_name} &middot; {a.owner_email}</p>
+									</div>
+									<div class="text-right flex items-center gap-2">
+										<div>
+											<span class={`${PLAN_COLORS[a.plan] || PLAN_COLORS.starter} px-2 py-0.5 rounded text-xs font-medium font-display`}>
+												{a.plan.charAt(0).toUpperCase() + a.plan.slice(1)}
+											</span>
+											<p class="text-xs text-sk-muted font-body mt-1">
+												{a.hours_ago < 1 ? "Agora" : a.hours_ago < 24 ? `${a.hours_ago}h atrás` : `${Math.floor(a.hours_ago / 24)}d atrás`}
+											</p>
+										</div>
+										<a href={`mailto:${a.owner_email}?subject=Precisando de ajuda? - Giro Kids&body=Olá ${a.owner_name},%0D%0A%0D%0ANotamos que você iniciou o cadastro para ${a.business_name} mas não finalizou. Podemos ajudar?`}
+											class="text-sk-blue hover:text-sk-blue-dark text-xs font-display" title="Enviar email de follow-up">
+											Follow-up
+										</a>
+									</div>
+								</div>
+							))}
+						</div>
+					) : (
+						<div class="px-5 py-6 text-center text-sk-muted text-sm font-body">Nenhum checkout abandonado nos últimos 30 dias</div>
+					)}
+				</div>
+			</div>
+
+			{/* ── Tenants Table ── */}
 			<div id="tenants-table" class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
 				<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
 					<h2 class="font-display font-bold text-sk-text">Tenants</h2>
@@ -162,7 +327,7 @@ function createTenant(e) {
 										</td>
 										<td class="px-5 py-3 text-right font-display font-medium">{fmtBRL(t.revenue_cents)}</td>
 										<td class="px-5 py-3 text-center text-xs text-sk-muted">
-											{t.rental_count > 0 ? `${t.rental_count} loc.` : <span class="text-sk-border">—</span>}
+											{t.rental_count > 0 ? `${t.rental_count} loc.` : <span class="text-sk-border">&mdash;</span>}
 										</td>
 										<td class="px-5 py-3 text-right">
 											<div class="flex items-center justify-end gap-2">

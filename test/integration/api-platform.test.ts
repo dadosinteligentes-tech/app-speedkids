@@ -193,6 +193,33 @@ async function applyMigrations(db: D1Database) {
 				created_at TEXT DEFAULT (datetime('now'))
 			)
 		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS email_logs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER,
+				recipient TEXT NOT NULL,
+				subject TEXT NOT NULL,
+				event_type TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'sent',
+				error_message TEXT,
+				metadata TEXT,
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+			)
+		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS abandoned_checkouts (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				slug TEXT NOT NULL,
+				business_name TEXT NOT NULL,
+				owner_name TEXT NOT NULL,
+				owner_email TEXT NOT NULL,
+				plan TEXT NOT NULL DEFAULT 'starter',
+				converted INTEGER NOT NULL DEFAULT 0,
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
 	]);
 }
 
@@ -463,6 +490,112 @@ describe("Platform Admin API", () => {
 		it("returns 403 for non-platform user", async () => {
 			const res = await req("/api/platform/stats", {}, clientCookie);
 			expect(res.status).toBe(403);
+		});
+	});
+
+	describe("Sales intelligence queries", () => {
+		it("getExpiringTrials returns trials near expiry", async () => {
+			const { getExpiringTrials } = await import("../../src/db/queries/platform");
+			// Add a trialing subscription expiring in 3 days
+			await env.DB.prepare(
+				"UPDATE subscriptions SET status = 'trialing', current_period_end = datetime('now', '+3 days') WHERE tenant_id = ?"
+			).bind(clientTenantId).run();
+
+			const results = await getExpiringTrials(env.DB, 7);
+			expect(results.length).toBeGreaterThanOrEqual(1);
+			expect(results[0].days_remaining).toBeLessThanOrEqual(7);
+			expect(results[0].tenant_slug).toBe("testclient");
+
+			// Restore
+			await env.DB.prepare(
+				"UPDATE subscriptions SET status = 'active', current_period_end = NULL WHERE tenant_id = ?"
+			).bind(clientTenantId).run();
+		});
+
+		it("getTenantEngagement returns health scores", async () => {
+			const { getTenantEngagement } = await import("../../src/db/queries/platform");
+			const results = await getTenantEngagement(env.DB);
+			expect(results.length).toBeGreaterThanOrEqual(1);
+			const tenant = results.find((t) => t.tenant_slug === "testclient");
+			expect(tenant).toBeDefined();
+			expect(["healthy", "warning", "critical"]).toContain(tenant!.health);
+		});
+
+		it("getDelinquentSubscriptions returns past_due subs", async () => {
+			const { getDelinquentSubscriptions } = await import("../../src/db/queries/platform");
+			// Set subscription to past_due
+			await env.DB.prepare(
+				"UPDATE subscriptions SET status = 'past_due', updated_at = datetime('now', '-5 days') WHERE tenant_id = ?"
+			).bind(clientTenantId).run();
+
+			const results = await getDelinquentSubscriptions(env.DB);
+			expect(results.length).toBeGreaterThanOrEqual(1);
+			expect(results[0].status).toBe("past_due");
+			expect(results[0].days_overdue).toBeGreaterThanOrEqual(4);
+
+			// Restore
+			await env.DB.prepare(
+				"UPDATE subscriptions SET status = 'active', updated_at = datetime('now') WHERE tenant_id = ?"
+			).bind(clientTenantId).run();
+		});
+
+		it("abandoned checkouts: record, list, and mark converted", async () => {
+			const { recordAbandonedCheckout, getAbandonedCheckouts, markCheckoutConverted } = await import("../../src/db/queries/platform");
+
+			await recordAbandonedCheckout(env.DB, {
+				slug: "test-abandoned",
+				businessName: "Abandoned Corp",
+				ownerName: "John",
+				ownerEmail: "john@test.com",
+				plan: "pro",
+			});
+
+			let results = await getAbandonedCheckouts(env.DB);
+			expect(results.length).toBeGreaterThanOrEqual(1);
+			const found = results.find((a) => a.slug === "test-abandoned");
+			expect(found).toBeDefined();
+			expect(found!.business_name).toBe("Abandoned Corp");
+
+			await markCheckoutConverted(env.DB, "test-abandoned");
+			results = await getAbandonedCheckouts(env.DB);
+			const converted = results.find((a) => a.slug === "test-abandoned");
+			expect(converted).toBeUndefined(); // converted=1 is filtered out
+		});
+	});
+
+	describe("Email logging", () => {
+		it("logEmail persists an email log entry", async () => {
+			const { logEmail } = await import("../../src/lib/email");
+			await logEmail(env.DB, {
+				tenantId: clientTenantId,
+				recipient: "test@email.com",
+				subject: "Test email",
+				eventType: "welcome",
+			}, "sent");
+
+			const row = await env.DB.prepare(
+				"SELECT * FROM email_logs WHERE recipient = 'test@email.com'"
+			).first();
+			expect(row).toBeDefined();
+			expect(row!.status).toBe("sent");
+			expect(row!.event_type).toBe("welcome");
+		});
+
+		it("logEmail records failures", async () => {
+			const { logEmail } = await import("../../src/lib/email");
+			await logEmail(env.DB, {
+				tenantId: clientTenantId,
+				recipient: "fail@email.com",
+				subject: "Failed email",
+				eventType: "payment_failed",
+			}, "failed", "SMTP timeout");
+
+			const row = await env.DB.prepare(
+				"SELECT * FROM email_logs WHERE recipient = 'fail@email.com'"
+			).first();
+			expect(row).toBeDefined();
+			expect(row!.status).toBe("failed");
+			expect(row!.error_message).toBe("SMTP timeout");
 		});
 	});
 });

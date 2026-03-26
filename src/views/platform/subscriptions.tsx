@@ -1,10 +1,17 @@
 import type { FC } from "hono/jsx";
 import { PlatformLayout } from "./layout";
+import type { PlanConfig } from "../../db/queries/platform";
 
 interface SubscriptionsProps {
-	subscriptions: Array<{ id: number; tenant_id: number; stripe_customer_id: string | null; stripe_subscription_id: string | null; plan: string; status: string; current_period_start: string | null; current_period_end: string | null; created_at: string; tenant_name: string; tenant_slug: string }>;
+	subscriptions: Array<{
+		id: number; tenant_id: number; stripe_customer_id: string | null;
+		stripe_subscription_id: string | null; plan: string; status: string;
+		current_period_start: string | null; current_period_end: string | null;
+		created_at: string; tenant_name: string; tenant_slug: string;
+	}>;
 	user: { name: string; email: string } | null;
 	mrr_cents: number;
+	plans: Record<string, PlanConfig>;
 }
 
 function fmtBRL(cents: number): string {
@@ -21,19 +28,21 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> 
 	active: { bg: "bg-sk-green-light", text: "text-sk-green-dark", label: "Ativo" },
 	trialing: { bg: "bg-sk-blue-light", text: "text-sk-blue-dark", label: "Trial" },
 	past_due: { bg: "bg-sk-yellow-light", text: "text-sk-yellow-dark", label: "Atrasado" },
+	cancelled: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Cancelado" },
 	canceled: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Cancelado" },
-	unpaid: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Nao pago" },
+	unpaid: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Não pago" },
 	incomplete: { bg: "bg-sk-bg", text: "text-sk-muted", label: "Incompleto" },
 };
 
 function truncateId(id: string | null): string {
-	if (!id) return "\u2014";
+	if (!id) return "—";
 	if (id.length <= 20) return id;
 	return id.slice(0, 18) + "\u2026";
 }
 
-export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, user, mrr_cents }) => {
+export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, user, mrr_cents, plans }) => {
 	const activeCount = subscriptions.filter((s) => s.status === "active" || s.status === "trialing").length;
+	const trialingCount = subscriptions.filter((s) => s.status === "trialing").length;
 
 	return (
 		<PlatformLayout
@@ -42,14 +51,18 @@ export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, u
 			breadcrumb={[{ label: "Dashboard", href: "/platform" }, { label: "Assinaturas" }]}
 		>
 			{/* Summary Cards */}
-			<div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
 				<div class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50">
-					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Total Assinaturas</p>
+					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Total</p>
 					<p class="text-3xl font-bold font-display text-sk-text">{subscriptions.length}</p>
 				</div>
 				<div class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50">
 					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Ativas</p>
 					<p class="text-3xl font-bold font-display text-sk-green-dark">{activeCount}</p>
+				</div>
+				<div class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50">
+					<p class="text-xs text-sk-blue font-display font-medium uppercase tracking-wider mb-1">Em Trial</p>
+					<p class="text-3xl font-bold font-display text-sk-blue-dark">{trialingCount}</p>
 				</div>
 				<div class="bg-sk-surface rounded-sk p-5 shadow-sk-sm border-2 border-sk-border/50 border-sk-green-light">
 					<p class="text-xs text-sk-green font-display font-medium uppercase tracking-wider mb-1">MRR</p>
@@ -62,7 +75,7 @@ export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, u
 			<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">
 				<div class="px-6 py-4 border-b border-sk-border/30 flex items-center justify-between">
 					<h2 class="font-semibold font-display text-sk-text">Assinaturas</h2>
-					<span class="text-xs text-sk-muted font-body">{subscriptions.length} registros</span>
+					<a href="/platform/emails" class="text-xs text-sk-blue hover:underline font-display">Ver emails enviados</a>
 				</div>
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm font-body">
@@ -70,9 +83,10 @@ export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, u
 							<tr class="bg-sk-bg border-b border-sk-border/30 text-left text-xs text-sk-muted uppercase tracking-wider">
 								<th class="px-5 py-3 font-medium font-display">Tenant</th>
 								<th class="px-5 py-3 font-medium font-display">Plano</th>
+								<th class="px-5 py-3 font-medium font-display">Valor</th>
 								<th class="px-5 py-3 font-medium font-display">Status</th>
 								<th class="px-5 py-3 font-medium font-display">Stripe ID</th>
-								<th class="px-5 py-3 font-medium font-display">Periodo</th>
+								<th class="px-5 py-3 font-medium font-display">Período</th>
 								<th class="px-5 py-3 font-medium font-display">Criado em</th>
 							</tr>
 						</thead>
@@ -80,8 +94,10 @@ export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, u
 							{subscriptions.map((s) => {
 								const planColor = PLAN_COLORS[s.plan] || PLAN_COLORS.starter;
 								const badge = STATUS_BADGE[s.status] || { bg: "bg-sk-bg", text: "text-sk-muted", label: s.status };
-								const periodStart = s.current_period_start ? s.current_period_start.slice(0, 10) : "\u2014";
-								const periodEnd = s.current_period_end ? s.current_period_end.slice(0, 10) : "\u2014";
+								const periodStart = s.current_period_start ? s.current_period_start.slice(0, 10) : "—";
+								const periodEnd = s.current_period_end ? s.current_period_end.slice(0, 10) : "—";
+								const planCfg = plans[s.plan];
+								const priceStr = planCfg ? fmtBRL(planCfg.priceCents) : "—";
 								return (
 									<tr class="hover:bg-sk-blue-light/30 transition-colors">
 										<td class="px-5 py-3">
@@ -92,8 +108,11 @@ export const PlatformSubscriptions: FC<SubscriptionsProps> = ({ subscriptions, u
 										</td>
 										<td class="px-5 py-3">
 											<span class={`${planColor} px-2 py-0.5 rounded text-xs font-medium font-display`}>
-												{s.plan.charAt(0).toUpperCase() + s.plan.slice(1)}
+												{planCfg?.label || s.plan.charAt(0).toUpperCase() + s.plan.slice(1)}
 											</span>
+										</td>
+										<td class="px-5 py-3 text-xs text-sk-text font-medium tabular-nums">
+											{priceStr}<span class="text-sk-muted font-normal">/mês</span>
 										</td>
 										<td class="px-5 py-3">
 											<span class={`${badge.bg} ${badge.text} px-2 py-0.5 rounded text-xs font-medium font-display`}>

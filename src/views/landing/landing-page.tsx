@@ -1,12 +1,14 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
+import type { PlanConfig } from "../../db/queries/platform";
 
 interface LandingPageProps {
 	domain: string;
 	stripePublishableKey: string;
+	plans: Record<string, PlanConfig>;
 }
 
-export const LandingPage: FC<LandingPageProps> = ({ domain, stripePublishableKey }) => {
+export const LandingPage: FC<LandingPageProps> = ({ domain, stripePublishableKey, plans }) => {
 	const signupScript = html`<script>
 ${raw(`
 var selectedPlan = 'pro';
@@ -333,76 +335,71 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 							<p class="font-body text-sk-muted text-lg">Comece pequeno, cresça sem limites</p>
 						</div>
 						<div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto items-start">
-							{/* Starter */}
-							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border">
-								<div class="text-center mb-4">
-									<span class="text-3xl" aria-hidden="true">🌱</span>
-									<h3 class="font-display font-bold text-xl text-sk-text mt-2">Starter</h3>
-									<p class="font-body text-sk-muted text-sm">Para quem está começando</p>
-								</div>
-								<div class="text-center mb-6">
-									<span class="font-display font-bold text-4xl text-sk-text">R$ 97</span>
-									<span class="font-body text-sk-muted text-sm">/mês</span>
-								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 3 usuários</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 15 brinquedos</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Locações e caixa</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Relatórios básicos</li>
-								</ul>
-								<button onclick="choosePlan('starter')" class="btn-touch btn-bounce block w-full py-3 bg-sk-yellow hover:bg-sk-yellow-dark text-sk-text text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
-									30 dias grátis
-								</button>
-							</div>
-
-							{/* Pro */}
-							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-md border-2 ring-2 ring-sk-orange border-sk-orange relative">
-								<span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-sk-orange text-white text-xs font-display font-bold px-4 py-1 rounded-sk shadow-sk-sm">
-									Popular
-								</span>
-								<div class="text-center mb-4">
-									<span class="text-3xl" aria-hidden="true">🚀</span>
-									<h3 class="font-display font-bold text-xl text-sk-text mt-2">Pro</h3>
-									<p class="font-body text-sk-muted text-sm">Para parques em crescimento</p>
-								</div>
-								<div class="text-center mb-6">
-									<span class="font-display font-bold text-4xl text-sk-orange">R$ 197</span>
-									<span class="font-body text-sk-muted text-sm">/mês</span>
-								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 10 usuários</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> 50 brinquedos</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Todos os relatórios</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Logo e cores personalizadas</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Suporte por chat</li>
-								</ul>
-								<button onclick="choosePlan('pro')" class="btn-touch btn-bounce block w-full py-3 bg-sk-orange hover:bg-sk-orange-dark text-white text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
-									30 dias grátis
-								</button>
-							</div>
-
-							{/* Enterprise */}
-							<div class="bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border">
-								<div class="text-center mb-4">
-									<span class="text-3xl" aria-hidden="true">🏢</span>
-									<h3 class="font-display font-bold text-xl text-sk-text mt-2">Enterprise</h3>
-									<p class="font-body text-sk-muted text-sm">Para grandes operações</p>
-								</div>
-								<div class="text-center mb-6">
-									<span class="font-display font-bold text-4xl text-sk-text">R$ 397</span>
-									<span class="font-body text-sk-muted text-sm">/mês</span>
-								</div>
-								<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Usuários ilimitados</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Brinquedos ilimitados</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Relatórios + exportação</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Suporte prioritário</li>
-									<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> Backup sob demanda</li>
-								</ul>
-								<button onclick="choosePlan('enterprise')" class="btn-touch btn-bounce block w-full py-3 bg-sk-blue hover:bg-sk-blue-dark text-white text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors">
-									30 dias grátis
-								</button>
-							</div>
+							{(() => {
+								const planMeta: Record<string, { icon: string; subtitle: string; highlight: boolean; btnClass: string; features: (cfg: { maxUsers: number; maxAssets: number }) => string[] }> = {
+									starter: {
+										icon: "🌱", subtitle: "Para quem está começando", highlight: false,
+										btnClass: "bg-sk-yellow hover:bg-sk-yellow-dark text-sk-text",
+										features: (c) => [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Locações e caixa", "Relatórios básicos"],
+									},
+									pro: {
+										icon: "🚀", subtitle: "Para parques em crescimento", highlight: true,
+										btnClass: "bg-sk-orange hover:bg-sk-orange-dark text-white",
+										features: (c) => [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Todos os relatórios", "Logo e cores personalizadas", "Suporte por chat"],
+									},
+									enterprise: {
+										icon: "🏢", subtitle: "Para grandes operações", highlight: false,
+										btnClass: "bg-sk-blue hover:bg-sk-blue-dark text-white",
+										features: (c) => [
+											c.maxUsers >= 999 ? "Usuários ilimitados" : `${c.maxUsers} usuários`,
+											c.maxAssets >= 999 ? "Brinquedos ilimitados" : `${c.maxAssets} brinquedos`,
+											"Relatórios + exportação", "Suporte prioritário", "Backup sob demanda",
+										],
+									},
+								};
+								const order = ["starter", "pro", "enterprise"];
+								return order.map((key) => {
+									const cfg = plans[key];
+									const meta = planMeta[key];
+									if (!cfg || !meta) return null;
+									const reais = Math.floor(cfg.priceCents / 100);
+								const centavos = cfg.priceCents % 100;
+								const reaisFormatted = reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+								const priceStr = centavos > 0
+									? `R$ ${reaisFormatted},${centavos.toString().padStart(2, "0")}`
+									: `R$ ${reaisFormatted}`;
+									const borderClass = meta.highlight
+										? "shadow-sk-md border-2 ring-2 ring-sk-orange border-sk-orange relative"
+										: "shadow-sk-sm border-2 border-sk-border";
+									const priceColor = meta.highlight ? "text-sk-orange" : "text-sk-text";
+									return (
+										<div class={`bg-sk-surface rounded-sk-lg p-6 ${borderClass}`}>
+											{meta.highlight && (
+												<span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-sk-orange text-white text-xs font-display font-bold px-4 py-1 rounded-sk shadow-sk-sm">
+													Popular
+												</span>
+											)}
+											<div class="text-center mb-4">
+												<span class="text-3xl" aria-hidden="true">{meta.icon}</span>
+												<h3 class="font-display font-bold text-xl text-sk-text mt-2">{cfg.label}</h3>
+												<p class="font-body text-sk-muted text-sm">{meta.subtitle}</p>
+											</div>
+											<div class="text-center mb-6">
+												<span class={`font-display font-bold text-4xl ${priceColor}`}>{priceStr}</span>
+												<span class="font-body text-sk-muted text-sm">/mês</span>
+											</div>
+											<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
+												{meta.features(cfg).map((f) => (
+													<li class="flex items-center gap-2"><span class="text-sk-green font-bold">✓</span> {f}</li>
+												))}
+											</ul>
+											<button onclick={`choosePlan('${key}')`} class={`btn-touch btn-bounce block w-full py-3 text-center rounded-sk font-display font-bold text-base shadow-sk-sm transition-colors ${meta.btnClass}`}>
+												30 dias grátis
+											</button>
+										</div>
+									);
+								});
+							})()}
 						</div>
 					</div>
 				</section>

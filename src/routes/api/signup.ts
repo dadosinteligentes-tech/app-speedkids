@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { isSlugAvailable, provisionTenant } from "../../services/provisioning";
 import { createCheckoutSession } from "../../lib/stripe";
+import { recordAbandonedCheckout } from "../../db/queries/platform";
 
 export const signupRoutes = new Hono<AppEnv>();
 
@@ -48,6 +49,14 @@ signupRoutes.post("/checkout", async (c) => {
 	}
 
 	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+
+	// Track checkout attempt for abandoned checkout detection
+	try {
+		await recordAbandonedCheckout(c.env.DB, {
+			slug, businessName: body.businessName,
+			ownerName: body.ownerName, ownerEmail: body.ownerEmail, plan: body.plan,
+		});
+	} catch { /* non-critical */ }
 
 	try {
 		const session = await createCheckoutSession(c.env.STRIPE_SECRET_KEY, {

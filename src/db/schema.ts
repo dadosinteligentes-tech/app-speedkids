@@ -314,6 +314,18 @@ export interface Subscription {
 	updated_at: string;
 }
 
+export interface EmailLog {
+	id: number;
+	tenant_id: number | null;
+	recipient: string;
+	subject: string;
+	event_type: string;
+	status: "sent" | "failed" | "skipped";
+	error_message: string | null;
+	metadata: string | null;
+	created_at: string;
+}
+
 export interface Promotion {
 	id: number;
 	tenant_id: number;

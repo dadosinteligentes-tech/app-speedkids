@@ -669,6 +669,186 @@ export async function getAllUsersAcrossTenants(
 	return results as any;
 }
 
+// ── Sales Intelligence Queries ───────────────────────────────────────
+
+export interface TrialExpiring {
+	tenant_id: number;
+	tenant_name: string;
+	tenant_slug: string;
+	owner_email: string;
+	plan: string;
+	trial_end: string;
+	days_remaining: number;
+	rental_count: number;
+	last_login: string | null;
+}
+
+export async function getExpiringTrials(db: D1Database, withinDays: number = 7): Promise<TrialExpiring[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT
+				t.id as tenant_id, t.name as tenant_name, t.slug as tenant_slug,
+				t.owner_email, s.plan, s.current_period_end as trial_end,
+				CAST(JULIANDAY(s.current_period_end) - JULIANDAY('now') AS INTEGER) as days_remaining,
+				COALESCE(r.rental_count, 0) as rental_count,
+				activity.last_login
+			FROM subscriptions s
+			JOIN tenants t ON t.id = s.tenant_id
+			LEFT JOIN (
+				SELECT tenant_id, COUNT(*) as rental_count FROM rental_sessions GROUP BY tenant_id
+			) r ON r.tenant_id = t.id
+			LEFT JOIN (
+				SELECT u.tenant_id, MAX(sess.created_at) as last_login
+				FROM users u JOIN auth_sessions sess ON sess.user_id = u.id
+				GROUP BY u.tenant_id
+			) activity ON activity.tenant_id = t.id
+			WHERE s.status = 'trialing'
+				AND s.current_period_end <= datetime('now', '+' || ? || ' days')
+			ORDER BY days_remaining ASC
+		`)
+		.bind(withinDays)
+		.all<TrialExpiring>();
+	return results;
+}
+
+export interface TenantEngagement {
+	tenant_id: number;
+	tenant_name: string;
+	tenant_slug: string;
+	owner_email: string;
+	plan: string;
+	status: string;
+	created_at: string;
+	days_since_creation: number;
+	rentals_7d: number;
+	rentals_30d: number;
+	product_sales_7d: number;
+	last_login: string | null;
+	days_since_login: number | null;
+	health: "healthy" | "warning" | "critical";
+}
+
+export async function getTenantEngagement(db: D1Database): Promise<TenantEngagement[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT
+				t.id as tenant_id, t.name as tenant_name, t.slug as tenant_slug,
+				t.owner_email, t.plan, t.status, t.created_at,
+				CAST(JULIANDAY('now') - JULIANDAY(t.created_at) AS INTEGER) as days_since_creation,
+				COALESCE(r7.cnt, 0) as rentals_7d,
+				COALESCE(r30.cnt, 0) as rentals_30d,
+				COALESCE(ps7.cnt, 0) as product_sales_7d,
+				activity.last_login,
+				CASE WHEN activity.last_login IS NOT NULL
+					THEN CAST(JULIANDAY('now') - JULIANDAY(activity.last_login) AS INTEGER)
+					ELSE NULL END as days_since_login
+			FROM tenants t
+			LEFT JOIN (
+				SELECT tenant_id, COUNT(*) as cnt FROM rental_sessions
+				WHERE created_at >= datetime('now', '-7 days') GROUP BY tenant_id
+			) r7 ON r7.tenant_id = t.id
+			LEFT JOIN (
+				SELECT tenant_id, COUNT(*) as cnt FROM rental_sessions
+				WHERE created_at >= datetime('now', '-30 days') GROUP BY tenant_id
+			) r30 ON r30.tenant_id = t.id
+			LEFT JOIN (
+				SELECT tenant_id, COUNT(*) as cnt FROM product_sales
+				WHERE created_at >= datetime('now', '-7 days') GROUP BY tenant_id
+			) ps7 ON ps7.tenant_id = t.id
+			LEFT JOIN (
+				SELECT u.tenant_id, MAX(sess.created_at) as last_login
+				FROM users u JOIN auth_sessions sess ON sess.user_id = u.id
+				GROUP BY u.tenant_id
+			) activity ON activity.tenant_id = t.id
+			WHERE t.slug != '_platform' AND t.status = 'active'
+			ORDER BY rentals_7d ASC, days_since_login DESC NULLS FIRST
+		`)
+		.all<Omit<TenantEngagement, "health">>();
+
+	return results.map((t) => {
+		let health: TenantEngagement["health"] = "healthy";
+		if (t.days_since_creation > 3 && t.rentals_7d === 0 && t.product_sales_7d === 0) {
+			health = t.days_since_login === null || t.days_since_login > 7 ? "critical" : "warning";
+		} else if (t.rentals_7d === 0 && t.days_since_login !== null && t.days_since_login > 3) {
+			health = "warning";
+		}
+		return { ...t, health };
+	});
+}
+
+export interface DelinquentSubscription {
+	tenant_id: number;
+	tenant_name: string;
+	tenant_slug: string;
+	owner_email: string;
+	plan: string;
+	status: string;
+	stripe_subscription_id: string | null;
+	updated_at: string;
+	days_overdue: number;
+}
+
+export async function getDelinquentSubscriptions(db: D1Database): Promise<DelinquentSubscription[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT
+				t.id as tenant_id, t.name as tenant_name, t.slug as tenant_slug,
+				t.owner_email, s.plan, s.status, s.stripe_subscription_id, s.updated_at,
+				CAST(JULIANDAY('now') - JULIANDAY(s.updated_at) AS INTEGER) as days_overdue
+			FROM subscriptions s
+			JOIN tenants t ON t.id = s.tenant_id
+			WHERE s.status IN ('past_due', 'unpaid', 'incomplete')
+			ORDER BY s.updated_at ASC
+		`)
+		.all<DelinquentSubscription>();
+	return results;
+}
+
+export interface AbandonedCheckout {
+	id: number;
+	slug: string;
+	business_name: string;
+	owner_name: string;
+	owner_email: string;
+	plan: string;
+	created_at: string;
+	hours_ago: number;
+}
+
+export async function getAbandonedCheckouts(db: D1Database): Promise<AbandonedCheckout[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT id, slug, business_name, owner_name, owner_email, plan, created_at,
+				CAST((JULIANDAY('now') - JULIANDAY(created_at)) * 24 AS INTEGER) as hours_ago
+			FROM abandoned_checkouts
+			WHERE converted = 0
+				AND created_at >= datetime('now', '-30 days')
+			ORDER BY created_at DESC
+		`)
+		.all<AbandonedCheckout>();
+	return results;
+}
+
+export async function recordAbandonedCheckout(
+	db: D1Database,
+	data: { slug: string; businessName: string; ownerName: string; ownerEmail: string; plan: string },
+): Promise<void> {
+	await db
+		.prepare(
+			`INSERT INTO abandoned_checkouts (slug, business_name, owner_name, owner_email, plan)
+			 VALUES (?, ?, ?, ?, ?)`,
+		)
+		.bind(data.slug, data.businessName, data.ownerName, data.ownerEmail, data.plan)
+		.run();
+}
+
+export async function markCheckoutConverted(db: D1Database, slug: string): Promise<void> {
+	await db
+		.prepare("UPDATE abandoned_checkouts SET converted = 1, updated_at = datetime('now') WHERE slug = ? AND converted = 0")
+		.bind(slug)
+		.run();
+}
+
 export async function getSubscriptionDetails(
 	db: D1Database,
 ): Promise<
