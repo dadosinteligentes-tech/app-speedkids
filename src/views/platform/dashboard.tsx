@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { PlatformStats, TenantWithStats, TrialExpiring, TenantEngagement, DelinquentSubscription, AbandonedCheckout } from "../../db/queries/platform";
+import type { CrmDashboardStats } from "../../db/queries/crm-leads";
 import { PlatformLayout } from "./layout";
 
 interface PlatformDashboardProps {
@@ -12,6 +13,7 @@ interface PlatformDashboardProps {
 	engagement: TenantEngagement[];
 	delinquent: DelinquentSubscription[];
 	abandoned: AbandonedCheckout[];
+	crmStats: CrmDashboardStats;
 }
 
 function fmtBRL(cents: number): string {
@@ -36,7 +38,7 @@ const HEALTH_BADGE: Record<string, { bg: string; text: string; label: string }> 
 	critical: { bg: "bg-sk-danger-light", text: "text-sk-danger", label: "Crítico" },
 };
 
-export const PlatformDashboard: FC<PlatformDashboardProps> = ({ stats, tenants, user, domain, expiringTrials, engagement, delinquent, abandoned }) => {
+export const PlatformDashboard: FC<PlatformDashboardProps> = ({ stats, tenants, user, domain, expiringTrials, engagement, delinquent, abandoned, crmStats }) => {
 	const criticalCount = engagement.filter((e) => e.health === "critical").length;
 	const warningCount = engagement.filter((e) => e.health === "warning").length;
 
@@ -275,6 +277,25 @@ function createTenant(e) {
 					)}
 				</div>
 			</div>
+
+			{/* ── CRM Summary ── */}
+			<a href="/platform/crm" class={`block bg-sk-surface rounded-sk shadow-sk-sm border-2 p-5 mb-6 hover:shadow-sk-md transition-all ${crmStats.overdue_count > 0 ? "border-sk-orange" : "border-sk-border/50"}`}>
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-3">
+						<span class="text-2xl">📋</span>
+						<div>
+							<h3 class="font-display font-bold text-sm text-sk-text">CRM — Prospecção</h3>
+							<p class="text-xs text-sk-muted font-body">{crmStats.total} leads · {crmStats.this_week_contacts} contatos esta semana</p>
+						</div>
+					</div>
+					<div class="flex items-center gap-3">
+						{crmStats.overdue_count > 0 && (
+							<span class="bg-sk-danger text-white text-xs font-bold px-2 py-0.5 rounded-full">{crmStats.overdue_count} atrasados</span>
+						)}
+						<span class="text-sk-blue text-xs font-display font-medium">Ver CRM &rarr;</span>
+					</div>
+				</div>
+			</a>
 
 			{/* ── Tenants Table ── */}
 			<div id="tenants-table" class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-border/50 overflow-hidden">

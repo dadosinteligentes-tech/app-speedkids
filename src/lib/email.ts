@@ -168,7 +168,76 @@ export function buildWelcomeEmail(params: {
       </a>
     </div>
     <div style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
-      <p style="margin: 0; font-size: 11px; color: #9CA3AF;">Giro Kids — Sistema de Gestão para Parques de Diversão</p>
+      <p style="margin: 0 0 4px; font-size: 11px; color: #9CA3AF;">Giro Kids — DADOS INTELIGENTES LTDA — CNPJ: 47.773.826/0001-57</p>
+      <p style="margin: 0; font-size: 10px; color: #C0C4CC;"><a href="https://giro-kids.com/legal/terms" style="color:#C0C4CC">Termos</a> · <a href="https://giro-kids.com/legal/privacy" style="color:#C0C4CC">Privacidade</a> · <a href="https://giro-kids.com/legal/lgpd" style="color:#C0C4CC">LGPD</a></p>
+    </div>
+  </div>
+</body>
+</html>`,
+	};
+}
+
+export function buildPresentationEmail(params: {
+	contactName: string;
+	companyName: string;
+	domain: string;
+	customMessage?: string;
+}): EmailParams {
+	const landingUrl = `https://${params.domain}/landing`;
+
+	return {
+		to: "",
+		subject: `Giro Kids — Apresentação para ${params.companyName}`,
+		html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px;">
+  <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <div style="background: linear-gradient(135deg, #F97316, #EA580C); padding: 30px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 22px;">Giro Kids</h1>
+      <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">Sistema de Gestão para Locação de Brinquedos</p>
+    </div>
+    <div style="padding: 30px;">
+      <p style="color: #333; font-size: 14px; line-height: 1.6;">
+        Olá, <strong>${params.contactName}</strong>!
+      </p>
+      ${params.customMessage ? `<p style="color: #333; font-size: 14px; line-height: 1.6;">${params.customMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>` : ""}
+      <p style="color: #333; font-size: 14px; line-height: 1.6;">
+        Somos a <strong>Giro Kids</strong> e gostaríamos de apresentar nosso sistema de gestão para
+        <strong>${params.companyName}</strong>. Ajudamos parques, shoppings e espaços de lazer a
+        gerenciar suas locações de brinquedos de forma profissional.
+      </p>
+
+      <div style="background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0 0 12px; font-size: 14px; font-weight: bold; color: #9A3412;">O que oferecemos:</p>
+        <table style="width: 100%; font-size: 13px; color: #78350F;">
+          <tr><td style="padding: 4px 0;">✓ Controle de locações em tempo real com cronômetro</td></tr>
+          <tr><td style="padding: 4px 0;">✓ Gestão de caixa com múltiplas formas de pagamento</td></tr>
+          <tr><td style="padding: 4px 0;">✓ Relatórios completos de faturamento e desempenho</td></tr>
+          <tr><td style="padding: 4px 0;">✓ Cadastro de clientes com programa de fidelidade</td></tr>
+          <tr><td style="padding: 4px 0;">✓ Metas de vendas com gamificação para equipe</td></tr>
+          <tr><td style="padding: 4px 0;">✓ Sistema 100% na nuvem, sem instalação</td></tr>
+        </table>
+      </div>
+
+      <div style="background: #EEF2FF; border-radius: 8px; padding: 16px; text-align: center; margin: 20px 0;">
+        <p style="margin: 0 0 4px; font-size: 12px; color: #6B7280;">Teste grátis por 30 dias</p>
+        <p style="margin: 0; font-size: 18px; font-weight: bold; color: #F97316;">Sem compromisso, sem cartão</p>
+      </div>
+
+      <a href="${landingUrl}#planos" style="display: block; background: #F97316; color: white; text-align: center; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+        Conhecer os planos
+      </a>
+
+      <p style="color: #666; font-size: 12px; line-height: 1.5; margin-top: 20px;">
+        Ficou com alguma dúvida? Responda este email ou entre em contato pelo nosso WhatsApp.
+        Teremos prazer em agendar uma demonstração personalizada.
+      </p>
+    </div>
+    <div style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+      <p style="margin: 0 0 4px; font-size: 11px; color: #9CA3AF;">Giro Kids — DADOS INTELIGENTES LTDA — CNPJ: 47.773.826/0001-57</p>
+      <p style="margin: 0; font-size: 10px; color: #C0C4CC;"><a href="https://giro-kids.com/legal/terms" style="color:#C0C4CC">Termos</a> · <a href="https://giro-kids.com/legal/privacy" style="color:#C0C4CC">Privacidade</a> · <a href="https://giro-kids.com/legal/lgpd" style="color:#C0C4CC">LGPD</a></p>
     </div>
   </div>
 </body>

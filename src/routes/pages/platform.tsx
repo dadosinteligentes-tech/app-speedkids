@@ -20,6 +20,8 @@ import { PlatformSubscriptions } from "../../views/platform/subscriptions";
 import { PlatformEmailLogs } from "../../views/platform/email-logs";
 import { PlatformTickets } from "../../views/platform/tickets";
 import { getAllTickets } from "../../db/queries/support-tickets";
+import { CrmPage } from "../../views/platform/crm";
+import { listLeads, getCrmStats, getLeadsByStatus, getOverdueLeads } from "../../db/queries/crm-leads";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 
 export const platformPages = new Hono<AppEnv>();
@@ -34,18 +36,19 @@ platformPages.use("*", platformAdminMiddleware);
 // Dashboard
 platformPages.get("/", async (c) => {
 	const db = c.env.DB;
-	const [stats, tenants, expiringTrials, engagement, delinquent, abandoned] = await Promise.all([
+	const [stats, tenants, expiringTrials, engagement, delinquent, abandoned, crmStats] = await Promise.all([
 		getPlatformStats(db),
 		getAllTenants(db),
 		getExpiringTrials(db, 7),
 		getTenantEngagement(db),
 		getDelinquentSubscriptions(db),
 		getAbandonedCheckouts(db),
+		getCrmStats(db),
 	]);
 	const user = c.get("user");
 	const domain = c.env.APP_DOMAIN || "giro-kids.com";
 	return c.html(<PlatformDashboard stats={stats} tenants={tenants} user={user} domain={domain}
-		expiringTrials={expiringTrials} engagement={engagement} delinquent={delinquent} abandoned={abandoned} />);
+		expiringTrials={expiringTrials} engagement={engagement} delinquent={delinquent} abandoned={abandoned} crmStats={crmStats} />);
 });
 
 // Tenant detail
@@ -143,4 +146,17 @@ platformPages.get("/tickets", async (c) => {
 	const tickets = await getAllTickets(c.env.DB);
 	const user = c.get("user");
 	return c.html(<PlatformTickets tickets={tickets} user={user} />);
+});
+
+// CRM
+platformPages.get("/crm", async (c) => {
+	const db = c.env.DB;
+	const [leadResult, stats, kanbanData, overdueLeadsList] = await Promise.all([
+		listLeads(db, { limit: 100 }),
+		getCrmStats(db),
+		getLeadsByStatus(db),
+		getOverdueLeads(db),
+	]);
+	const user = c.get("user");
+	return c.html(<CrmPage leads={leadResult.leads} stats={stats} kanbanData={kanbanData} overdueLeads={overdueLeadsList} user={user} />);
 });

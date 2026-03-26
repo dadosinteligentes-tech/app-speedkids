@@ -394,3 +394,39 @@ export interface TicketMessage {
 	read: number;
 	created_at: string;
 }
+
+export interface CrmLead {
+	id: number;
+	company_name: string;
+	contact_name: string;
+	contact_role: string | null;
+	email: string | null;
+	whatsapp: string | null;
+	social_profile: string | null;
+	address: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	location_type: "shopping" | "condominio" | "praca" | "evento" | null;
+	status: "novo" | "contatado" | "proposta_enviada" | "negociacao" | "ganho" | "perdido";
+	loss_reason: string | null;
+	lead_source: "maps" | "indicacao" | "ativo";
+	last_contact_at: string | null;
+	next_followup_at: string | null;
+	flow_potential: "baixo" | "medio" | "alto";
+	has_competition: number;
+	map_embed: string | null;
+	estimated_value_cents: number;
+	converted_tenant_id: number | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CrmLeadNote {
+	id: number;
+	lead_id: number;
+	user_id: number;
+	user_name: string;
+	note: string;
+	next_step: string;
+	created_at: string;
+}

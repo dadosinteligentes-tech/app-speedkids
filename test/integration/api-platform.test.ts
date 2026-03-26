@@ -247,6 +247,44 @@ async function applyMigrations(db: D1Database) {
 				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 			)
 		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS crm_leads (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				company_name TEXT NOT NULL,
+				contact_name TEXT NOT NULL,
+				contact_role TEXT,
+				email TEXT,
+				whatsapp TEXT,
+				social_profile TEXT,
+				address TEXT,
+				latitude REAL,
+				longitude REAL,
+				location_type TEXT,
+				status TEXT NOT NULL DEFAULT 'novo',
+				loss_reason TEXT,
+				lead_source TEXT DEFAULT 'ativo',
+				last_contact_at TEXT,
+				next_followup_at TEXT,
+				flow_potential TEXT DEFAULT 'medio',
+				has_competition INTEGER DEFAULT 0,
+				map_embed TEXT,
+				estimated_value_cents INTEGER DEFAULT 0,
+				converted_tenant_id INTEGER REFERENCES tenants(id),
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS crm_lead_notes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+				user_id INTEGER NOT NULL,
+				user_name TEXT NOT NULL,
+				note TEXT NOT NULL,
+				next_step TEXT NOT NULL,
+				created_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
 	]);
 }
 
@@ -675,6 +713,143 @@ describe("Platform Admin API", () => {
 			expect(row).toBeDefined();
 			expect(row!.status).toBe("failed");
 			expect(row!.error_message).toBe("SMTP timeout");
+		});
+	});
+
+	describe("CRM Leads", () => {
+		let leadId: number;
+
+		beforeAll(async () => {
+			// Seed a lead directly for subsequent tests
+			const { createLead } = await import("../../src/db/queries/crm-leads");
+			const lead = await createLead(env.DB, {
+				company_name: "Parque ABC",
+				contact_name: "João Silva",
+				contact_role: "Gerente",
+				email: "joao@parqueabc.com",
+				whatsapp: "11999990000",
+				lead_source: "maps",
+				flow_potential: "alto",
+				location_type: "shopping",
+				next_followup_at: "2025-01-01T00:00:00",
+			});
+			leadId = lead.id;
+		});
+
+		it("POST /api/platform/crm/leads creates a lead via API", async () => {
+			const res = await jsonReq("/api/platform/crm/leads", {
+				company_name: "Parque XYZ",
+				contact_name: "Maria Santos",
+				email: "maria@xyz.com",
+			});
+			expect(res.status).toBe(201);
+			const body = await res.json() as { id: number; status: string };
+			expect(body.id).toBeGreaterThan(0);
+			expect(body.status).toBe("novo");
+		});
+
+		it("rejects create without required fields", async () => {
+			const res = await jsonReq("/api/platform/crm/leads", { company_name: "" });
+			expect(res.status).toBe(400);
+		});
+
+		it("GET /api/platform/crm/leads returns list", async () => {
+			const { listLeads } = await import("../../src/db/queries/crm-leads");
+			const result = await listLeads(env.DB, { limit: 50 });
+			expect(result.leads.length).toBeGreaterThanOrEqual(1);
+			expect(result.total).toBeGreaterThanOrEqual(1);
+		});
+
+		it("searches leads by text", async () => {
+			const { listLeads } = await import("../../src/db/queries/crm-leads");
+			const result = await listLeads(env.DB, { search: "ABC" });
+			expect(result.leads.length).toBe(1);
+			expect(result.leads[0].company_name).toBe("Parque ABC");
+		});
+
+		it("filters by status", async () => {
+			const { listLeads } = await import("../../src/db/queries/crm-leads");
+			const result = await listLeads(env.DB, { status: "novo" });
+			expect(result.leads.every((l) => l.status === "novo")).toBe(true);
+		});
+
+		it("gets lead by ID", async () => {
+			const { getLeadById } = await import("../../src/db/queries/crm-leads");
+			const lead = await getLeadById(env.DB, leadId);
+			expect(lead).not.toBeNull();
+			expect(lead!.company_name).toBe("Parque ABC");
+		});
+
+		it("updates lead status", async () => {
+			const { updateLeadStatus, getLeadById } = await import("../../src/db/queries/crm-leads");
+			await updateLeadStatus(env.DB, leadId, "contatado");
+			const lead = await getLeadById(env.DB, leadId);
+			expect(lead!.status).toBe("contatado");
+			expect(lead!.last_contact_at).not.toBeNull();
+		});
+
+		it("adds note and lists notes", async () => {
+			const { addLeadNote, getLeadNotes } = await import("../../src/db/queries/crm-leads");
+			const note = await addLeadNote(env.DB, leadId, adminUserId, "Admin", "Ligação inicial", "Enviar proposta");
+			expect(note.id).toBeGreaterThan(0);
+			expect(note.next_step).toBe("Enviar proposta");
+			const notes = await getLeadNotes(env.DB, leadId);
+			expect(notes.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it("returns overdue leads", async () => {
+			const { getOverdueLeads } = await import("../../src/db/queries/crm-leads");
+			const overdue = await getOverdueLeads(env.DB);
+			expect(overdue.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it("returns CRM stats", async () => {
+			const { getCrmStats } = await import("../../src/db/queries/crm-leads");
+			const stats = await getCrmStats(env.DB);
+			expect(stats.total).toBeGreaterThanOrEqual(1);
+			expect(stats).toHaveProperty("overdue_count");
+		});
+
+		it("returns kanban data", async () => {
+			const { getLeadsByStatus } = await import("../../src/db/queries/crm-leads");
+			const kanban = await getLeadsByStatus(env.DB);
+			// Should have at least one lead in some status
+			const totalInKanban = Object.values(kanban).reduce((sum, arr) => sum + arr.length, 0);
+			expect(totalInKanban).toBeGreaterThanOrEqual(1);
+		});
+
+		it("buildPresentationEmail generates valid HTML", async () => {
+			const { buildPresentationEmail } = await import("../../src/lib/email");
+			const email = buildPresentationEmail({
+				contactName: "João",
+				companyName: "Parque ABC",
+				domain: "giro-kids.com",
+			});
+			expect(email.subject).toContain("Parque ABC");
+			expect(email.html).toContain("João");
+			expect(email.html).toContain("giro-kids.com");
+		});
+
+		it("converts lead to tenant", async () => {
+			const { markLeadConverted, getLeadById } = await import("../../src/db/queries/crm-leads");
+			const { provisionTenant } = await import("../../src/services/provisioning");
+			const tenant = await provisionTenant(env.DB, {
+				slug: "parqueabc",
+				name: "Parque ABC",
+				ownerName: "João Silva",
+				ownerEmail: "joao@parqueabc.com",
+				ownerPassword: "temp1234",
+				plan: "starter",
+			});
+			await markLeadConverted(env.DB, leadId, tenant.id);
+			const lead = await getLeadById(env.DB, leadId);
+			expect(lead!.status).toBe("ganho");
+			expect(lead!.converted_tenant_id).toBe(tenant.id);
+		});
+
+		it("returns 403 for non-platform user via API", async () => {
+			const res = await req("/api/platform/crm/leads", {}, clientCookie);
+			expect(res.status).toBe(403);
 		});
 	});
 });

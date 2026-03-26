@@ -433,3 +433,232 @@ platformApiRoutes.post("/tickets/:id/status", async (c) => {
 	await updateTicketStatus(c.env.DB, ticketId, body.status as any);
 	return c.json({ ok: true });
 });
+
+// --- CRM Leads ---
+
+import {
+	listLeads, getLeadById, createLead, updateLead, updateLeadStatus,
+	deleteLead, getLeadNotes, addLeadNote, getOverdueLeads, getCrmStats,
+	getLeadsByStatus, markLeadConverted,
+} from "../../db/queries/crm-leads";
+import { buildPresentationEmail, buildWelcomeEmail, sendAndLogEmail } from "../../lib/email";
+
+const CRM_VALID_STATUSES = ["novo", "contatado", "proposta_enviada", "negociacao", "ganho", "perdido"];
+const CRM_MAX_LENGTHS: Record<string, number> = {
+	company_name: 200, contact_name: 200, contact_role: 100, email: 254,
+	whatsapp: 30, social_profile: 200, address: 500, loss_reason: 500, map_embed: 1000,
+};
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAP_EMBED_REGEX = /^https:\/\/(www\.)?google\.com\/maps\/embed/;
+
+function validateCrmFields(body: Record<string, unknown>): string | null {
+	for (const [field, max] of Object.entries(CRM_MAX_LENGTHS)) {
+		const val = body[field];
+		if (val && typeof val === "string" && val.length > max) {
+			return `${field} excede o limite de ${max} caracteres`;
+		}
+	}
+	if (body.email && typeof body.email === "string" && !EMAIL_REGEX.test(body.email)) {
+		return "Formato de email inválido";
+	}
+	if (body.status && typeof body.status === "string" && !CRM_VALID_STATUSES.includes(body.status)) {
+		return "Status inválido";
+	}
+	if (body.map_embed && typeof body.map_embed === "string") {
+		// Extract src from pasted iframe
+		let src = body.map_embed;
+		const match = src.match(/src="([^"]+)"/);
+		if (match) src = match[1];
+		if (!MAP_EMBED_REGEX.test(src)) {
+			return "URL do mapa inválida. Use o iframe do Google Maps.";
+		}
+		body.map_embed = src;
+	}
+	return null;
+}
+
+platformApiRoutes.get("/crm/stats", async (c) => {
+	const stats = await getCrmStats(c.env.DB);
+	return c.json(stats);
+});
+
+platformApiRoutes.get("/crm/leads", async (c) => {
+	const params = {
+		status: c.req.query("status"),
+		search: c.req.query("search"),
+		source: c.req.query("source"),
+		potential: c.req.query("potential"),
+		page: c.req.query("page") ? parseInt(c.req.query("page")!, 10) : undefined,
+		limit: c.req.query("limit") ? parseInt(c.req.query("limit")!, 10) : undefined,
+	};
+	const result = await listLeads(c.env.DB, params);
+	return c.json(result);
+});
+
+platformApiRoutes.get("/crm/leads/kanban", async (c) => {
+	const data = await getLeadsByStatus(c.env.DB);
+	return c.json(data);
+});
+
+platformApiRoutes.get("/crm/leads/overdue", async (c) => {
+	const leads = await getOverdueLeads(c.env.DB);
+	return c.json(leads);
+});
+
+platformApiRoutes.get("/crm/leads/:id", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const lead = await getLeadById(c.env.DB, id);
+	if (!lead) return c.json({ error: "Lead não encontrado" }, 404);
+	return c.json(lead);
+});
+
+platformApiRoutes.post("/crm/leads", async (c) => {
+	const body = await c.req.json<Record<string, unknown>>();
+	if (!body.company_name || !body.contact_name) {
+		return c.json({ error: "Nome da empresa e nome do contato são obrigatórios" }, 400);
+	}
+	const fieldErr = validateCrmFields(body);
+	if (fieldErr) return c.json({ error: fieldErr }, 400);
+	const lead = await createLead(c.env.DB, body as any);
+	return c.json(lead, 201);
+});
+
+platformApiRoutes.put("/crm/leads/:id", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const existing = await getLeadById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Lead não encontrado" }, 404);
+	const body = await c.req.json<Record<string, unknown>>();
+	const fieldErr = validateCrmFields(body);
+	if (fieldErr) return c.json({ error: fieldErr }, 400);
+	await updateLead(c.env.DB, id, body as any);
+	return c.json({ ok: true });
+});
+
+platformApiRoutes.put("/crm/leads/:id/status", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const existing = await getLeadById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Lead não encontrado" }, 404);
+	const body = await c.req.json<{ status: string; loss_reason?: string }>();
+	if (!CRM_VALID_STATUSES.includes(body.status)) {
+		return c.json({ error: "Status inválido" }, 400);
+	}
+	await updateLeadStatus(c.env.DB, id, body.status, body.loss_reason);
+	return c.json({ ok: true });
+});
+
+platformApiRoutes.delete("/crm/leads/:id", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	await deleteLead(c.env.DB, id);
+	return c.json({ ok: true });
+});
+
+platformApiRoutes.get("/crm/leads/:id/notes", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const notes = await getLeadNotes(c.env.DB, id);
+	return c.json(notes);
+});
+
+platformApiRoutes.post("/crm/leads/:id/notes", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const user = c.get("user");
+	if (!user) return c.json({ error: "Não autenticado" }, 401);
+	const body = await c.req.json<{ note: string; next_step: string }>();
+	if (!body.note?.trim()) return c.json({ error: "Nota é obrigatória" }, 400);
+	if (!body.next_step?.trim()) return c.json({ error: "Próximo passo é obrigatório" }, 400);
+	const note = await addLeadNote(c.env.DB, id, user.id, user.name, body.note.trim(), body.next_step.trim());
+	return c.json(note, 201);
+});
+
+platformApiRoutes.post("/crm/leads/:id/send-presentation", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const lead = await getLeadById(c.env.DB, id);
+	if (!lead) return c.json({ error: "Lead não encontrado" }, 404);
+	if (!lead.email) return c.json({ error: "Lead não possui email cadastrado" }, 400);
+	if (!EMAIL_REGEX.test(lead.email)) return c.json({ error: "Email do lead é inválido" }, 400);
+
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	const body = await c.req.json<{ customMessage?: string }>().catch(() => ({} as { customMessage?: string }));
+
+	const emailParams = buildPresentationEmail({
+		contactName: lead.contact_name,
+		companyName: lead.company_name,
+		domain,
+		customMessage: body.customMessage,
+	});
+	emailParams.to = lead.email;
+
+	const sent = await sendAndLogEmail(
+		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, emailParams,
+		{ tenantId: null, recipient: lead.email, subject: emailParams.subject, eventType: "crm_presentation", metadata: { lead_id: String(id) } },
+	);
+
+	if (lead.status === "novo") {
+		await updateLeadStatus(c.env.DB, id, "contatado");
+	} else {
+		await c.env.DB.prepare("UPDATE crm_leads SET last_contact_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").bind(id).run();
+	}
+
+	return c.json({ ok: true, sent });
+});
+
+platformApiRoutes.post("/crm/leads/:id/convert", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const lead = await getLeadById(c.env.DB, id);
+	if (!lead) return c.json({ error: "Lead não encontrado" }, 404);
+	if (lead.status === "ganho") return c.json({ error: "Lead já foi convertido" }, 400);
+	if (!lead.email) return c.json({ error: "Lead precisa ter email cadastrado para ser convertido" }, 400);
+	if (!EMAIL_REGEX.test(lead.email)) return c.json({ error: "Email do lead é inválido" }, 400);
+
+	const body = await c.req.json<{ slug: string; ownerPassword: string; plan: string }>();
+	if (!body.slug || !body.ownerPassword) {
+		return c.json({ error: "Slug e senha são obrigatórios" }, 400);
+	}
+
+	const { isSlugAvailable, provisionTenant } = await import("../../services/provisioning");
+	const slug = body.slug.toLowerCase().trim();
+	const available = await isSlugAvailable(c.env.DB, slug);
+	if (!available) return c.json({ error: "Este subdomínio não está disponível" }, 400);
+
+	const plan = body.plan || "starter";
+	const tenant = await provisionTenant(c.env.DB, {
+		slug,
+		name: lead.company_name,
+		ownerName: lead.contact_name,
+		ownerEmail: lead.email,
+		ownerPassword: body.ownerPassword,
+		plan,
+	});
+
+	await markLeadConverted(c.env.DB, id, tenant.id);
+
+	// Preserve lead notes as operation logs in the new tenant
+	const notes = await getLeadNotes(c.env.DB, id);
+	for (const note of notes) {
+		await c.env.DB.prepare(
+			"INSERT INTO operation_logs (tenant_id, user_id, action, entity_type, entity_id, details, created_at) VALUES (?, NULL, 'crm.note', 'lead', ?, ?, ?)",
+		).bind(tenant.id, String(id), JSON.stringify({ note: note.note, next_step: note.next_step, by: note.user_name }), note.created_at).run();
+	}
+
+	// Send welcome email with credentials
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	const plans = await getPlanDefinitions(c.env.DB);
+	const planCfg = plans[plan];
+	const welcomeEmail = buildWelcomeEmail({
+		ownerName: lead.contact_name,
+		businessName: lead.company_name,
+		slug,
+		domain,
+		tempPassword: body.ownerPassword,
+		plan,
+		planLabel: planCfg?.label || plan,
+		priceCents: planCfg?.priceCents || 0,
+		trialDays: 30,
+	});
+	welcomeEmail.to = lead.email;
+	await sendAndLogEmail(
+		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+		{ tenantId: tenant.id, recipient: lead.email, subject: welcomeEmail.subject, eventType: "welcome_conversion", metadata: { lead_id: String(id), plan } },
+	);
+
+	return c.json({ ok: true, tenant: { id: tenant.id, slug: tenant.slug } }, 201);
+});
