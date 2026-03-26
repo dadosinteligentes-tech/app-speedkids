@@ -4,7 +4,7 @@ import { getBusinessConfig } from "../../db/queries/business-config";
 import { getSessionById } from "../../db/queries/rentals";
 import { getUserById } from "../../db/queries/users";
 import { getShiftReportById } from "../../db/queries/reports";
-import { getRegisterById, getRegisterSummary } from "../../db/queries/cash-registers";
+import { getRegisterById, getRegisterSummary, getTransactions, getDenominationEvents, getDenominationInventory } from "../../db/queries/cash-registers";
 import { RentalReceipt } from "../../views/receipts/rental-receipt";
 import { ShiftReceipt } from "../../views/receipts/shift-receipt";
 import { CashReceipt } from "../../views/receipts/cash-receipt";
@@ -78,9 +78,15 @@ receiptPages.get("/cash/:id", async (c) => {
 	const register = await getRegisterById(c.env.DB, registerId, tenantId);
 	if (!register) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Caixa nao encontrado.</p></body></html>, 404);
 
-	const summary = await getRegisterSummary(c.env.DB, registerId);
+	const [summary, transactions, denomEvents, denomInventory] = await Promise.all([
+		getRegisterSummary(c.env.DB, registerId),
+		getTransactions(c.env.DB, registerId),
+		getDenominationEvents(c.env.DB, registerId),
+		getDenominationInventory(c.env.DB, registerId),
+	]);
 	const tenant = c.get("tenant");
-	return c.html(<CashReceipt register={register} summary={summary} config={config} tenant={tenant} />);
+	return c.html(<CashReceipt register={register} summary={summary} transactions={transactions}
+		denomEvents={denomEvents} denomInventory={denomInventory} config={config} tenant={tenant} />);
 });
 
 receiptPages.get("/product-sale/:id", async (c) => {
