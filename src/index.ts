@@ -20,6 +20,7 @@ import { permissionRoutes } from "./routes/api/permissions";
 import { salesGoalRoutes } from "./routes/api/sales-goals";
 import { billingRoutes } from "./routes/api/billing";
 import { promotionRoutes } from "./routes/api/promotions";
+import { supportTicketRoutes } from "./routes/api/support-tickets";
 import { signupRoutes } from "./routes/api/signup";
 import { stripeWebhookRoutes } from "./routes/api/stripe-webhook";
 import { setupRoutes } from "./routes/api/setup";
@@ -73,6 +74,7 @@ app.route("/api/permissions", permissionRoutes);
 app.route("/api/sales-goals", salesGoalRoutes);
 app.route("/api/billing", billingRoutes);
 app.route("/api/promotions", promotionRoutes);
+app.route("/api/support-tickets", supportTicketRoutes);
 
 // Landing pages (public site)
 app.route("/landing", landingPages);

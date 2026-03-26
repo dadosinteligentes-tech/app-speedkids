@@ -38,6 +38,7 @@ function toggleEdit(key) {
 		document.getElementById('price-' + key).value = (plansData[key].priceCents / 100).toFixed(2);
 		document.getElementById('users-' + key).value = plansData[key].maxUsers;
 		document.getElementById('assets-' + key).value = plansData[key].maxAssets;
+		document.getElementById('tickets-' + key).checked = !!plansData[key].hasTickets;
 		view.classList.add('hidden');
 		edit.classList.remove('hidden');
 	}
@@ -56,6 +57,7 @@ function savePlan(key) {
 	plansData[key].priceCents = Math.round(price * 100);
 	plansData[key].maxUsers = maxUsers;
 	plansData[key].maxAssets = maxAssets;
+	plansData[key].hasTickets = document.getElementById('tickets-' + key).checked;
 
 	var btn = document.getElementById('save-btn-' + key);
 	btn.disabled = true;
@@ -113,6 +115,12 @@ function savePlan(key) {
 										<span class="text-sk-muted font-body">Max. ativos</span>
 										<span class="font-medium text-sk-text font-body">{plan.maxAssets}</span>
 									</div>
+									<div class="flex items-center justify-between text-sm">
+										<span class="text-sk-muted font-body">Tickets de suporte</span>
+										<span class={`font-medium font-body ${plan.hasTickets ? "text-sk-green-dark" : "text-sk-muted"}`}>
+											{plan.hasTickets ? "✓ Incluído" : "✗ Não incluído"}
+										</span>
+									</div>
 								</div>
 								<button onclick={`toggleEdit('${key}')`} class="mt-5 w-full py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-medium font-display text-sm transition-colors">
 									Editar
@@ -133,6 +141,10 @@ function savePlan(key) {
 									<div>
 										<label class="block text-sm font-medium text-sk-text font-display mb-1">Max. ativos</label>
 										<input id={`assets-${key}`} type="number" min="1" class="w-full px-3 py-2.5 border-2 border-sk-border/50 rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" />
+									</div>
+									<div class="flex items-center gap-3 pt-1">
+										<input id={`tickets-${key}`} type="checkbox" checked={!!plan.hasTickets} class="w-4 h-4 rounded accent-sk-blue" />
+										<label class="text-sm font-medium text-sk-text font-display">Tickets de suporte</label>
 									</div>
 								</div>
 								<div class="flex gap-2 mt-4">

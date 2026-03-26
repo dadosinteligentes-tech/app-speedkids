@@ -369,3 +369,28 @@ export interface SalesGoalProgress extends SalesGoal {
 	user_name: string | null;
 	created_by_name: string;
 }
+
+export interface SupportTicket {
+	id: number;
+	tenant_id: number;
+	subject: string;
+	status: "open" | "awaiting_reply" | "resolved" | "closed";
+	priority: "low" | "normal" | "high" | "urgent";
+	created_by: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TicketMessage {
+	id: number;
+	ticket_id: number;
+	sender_type: "tenant" | "platform";
+	sender_id: number;
+	sender_name: string;
+	message: string;
+	attachment_key: string | null;
+	attachment_name: string | null;
+	attachment_type: string | null;
+	read: number;
+	created_at: string;
+}

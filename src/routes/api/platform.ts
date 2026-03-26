@@ -356,3 +356,80 @@ platformApiRoutes.get("/subscriptions", async (c) => {
 	const subs = await getSubscriptionDetails(c.env.DB);
 	return c.json(subs);
 });
+
+// --- Support tickets (platform side) ---
+
+import {
+	getAllTickets,
+	getTicketById,
+	getTicketMessages,
+	addMessage as addTicketMessage,
+	markMessagesRead,
+	updateTicketStatus,
+	getUnreadTicketCount,
+} from "../../db/queries/support-tickets";
+
+platformApiRoutes.get("/tickets", async (c) => {
+	const tickets = await getAllTickets(c.env.DB);
+	return c.json(tickets);
+});
+
+platformApiRoutes.get("/tickets/unread", async (c) => {
+	const count = await getUnreadTicketCount(c.env.DB);
+	return c.json({ count });
+});
+
+platformApiRoutes.get("/tickets/:id/messages", async (c) => {
+	const ticketId = parseInt(c.req.param("id"), 10);
+	const afterId = c.req.query("after") ? parseInt(c.req.query("after")!, 10) : undefined;
+	const messages = await getTicketMessages(c.env.DB, ticketId, afterId);
+	await markMessagesRead(c.env.DB, ticketId, "platform");
+	const ticket = await getTicketById(c.env.DB, ticketId, null);
+	const enriched = messages.map((m) => ({
+		...m,
+		attachment_url: m.attachment_key ? `/api/support-tickets/attachments/${m.attachment_key}` : null,
+	}));
+	return c.json({ messages: enriched, ticket: ticket ? { status: ticket.status, tenant_name: ticket.tenant_name } : null });
+});
+
+platformApiRoutes.post("/tickets/:id/messages", async (c) => {
+	const user = c.get("user");
+	if (!user) return c.json({ error: "Não autenticado" }, 401);
+	const ticketId = parseInt(c.req.param("id"), 10);
+
+	const contentType = c.req.header("content-type") || "";
+	let message = "";
+	let attachment: { key: string; name: string; type: string } | undefined;
+
+	if (contentType.includes("multipart/form-data")) {
+		const formData = await c.req.formData();
+		message = (formData.get("message") as string)?.trim() || "";
+		const file = formData.get("file") as File | null;
+		if (file && file.size > 0 && file.size <= 10 * 1024 * 1024) {
+			const ext = file.name.split(".").pop() || "bin";
+			const key = `tickets/${ticketId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+			await c.env.B_BUCKET_SPEEDKIDS.put(key, file.stream(), {
+				httpMetadata: { contentType: file.type },
+			});
+			attachment = { key, name: file.name, type: file.type };
+			if (!message) message = `📎 ${file.name}`;
+		}
+	} else {
+		const body = await c.req.json<{ message: string }>();
+		message = body.message?.trim() || "";
+	}
+
+	if (!message) return c.json({ error: "Mensagem obrigatória" }, 400);
+	const msg = await addTicketMessage(c.env.DB, ticketId, "platform", user.id, user.name, message, attachment);
+	return c.json(msg, 201);
+});
+
+platformApiRoutes.post("/tickets/:id/status", async (c) => {
+	const ticketId = parseInt(c.req.param("id"), 10);
+	const body = await c.req.json<{ status: string }>();
+	if (!["open", "awaiting_reply", "resolved", "closed"].includes(body.status)) {
+		return c.json({ error: "Status inválido" }, 400);
+	}
+	await updateTicketStatus(c.env.DB, ticketId, body.status as any);
+	return c.json({ ok: true });
+});

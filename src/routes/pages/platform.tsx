@@ -18,6 +18,8 @@ import { PlatformReports } from "../../views/platform/reports";
 import { PlatformUsersList } from "../../views/platform/users-list";
 import { PlatformSubscriptions } from "../../views/platform/subscriptions";
 import { PlatformEmailLogs } from "../../views/platform/email-logs";
+import { PlatformTickets } from "../../views/platform/tickets";
+import { getAllTickets } from "../../db/queries/support-tickets";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 
 export const platformPages = new Hono<AppEnv>();
@@ -134,4 +136,11 @@ platformPages.get("/emails", async (c) => {
 		}>();
 	const user = c.get("user");
 	return c.html(<PlatformEmailLogs logs={results} user={user} />);
+});
+
+// Tickets
+platformPages.get("/tickets", async (c) => {
+	const tickets = await getAllTickets(c.env.DB);
+	const user = c.get("user");
+	return c.html(<PlatformTickets tickets={tickets} user={user} />);
 });

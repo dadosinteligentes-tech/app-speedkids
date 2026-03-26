@@ -208,6 +208,33 @@ async function applyMigrations(db: D1Database) {
 			)
 		`),
 		db.prepare(`
+			CREATE TABLE IF NOT EXISTS support_tickets (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL REFERENCES tenants(id),
+				subject TEXT NOT NULL,
+				status TEXT NOT NULL DEFAULT 'open',
+				priority TEXT NOT NULL DEFAULT 'normal',
+				created_by INTEGER NOT NULL REFERENCES users(id),
+				created_at TEXT NOT NULL DEFAULT (datetime('now')),
+				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS ticket_messages (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				ticket_id INTEGER NOT NULL REFERENCES support_tickets(id),
+				sender_type TEXT NOT NULL,
+				sender_id INTEGER NOT NULL REFERENCES users(id),
+				sender_name TEXT NOT NULL,
+				message TEXT NOT NULL,
+				attachment_key TEXT,
+				attachment_name TEXT,
+				attachment_type TEXT,
+				read INTEGER NOT NULL DEFAULT 0,
+				created_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
 			CREATE TABLE IF NOT EXISTS abandoned_checkouts (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				slug TEXT NOT NULL,
@@ -560,6 +587,58 @@ describe("Platform Admin API", () => {
 			results = await getAbandonedCheckouts(env.DB);
 			const converted = results.find((a) => a.slug === "test-abandoned");
 			expect(converted).toBeUndefined(); // converted=1 is filtered out
+		});
+	});
+
+	describe("Support tickets", () => {
+		it("creates a ticket and adds messages", async () => {
+			const { createTicket, getTicketsByTenant, addMessage, getTicketMessages, markMessagesRead, getUnreadTicketCount, getTenantUnreadCount }
+				= await import("../../src/db/queries/support-tickets");
+
+			// Create ticket as tenant user
+			const ticket = await createTicket(env.DB, clientTenantId, 1, "Ajuda com relatórios", "Não consigo exportar relatórios", "Client Owner");
+			expect(ticket.id).toBeGreaterThan(0);
+			expect(ticket.status).toBe("open");
+
+			// List tickets
+			const tickets = await getTicketsByTenant(env.DB, clientTenantId);
+			expect(tickets.length).toBeGreaterThanOrEqual(1);
+			expect(tickets[0].subject).toBe("Ajuda com relatórios");
+
+			// Platform admin replies
+			const reply = await addMessage(env.DB, ticket.id, "platform", adminUserId, "Platform Admin", "Claro, vou te ajudar!");
+			expect(reply.sender_type).toBe("platform");
+
+			// Check messages
+			const messages = await getTicketMessages(env.DB, ticket.id);
+			expect(messages.length).toBe(2);
+			expect(messages[0].message).toContain("relatórios");
+			expect(messages[1].message).toContain("ajudar");
+
+			// Unread counts
+			const tenantUnread = await getTenantUnreadCount(env.DB, clientTenantId);
+			expect(tenantUnread).toBeGreaterThanOrEqual(1);
+
+			// Mark as read
+			await markMessagesRead(env.DB, ticket.id, "tenant");
+			const afterRead = await getTenantUnreadCount(env.DB, clientTenantId);
+			expect(afterRead).toBe(0);
+
+			// Polling - get messages after a certain ID
+			const newMsgs = await getTicketMessages(env.DB, ticket.id, messages[0].id);
+			expect(newMsgs.length).toBe(1);
+			expect(newMsgs[0].sender_type).toBe("platform");
+		});
+
+		it("getAllTickets returns tickets for platform admin", async () => {
+			const { getAllTickets, updateTicketStatus } = await import("../../src/db/queries/support-tickets");
+			// Ensure there's an open ticket
+			const { createTicket } = await import("../../src/db/queries/support-tickets");
+			await createTicket(env.DB, clientTenantId, 1, "Outro problema", "Detalhe aqui", "Client Owner");
+			const all = await getAllTickets(env.DB);
+			expect(all.length).toBeGreaterThanOrEqual(1);
+			expect(all[0]).toHaveProperty("tenant_name");
+			expect(all[0]).toHaveProperty("unread_count");
 		});
 	});
 

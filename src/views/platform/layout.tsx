@@ -116,6 +116,7 @@ export const PlatformLayout: FC<PropsWithChildren<PlatformLayoutProps>> = ({
 						<a href="/platform/users" class="text-white/80 hover:text-white transition-colors">Usuários</a>
 						<a href="/platform/subscriptions" class="text-white/80 hover:text-white transition-colors">Assinaturas</a>
 						<a href="/platform/emails" class="text-white/80 hover:text-white transition-colors">Emails</a>
+						<a href="/platform/tickets" class="text-white/80 hover:text-white transition-colors">Tickets</a>
 						<a href="/platform/superadmins" class="text-white/80 hover:text-white transition-colors">Admins</a>
 						<a href="/platform/plans" class="text-white/80 hover:text-white transition-colors">Planos</a>
 						<span class="text-white/30">|</span>

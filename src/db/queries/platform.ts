@@ -451,6 +451,7 @@ export interface PlanConfig {
 	maxUsers: number;
 	maxAssets: number;
 	priceCents: number;
+	hasTickets?: boolean;
 }
 
 export async function getPlanDefinitions(db: D1Database): Promise<Record<string, PlanConfig>> {
@@ -462,10 +463,21 @@ export async function getPlanDefinitions(db: D1Database): Promise<Record<string,
 
 	// Hardcoded defaults
 	return {
-		starter: { label: "Starter", maxUsers: 3, maxAssets: 10, priceCents: 9700 },
-		pro: { label: "Pro", maxUsers: 10, maxAssets: 50, priceCents: 19700 },
-		enterprise: { label: "Enterprise", maxUsers: 50, maxAssets: 200, priceCents: 39700 },
+		starter: { label: "Starter", maxUsers: 3, maxAssets: 10, priceCents: 9700, hasTickets: false },
+		pro: { label: "Pro", maxUsers: 10, maxAssets: 50, priceCents: 19700, hasTickets: true },
+		enterprise: { label: "Enterprise", maxUsers: 50, maxAssets: 200, priceCents: 39700, hasTickets: true },
 	};
+}
+
+export async function tenantHasTickets(db: D1Database, tenantId: number): Promise<boolean> {
+	const tenant = await db
+		.prepare("SELECT plan FROM tenants WHERE id = ?")
+		.bind(tenantId)
+		.first<{ plan: string }>();
+	if (!tenant) return false;
+	const plans = await getPlanDefinitions(db);
+	const cfg = plans[tenant.plan];
+	return cfg?.hasTickets ?? false;
 }
 
 export async function updatePlanDefinitions(

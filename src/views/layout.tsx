@@ -376,6 +376,270 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 			</script>`}
 
 			{bodyScripts ?? ""}
+
+			{/* ── Support Chat Widget ── */}
+			{user && html`
+			<div id="sk-chat-widget" style="position:fixed;bottom:20px;right:20px;z-index:9999">
+				<div id="sk-chat-panel" style="display:none;width:360px;max-height:500px;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);overflow:hidden;flex-direction:column;border:2px solid ${brandPalette.DEFAULT}">
+					<!-- Header -->
+					<div style="background:linear-gradient(135deg,${brandPalette.DEFAULT},${brandPalette.dark});padding:14px 16px;color:white;display:flex;align-items:center;justify-content:space-between">
+						<div style="display:flex;align-items:center;gap:8px">
+							<span style="font-size:18px">💬</span>
+							<span style="font-family:Fredoka,sans-serif;font-weight:700;font-size:14px" id="sk-chat-title">Suporte</span>
+						</div>
+						<button onclick="skChatToggle()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;padding:0;line-height:1">&times;</button>
+					</div>
+					<!-- Ticket list / conversation -->
+					<div id="sk-chat-body" style="flex:1;overflow-y:auto;max-height:350px;min-height:200px">
+						<div style="padding:20px;text-align:center;color:#999;font-family:Quicksand,sans-serif;font-size:13px">Carregando...</div>
+					</div>
+					<!-- Input area -->
+					<div id="sk-chat-input" style="display:none;padding:10px;border-top:1px solid #eee;background:#fafafa">
+						<div id="sk-chat-attachment-preview" style="display:none;padding:4px 8px;margin-bottom:6px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;font-size:12px;font-family:Quicksand,sans-serif;display:none;align-items:center;gap:6px">
+							<span>📎</span><span id="sk-chat-attachment-name"></span>
+							<button onclick="skChatClearAttachment()" style="background:none;border:none;color:#999;cursor:pointer;font-size:14px;margin-left:auto">&times;</button>
+						</div>
+						<form onsubmit="skChatSend(event)" style="display:flex;gap:8px;align-items:center">
+							<label style="cursor:pointer;font-size:18px;padding:4px;flex-shrink:0" title="Anexar arquivo">
+								📎
+								<input id="sk-chat-file" type="file" style="display:none" onchange="skChatFileSelected(this)" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+							</label>
+							<input id="sk-chat-msg" type="text" placeholder="Digite sua mensagem..." style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-family:Quicksand,sans-serif;font-size:13px;outline:none" autocomplete="off" />
+							<button type="submit" style="background:${brandPalette.DEFAULT};color:white;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:Fredoka,sans-serif;font-weight:700;font-size:13px">Enviar</button>
+						</form>
+					</div>
+				</div>
+				<!-- FAB with pulse animation -->
+				<style>
+					@keyframes sk-pulse {
+						0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+						70% { box-shadow: 0 0 0 14px rgba(239,68,68,0); }
+						100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+					}
+					.sk-fab-pulse { animation: sk-pulse 1.5s infinite; }
+				</style>
+				<button id="sk-chat-fab" onclick="skChatToggle()" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${brandPalette.DEFAULT},${brandPalette.dark});color:white;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);font-size:24px;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-top:8px;position:relative;transition:transform 0.2s">
+					💬
+					<span id="sk-chat-badge" style="position:absolute;top:-4px;right:-4px;background:#EF4444;color:white;font-size:11px;font-weight:bold;border-radius:50%;width:20px;height:20px;align-items:center;justify-content:center;font-family:sans-serif;display:none">0</span>
+				</button>
+			</div>
+			<script>
+${raw(`
+var skChatOpen = false;
+var skChatView = 'list'; // list | conversation | new
+var skChatCurrentTicket = null;
+var skChatLastMsgId = 0;
+var skChatPollTimer = null;
+
+function skChatToggle() {
+	skChatOpen = !skChatOpen;
+	var panel = document.getElementById('sk-chat-panel');
+	panel.style.display = skChatOpen ? 'flex' : 'none';
+	if (skChatOpen) {
+		skChatLoadList();
+	} else {
+		if (skChatPollTimer) { clearInterval(skChatPollTimer); skChatPollTimer = null; }
+	}
+}
+
+function skChatLoadList() {
+	skChatView = 'list';
+	skChatCurrentTicket = null;
+	if (skChatPollTimer) { clearInterval(skChatPollTimer); skChatPollTimer = null; }
+	document.getElementById('sk-chat-title').textContent = 'Suporte';
+	document.getElementById('sk-chat-input').style.display = 'none';
+	var body = document.getElementById('sk-chat-body');
+	body.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">Carregando...</div>';
+
+	fetch('/api/support-tickets')
+		.then(function(r) {
+			if (r.status === 403) return r.json().then(function(d) { throw { noAccess: true, msg: d.error }; });
+			return r.json();
+		})
+		.then(function(tickets) {
+			var html = '<div style="padding:8px">';
+			html += '<button onclick="skChatNewTicket()" style="width:100%;padding:10px;background:#F97316;color:white;border:none;border-radius:8px;font-family:Fredoka,sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">+ Nova conversa</button>';
+			if (tickets.length === 0) {
+				html += '<p style="text-align:center;color:#999;font-size:13px;padding:16px;font-family:Quicksand,sans-serif">Nenhum chamado aberto</p>';
+			}
+			tickets.forEach(function(t) {
+				var statusColors = { open: '#22C55E', awaiting_reply: '#F97316', resolved: '#6B7280', closed: '#9CA3AF' };
+				var statusLabels = { open: 'Aberto', awaiting_reply: 'Aguardando', resolved: 'Resolvido', closed: 'Fechado' };
+				var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (statusColors[t.status] || '#999') + ';margin-right:6px"></span>';
+				var unread = t.unread_count > 0 ? '<span style="background:#EF4444;color:white;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:auto">' + t.unread_count + '</span>' : '';
+				html += '<div onclick="skChatOpenTicket(' + t.id + ',\\'' + t.subject.replace(/'/g, "\\\\'") + '\\')" style="padding:10px 12px;border:1px solid #eee;border-radius:8px;margin-bottom:4px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:background 0.15s" onmouseover="this.style.background=\\'#f5f5f5\\'" onmouseout="this.style.background=\\'white\\'">';
+				html += '<div style="flex:1;min-width:0"><div style="font-family:Fredoka,sans-serif;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + dot + t.subject + '</div>';
+				html += '<div style="font-size:11px;color:#999;font-family:Quicksand,sans-serif;margin-top:2px">' + (statusLabels[t.status] || t.status) + ' · ' + t.message_count + ' msgs</div></div>' + unread + '</div>';
+			});
+			html += '</div>';
+			body.innerHTML = html;
+		})
+		.catch(function(err) {
+			if (err && err.noAccess) {
+				body.innerHTML = '<div style="padding:24px;text-align:center">'
+					+ '<div style="font-size:32px;margin-bottom:8px">🔒</div>'
+					+ '<p style="font-family:Fredoka,sans-serif;font-weight:700;font-size:14px;color:#333;margin-bottom:4px">Suporte por tickets</p>'
+					+ '<p style="font-family:Quicksand,sans-serif;font-size:12px;color:#999;margin-bottom:12px">' + (err.msg || 'Seu plano não inclui esta funcionalidade.') + '</p>'
+					+ '<a href="/admin/plan" style="display:inline-block;padding:8px 16px;background:#F97316;color:white;border-radius:8px;font-family:Fredoka,sans-serif;font-weight:700;font-size:12px;text-decoration:none">Ver planos</a>'
+					+ '</div>';
+			}
+		});
+}
+
+function skChatNewTicket() {
+	skChatView = 'new';
+	document.getElementById('sk-chat-title').textContent = 'Novo chamado';
+	document.getElementById('sk-chat-input').style.display = 'none';
+	var body = document.getElementById('sk-chat-body');
+	body.innerHTML = '<div style="padding:16px">'
+		+ '<input id="sk-new-subject" type="text" placeholder="Assunto" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:Quicksand,sans-serif;font-size:13px;margin-bottom:8px;box-sizing:border-box;outline:none" />'
+		+ '<textarea id="sk-new-message" placeholder="Descreva sua dúvida ou problema..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-family:Quicksand,sans-serif;font-size:13px;height:100px;resize:none;box-sizing:border-box;outline:none"></textarea>'
+		+ '<div style="display:flex;gap:8px;margin-top:8px">'
+		+ '<button onclick="skChatSubmitNew()" style="flex:1;padding:10px;background:#F97316;color:white;border:none;border-radius:8px;font-family:Fredoka,sans-serif;font-weight:700;font-size:13px;cursor:pointer">Enviar</button>'
+		+ '<button onclick="skChatLoadList()" style="flex:1;padding:10px;background:#eee;color:#333;border:none;border-radius:8px;font-family:Fredoka,sans-serif;font-weight:600;font-size:13px;cursor:pointer">Cancelar</button>'
+		+ '</div></div>';
+}
+
+function skChatSubmitNew() {
+	var subject = document.getElementById('sk-new-subject').value.trim();
+	var message = document.getElementById('sk-new-message').value.trim();
+	if (!subject || !message) return;
+	fetch('/api/support-tickets', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ subject: subject, message: message })
+	})
+	.then(function(r) { return r.json(); })
+	.then(function(t) { skChatOpenTicket(t.id, t.subject); });
+}
+
+function skChatOpenTicket(id, subject) {
+	skChatView = 'conversation';
+	skChatCurrentTicket = id;
+	skChatLastMsgId = 0;
+	document.getElementById('sk-chat-title').innerHTML = '<span onclick="skChatLoadList()" style="cursor:pointer;margin-right:6px">&larr;</span> ' + subject;
+	document.getElementById('sk-chat-input').style.display = 'block';
+	document.getElementById('sk-chat-body').innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">Carregando...</div>';
+	skChatFetchMessages(false);
+	if (skChatPollTimer) clearInterval(skChatPollTimer);
+	skChatPollTimer = setInterval(function() { skChatFetchMessages(true); }, 5000);
+}
+
+var skChatPendingFile = null;
+
+function skChatRenderAttachment(m) {
+	if (!m.attachment_url) return '';
+	var name = m.attachment_name || 'Anexo';
+	var isImage = /\\.(jpg|jpeg|png|gif|webp)$/i.test(name);
+	if (isImage) {
+		return '<div style="margin-top:6px"><img src="' + m.attachment_url + '" alt="' + name + '" style="max-width:200px;max-height:150px;border-radius:8px;cursor:pointer" onclick="window.open(this.src)" /></div>';
+	}
+	return '<div style="margin-top:6px"><a href="' + m.attachment_url + '" target="_blank" style="color:inherit;text-decoration:underline;font-size:12px">📎 ' + name + '</a></div>';
+}
+
+function skChatFetchMessages(isPolling) {
+	var url = '/api/support-tickets/' + skChatCurrentTicket + '/messages';
+	if (isPolling && skChatLastMsgId > 0) url += '?after=' + skChatLastMsgId;
+	fetch(url)
+		.then(function(r) { return r.json(); })
+		.then(function(data) {
+			var body = document.getElementById('sk-chat-body');
+			if (!isPolling || skChatLastMsgId === 0) body.innerHTML = '';
+			data.messages.forEach(function(m) {
+				skChatLastMsgId = Math.max(skChatLastMsgId, m.id);
+				var isMine = m.sender_type === 'tenant';
+				var align = isMine ? 'flex-end' : 'flex-start';
+				var bg = isMine ? '#F97316' : '#f0f0f0';
+				var color = isMine ? 'white' : '#333';
+				var time = m.created_at ? m.created_at.slice(11, 16) : '';
+				var attachHtml = skChatRenderAttachment(m);
+				var div = document.createElement('div');
+				div.style.cssText = 'display:flex;flex-direction:column;align-items:' + align + ';padding:4px 12px';
+				div.innerHTML = '<div style="max-width:80%;padding:8px 12px;border-radius:12px;background:' + bg + ';color:' + color + ';font-family:Quicksand,sans-serif;font-size:13px;line-height:1.4;word-break:break-word">' + m.message.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>') + attachHtml + '</div>'
+					+ '<div style="font-size:10px;color:#999;margin-top:2px;font-family:sans-serif">' + (isMine ? '' : m.sender_name + ' · ') + time + '</div>';
+				body.appendChild(div);
+			});
+			if (!isPolling || data.messages.length > 0) body.scrollTop = body.scrollHeight;
+			if (data.ticket && (data.ticket.status === 'closed')) {
+				document.getElementById('sk-chat-input').style.display = 'none';
+			}
+		});
+}
+
+function skChatFileSelected(input) {
+	if (input.files && input.files[0]) {
+		skChatPendingFile = input.files[0];
+		document.getElementById('sk-chat-attachment-name').textContent = skChatPendingFile.name;
+		document.getElementById('sk-chat-attachment-preview').style.display = 'flex';
+	}
+}
+
+function skChatClearAttachment() {
+	skChatPendingFile = null;
+	document.getElementById('sk-chat-file').value = '';
+	document.getElementById('sk-chat-attachment-preview').style.display = 'none';
+}
+
+function skChatSend(e) {
+	e.preventDefault();
+	var input = document.getElementById('sk-chat-msg');
+	var msg = input.value.trim();
+	if (!msg && !skChatPendingFile) return;
+	input.value = '';
+
+	if (skChatPendingFile) {
+		var formData = new FormData();
+		formData.append('message', msg || '📎 ' + skChatPendingFile.name);
+		formData.append('file', skChatPendingFile);
+		skChatClearAttachment();
+		fetch('/api/support-tickets/' + skChatCurrentTicket + '/messages', {
+			method: 'POST',
+			body: formData
+		}).then(function() { skChatFetchMessages(true); });
+	} else {
+		fetch('/api/support-tickets/' + skChatCurrentTicket + '/messages', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ message: msg })
+		}).then(function() { skChatFetchMessages(true); });
+	}
+}
+
+// Poll unread count for badge + pulse animation
+setInterval(function() {
+	if (skChatOpen && skChatView === 'conversation') return;
+	fetch('/api/support-tickets/unread')
+		.then(function(r) { return r.json(); })
+		.then(function(d) {
+			var badge = document.getElementById('sk-chat-badge');
+			var fab = document.getElementById('sk-chat-fab');
+			if (d.count > 0) {
+				badge.textContent = d.count;
+				badge.style.display = 'flex';
+				fab.classList.add('sk-fab-pulse');
+			} else {
+				badge.style.display = 'none';
+				fab.classList.remove('sk-fab-pulse');
+			}
+		})
+		.catch(function(){});
+}, 15000);
+// Initial check on load
+setTimeout(function() {
+	fetch('/api/support-tickets/unread')
+		.then(function(r) { return r.json(); })
+		.then(function(d) {
+			if (d.count > 0) {
+				document.getElementById('sk-chat-badge').textContent = d.count;
+				document.getElementById('sk-chat-badge').style.display = 'flex';
+				document.getElementById('sk-chat-fab').classList.add('sk-fab-pulse');
+			}
+		}).catch(function(){});
+}, 2000);
+`)}
+			</script>
+			`}
+
 		</body>
 	</html>
 	);
