@@ -79,6 +79,10 @@ app.route("/api/support-tickets", supportTicketRoutes);
 // Landing pages (public site)
 app.route("/landing", landingPages);
 
+// Legal pages (public)
+import { legalPages } from "./routes/pages/legal";
+app.route("/legal", legalPages);
+
 // Platform admin pages
 app.route("/platform", platformPages);
 app.get("/platform/", (c) => c.redirect("/platform"));

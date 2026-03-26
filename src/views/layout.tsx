@@ -377,6 +377,17 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 
 			{bodyScripts ?? ""}
 
+			{/* Footer */}
+			<footer style="padding:12px 16px;text-align:center;font-size:11px;color:#94A3B8;font-family:Quicksand,sans-serif;border-top:1px solid #E2E8F0;margin-top:auto">
+				<span>DADOS INTELIGENTES LTDA — CNPJ: 47.773.826/0001-57</span>
+				<span style="margin:0 8px">|</span>
+				<a href="/legal/terms" style="color:#94A3B8;text-decoration:underline" target="_blank">Termos</a>
+				<span style="margin:0 4px">&middot;</span>
+				<a href="/legal/privacy" style="color:#94A3B8;text-decoration:underline" target="_blank">Privacidade</a>
+				<span style="margin:0 4px">&middot;</span>
+				<a href="/legal/lgpd" style="color:#94A3B8;text-decoration:underline" target="_blank">LGPD</a>
+			</footer>
+
 			{/* ── Support Chat Widget ── */}
 			{user && html`
 			<div id="sk-chat-widget" style="position:fixed;bottom:20px;right:20px;z-index:9999">

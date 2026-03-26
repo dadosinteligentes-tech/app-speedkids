@@ -117,6 +117,7 @@ export const PlatformLayout: FC<PropsWithChildren<PlatformLayoutProps>> = ({
 						<a href="/platform/subscriptions" class="text-white/80 hover:text-white transition-colors">Assinaturas</a>
 						<a href="/platform/emails" class="text-white/80 hover:text-white transition-colors">Emails</a>
 						<a href="/platform/tickets" class="text-white/80 hover:text-white transition-colors">Tickets</a>
+						<a href="/platform/crm" class="text-white/80 hover:text-white transition-colors">CRM</a>
 						<a href="/platform/superadmins" class="text-white/80 hover:text-white transition-colors">Admins</a>
 						<a href="/platform/plans" class="text-white/80 hover:text-white transition-colors">Planos</a>
 						<span class="text-white/30">|</span>
@@ -154,6 +155,16 @@ export const PlatformLayout: FC<PropsWithChildren<PlatformLayoutProps>> = ({
 					{children}
 				</div>
 			</main>
+
+			{/* Footer */}
+			<footer class="mt-auto py-4 text-center text-xs text-sk-muted font-body">
+				<p>DADOS INTELIGENTES LTDA — CNPJ: 47.773.826/0001-57</p>
+				<div class="flex items-center justify-center gap-3 mt-1">
+					<a href="/legal/terms" class="hover:text-sk-text underline">Termos</a>
+					<a href="/legal/privacy" class="hover:text-sk-text underline">Privacidade</a>
+					<a href="/legal/lgpd" class="hover:text-sk-text underline">LGPD</a>
+				</div>
+			</footer>
 
 			{/* Toast helper */}
 			{html`<script>

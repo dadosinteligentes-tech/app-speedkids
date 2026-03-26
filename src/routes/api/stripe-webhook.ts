@@ -288,7 +288,8 @@ function buildPaymentFailedEmail(tenantName: string, attemptCount: number): stri
       </p>
     </div>
     <div style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
-      <p style="margin: 0; font-size: 11px; color: #9CA3AF;">Giro Kids — Sistema de Gestão para Parques de Diversão</p>
+      <p style="margin: 0 0 4px; font-size: 11px; color: #9CA3AF;">Giro Kids — DADOS INTELIGENTES LTDA — CNPJ: 47.773.826/0001-57</p>
+      <p style="margin: 0; font-size: 10px; color: #C0C4CC;"><a href="https://giro-kids.com/legal/terms" style="color:#C0C4CC">Termos</a> · <a href="https://giro-kids.com/legal/privacy" style="color:#C0C4CC">Privacidade</a></p>
     </div>
   </div>
 </body>

@@ -463,12 +463,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						<div class="flex items-center justify-center gap-2 mb-3">
 							<img src="/logo-girokids.png" alt="Giro Kids" class="h-10 brightness-0 invert" />
 						</div>
-						<p class="font-body text-white/80 text-sm mb-4">
+						<p class="font-body text-white/80 text-sm mb-3">
 							Sistema de gestão para parques infantis e espaços de diversão
 						</p>
-						<p class="font-body text-white/60 text-xs">
-							&copy; {new Date().getFullYear()} Giro Kids. Todos os direitos reservados.
-						</p>
+						<div class="flex items-center justify-center gap-4 mb-4 text-xs font-body">
+							<a href="/legal/terms" class="text-white/70 hover:text-white underline">Termos de Uso</a>
+							<a href="/legal/privacy" class="text-white/70 hover:text-white underline">Privacidade</a>
+							<a href="/legal/lgpd" class="text-white/70 hover:text-white underline">LGPD</a>
+						</div>
+						<div class="font-body text-white/50 text-xs space-y-0.5">
+							<p class="font-display font-medium text-white/60">DADOS INTELIGENTES LTDA</p>
+							<p>CNPJ: 47.773.826/0001-57</p>
+							<p>Av. dos Holandeses, n. 7, Edif. Metr. Market Place, Sala 507, CEP 65.071-380, Calhau, São Luís - MA</p>
+							<p class="mt-2">&copy; {new Date().getFullYear()} Giro Kids. Todos os direitos reservados.</p>
+						</div>
 					</div>
 				</footer>
 
