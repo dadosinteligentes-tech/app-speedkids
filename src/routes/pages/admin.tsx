@@ -21,6 +21,7 @@ import { getAllPermissions, getAllRolePermissions } from "../../db/queries/permi
 import { PermissionsMatrix } from "../../views/admin/permissions-matrix";
 import { MyPlan } from "../../views/admin/my-plan";
 import { getLimitsForPlan, getTenantUsage } from "../../lib/plan-limits";
+import { getPlanDefinitions } from "../../db/queries/platform";
 import { getPromotionUsageStats } from "../../db/queries/promotions";
 import { PromotionsList } from "../../views/admin/promotions-list";
 
@@ -127,9 +128,16 @@ adminPages.get("/plan", async (c) => {
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
 	const limits = getLimitsForPlan(tenant?.plan || "starter");
-	const usage = await getTenantUsage(c.env.DB, tenantId);
+	const [usage, plans, subscription] = await Promise.all([
+		getTenantUsage(c.env.DB, tenantId),
+		getPlanDefinitions(c.env.DB),
+		c.env.DB.prepare("SELECT stripe_customer_id, plan, status FROM subscriptions WHERE tenant_id = ? LIMIT 1")
+			.bind(tenantId).first<{ stripe_customer_id: string | null; plan: string; status: string }>(),
+	]);
 	const user = c.get("user");
-	return c.html(<MyPlan tenant={tenant} limits={limits} usage={usage} user={user} isPlatformAdmin={isPlatformAdmin} />);
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	return c.html(<MyPlan tenant={tenant} limits={limits} usage={usage} user={user} isPlatformAdmin={isPlatformAdmin}
+		plans={plans} hasStripeSubscription={!!subscription?.stripe_customer_id} domain={domain} />);
 });
 
 // Business settings requires settings.manage permission
