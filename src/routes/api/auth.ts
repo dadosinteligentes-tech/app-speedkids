@@ -14,8 +14,8 @@ authRoutes.post("/login", async (c) => {
 	const tenantId = c.get('tenant_id');
 	const body = await validateJson(c, loginSchema);
 
-	// Try current tenant first
-	let user = await getUserByEmail(c.env.DB, tenantId, body.email);
+	// Try current tenant first (only if tenant resolved from subdomain)
+	let user = tenantId ? await getUserByEmail(c.env.DB, tenantId, body.email) : null;
 
 	// If not found and email is a platform admin, try the _platform tenant
 	if (!user) {
