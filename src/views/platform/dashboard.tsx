@@ -248,29 +248,43 @@ function createTenant(e) {
 						)}
 					</div>
 					{abandoned.length > 0 ? (
-						<div class="divide-y divide-sk-border/20 max-h-[300px] overflow-y-auto">
-							{abandoned.map((a) => (
-								<div class="px-5 py-3 flex items-center justify-between">
-									<div>
-										<p class="font-display font-medium text-sm text-sk-text">{a.business_name}</p>
-										<p class="text-xs text-sk-muted font-body">{a.owner_name} &middot; {a.owner_email}</p>
-									</div>
-									<div class="text-right flex items-center gap-2">
-										<div>
-											<span class={`${PLAN_COLORS[a.plan] || PLAN_COLORS.starter} px-2 py-0.5 rounded text-xs font-medium font-display`}>
-												{a.plan.charAt(0).toUpperCase() + a.plan.slice(1)}
-											</span>
-											<p class="text-xs text-sk-muted font-body mt-1">
-												{a.hours_ago < 1 ? "Agora" : a.hours_ago < 24 ? `${a.hours_ago}h atrás` : `${Math.floor(a.hours_ago / 24)}d atrás`}
-											</p>
+						<div class="divide-y divide-sk-border/20 max-h-[400px] overflow-y-auto">
+							{abandoned.map((a) => {
+								const urgency = a.hours_ago < 2 ? "border-l-4 border-sk-green" : a.hours_ago < 24 ? "border-l-4 border-sk-yellow" : a.hours_ago < 72 ? "border-l-4 border-sk-orange" : "border-l-4 border-sk-danger";
+								const timeLabel = a.hours_ago < 1 ? "Agora mesmo" : a.hours_ago < 24 ? `${a.hours_ago}h atrás` : `${Math.floor(a.hours_ago / 24)}d atrás`;
+								const whatsappBody = encodeURIComponent(`Olá ${a.owner_name}! Sou da Giro Kids. Notei que você iniciou o cadastro para ${a.business_name} mas não finalizou. Posso ajudar com alguma dúvida?`);
+								const emailBody = `Olá ${a.owner_name},%0D%0A%0D%0ANotamos que você iniciou o cadastro do ${a.business_name} na plataforma Giro Kids mas não concluiu o processo.%0D%0A%0D%0ASe teve alguma dificuldade ou dúvida, estamos à disposição para ajudar.%0D%0A%0D%0ASeu subdomínio reservado: ${a.slug}.giro-kids.com%0D%0APlano selecionado: ${a.plan.charAt(0).toUpperCase() + a.plan.slice(1)}%0D%0A%0D%0AAtenciosamente,%0D%0AEquipe Giro Kids`;
+								return (
+									<div class={`px-4 py-3 ${urgency}`}>
+										<div class="flex items-start justify-between gap-3">
+											<div class="flex-1 min-w-0">
+												<div class="flex items-center gap-2 mb-1">
+													<p class="font-display font-bold text-sm text-sk-text truncate">{a.business_name}</p>
+													<span class={`${PLAN_COLORS[a.plan] || PLAN_COLORS.starter} px-2 py-0.5 rounded text-xs font-medium font-display flex-shrink-0`}>
+														{a.plan.charAt(0).toUpperCase() + a.plan.slice(1)}
+													</span>
+												</div>
+												<div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs font-body">
+													<div><span class="text-sk-muted">Responsável:</span> <span class="text-sk-text font-medium">{a.owner_name}</span></div>
+													<div><span class="text-sk-muted">Subdomínio:</span> <span class="text-sk-text font-medium">{a.slug}.giro-kids.com</span></div>
+													<div><span class="text-sk-muted">Email:</span> <a href={`mailto:${a.owner_email}`} class="text-sk-blue hover:underline">{a.owner_email}</a></div>
+													<div><span class="text-sk-muted">Quando:</span> <span class={`font-medium ${a.hours_ago > 48 ? "text-sk-danger" : "text-sk-text"}`}>{timeLabel}</span></div>
+												</div>
+											</div>
+											<div class="flex flex-col gap-1 flex-shrink-0">
+												<a href={`mailto:${a.owner_email}?subject=Finalize seu cadastro - Giro Kids&body=${emailBody}`}
+													class="btn-touch px-2.5 py-1.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk text-xs font-display font-bold text-center" title="Enviar email">
+													Email
+												</a>
+												<a href={`https://wa.me/?text=${whatsappBody}`} target="_blank"
+													class="btn-touch px-2.5 py-1.5 bg-sk-green hover:bg-sk-green-dark text-white rounded-sk text-xs font-display font-bold text-center" title="Abrir WhatsApp">
+													WhatsApp
+												</a>
+											</div>
 										</div>
-										<a href={`mailto:${a.owner_email}?subject=Precisando de ajuda? - Giro Kids&body=Olá ${a.owner_name},%0D%0A%0D%0ANotamos que você iniciou o cadastro para ${a.business_name} mas não finalizou. Podemos ajudar?`}
-											class="text-sk-blue hover:text-sk-blue-dark text-xs font-display" title="Enviar email de follow-up">
-											Follow-up
-										</a>
 									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					) : (
 						<div class="px-5 py-6 text-center text-sk-muted text-sm font-body">Nenhum checkout abandonado nos últimos 30 dias</div>
