@@ -104,6 +104,15 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 		if (target) target.scrollIntoView({ behavior: 'smooth' });
 	});
 });
+
+// Reset balloon animation on click outside
+document.addEventListener('click', function(e) {
+	if (!e.target.closest('.feature-card-wrap')) {
+		document.querySelectorAll('.feature-card-wrap.active').forEach(function(el) {
+			el.classList.remove('active');
+		});
+	}
+});
 `)}
 </script>`;
 
@@ -172,14 +181,117 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						}
 						.btn-bounce:active { animation: sk-bounce 0.15s ease-out; }
 
-						@keyframes sk-wobble {
-							0% { transform: rotate(0deg); }
-							25% { transform: rotate(-1deg); }
-							50% { transform: rotate(1deg); }
-							75% { transform: rotate(-0.5deg); }
-							100% { transform: rotate(0deg); }
+						/* Feature card with floating party balloons */
+						.feature-card-wrap {
+							position: relative;
+							overflow: visible;
+							cursor: pointer;
 						}
-						.card-wobble:hover { animation: sk-wobble 0.4s ease-in-out; }
+						.feature-card-wrap:hover > .feature-inner,
+						.feature-card-wrap.active > .feature-inner {
+							border-color: #FF7043;
+							box-shadow: 0 4px 16px rgba(255,152,0,0.15);
+							transform: translateY(-2px);
+						}
+						.feature-inner {
+							transition: all 0.3s ease;
+							position: relative;
+							z-index: 1;
+						}
+
+						/* Party balloon base */
+						.party-balloon {
+							position: absolute;
+							bottom: 50%;
+							width: 32px;
+							height: 40px;
+							border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+							opacity: 0;
+							pointer-events: none;
+							z-index: 0;
+							filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+						}
+						/* Balloon knot + string */
+						.party-balloon::before {
+							content: '';
+							position: absolute;
+							bottom: -4px;
+							left: 50%;
+							transform: translateX(-50%);
+							width: 0; height: 0;
+							border-left: 5px solid transparent;
+							border-right: 5px solid transparent;
+							border-top: 6px solid inherit;
+							border-top-color: inherit;
+						}
+						.party-balloon::after {
+							content: '';
+							position: absolute;
+							bottom: -38px;
+							left: 50%;
+							width: 1.5px;
+							height: 34px;
+							background: rgba(0,0,0,0.15);
+							transform-origin: top center;
+						}
+						/* Shine on balloon */
+						.party-balloon span {
+							position: absolute;
+							top: 8px;
+							left: 9px;
+							width: 8px;
+							height: 10px;
+							background: rgba(255,255,255,0.45);
+							border-radius: 50%;
+							transform: rotate(-30deg);
+						}
+
+						@keyframes balloon-rise {
+							0% {
+								opacity: 0;
+								transform: translateY(0) scale(0.3) rotate(0deg);
+							}
+							15% {
+								opacity: 1;
+								transform: translateY(-20px) scale(1) rotate(-5deg);
+							}
+							50% {
+								transform: translateY(-80px) scale(1) rotate(5deg);
+							}
+							85% {
+								opacity: 1;
+								transform: translateY(-140px) scale(0.95) rotate(-3deg);
+							}
+							100% {
+								opacity: 0;
+								transform: translateY(-180px) scale(0.9) rotate(5deg);
+							}
+						}
+
+						.feature-card-wrap:hover .party-balloon,
+						.feature-card-wrap.active .party-balloon {
+							animation: balloon-rise 1.8s ease-out forwards;
+						}
+						/* Stagger each balloon */
+						.party-balloon:nth-child(1) { left: 15%; animation-delay: 0s; background: #FF7043; }
+						.party-balloon:nth-child(1)::before { border-top-color: #FF7043; }
+						.party-balloon:nth-child(2) { left: 40%; animation-delay: 0.15s; background: #FFC107; }
+						.party-balloon:nth-child(2)::before { border-top-color: #FFC107; }
+						.party-balloon:nth-child(3) { left: 65%; animation-delay: 0.3s; background: #0288D1; }
+						.party-balloon:nth-child(3)::before { border-top-color: #0288D1; }
+						.party-balloon:nth-child(4) { left: 85%; animation-delay: 0.1s; background: #388E3C; }
+						.party-balloon:nth-child(4)::before { border-top-color: #388E3C; }
+						.party-balloon:nth-child(5) { left: 5%; animation-delay: 0.25s; background: #AB47BC; }
+						.party-balloon:nth-child(5)::before { border-top-color: #AB47BC; }
+
+						.feature-card-wrap:hover .party-balloon:nth-child(2),
+						.feature-card-wrap.active .party-balloon:nth-child(2) { animation-delay: 0.15s; }
+						.feature-card-wrap:hover .party-balloon:nth-child(3),
+						.feature-card-wrap.active .party-balloon:nth-child(3) { animation-delay: 0.3s; }
+						.feature-card-wrap:hover .party-balloon:nth-child(4),
+						.feature-card-wrap.active .party-balloon:nth-child(4) { animation-delay: 0.1s; }
+						.feature-card-wrap:hover .party-balloon:nth-child(5),
+						.feature-card-wrap.active .party-balloon:nth-child(5) { animation-delay: 0.25s; }
 
 						@keyframes sk-fade-up {
 							from { opacity: 0; transform: translateY(24px); }
@@ -204,8 +316,9 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						.btn-touch { min-height: 48px; min-width: 48px; }
 
 						@media (prefers-reduced-motion: reduce) {
-							.sk-float, .card-wobble:hover, .btn-bounce:active,
-							.animate-fade-up, .animate-wave {
+							.sk-float, .btn-bounce:active,
+							.animate-fade-up, .animate-wave,
+							.party-balloon {
 								animation: none !important;
 							}
 						}
@@ -224,6 +337,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 						<div class="flex items-center gap-4">
 							<a href="#funcionalidades" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Funcionalidades</a>
 							<a href="#planos" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Planos</a>
+							<a href="/apresentacao.html" target="_blank" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Apresentação</a>
 							<a href="#cadastro" class="btn-touch btn-bounce bg-white/20 hover:bg-white/30 px-5 py-2 rounded-sk text-sm font-display font-bold flex items-center">
 								Começar agora
 							</a>
@@ -284,12 +398,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 								{ emoji: "🛍️", title: "Venda de produtos", desc: "Catálogo com fotos, vendas integradas ao caixa e controle de estoque." },
 							].map((f, i) => (
 								<div
-									class="card-wobble bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border/50 hover:shadow-sk-md transition-shadow animate-fade-up"
+									class="feature-card-wrap animate-fade-up"
 									style={`animation-delay: ${0.1 * i}s`}
+									onclick="this.classList.toggle('active')"
 								>
-									<div class="sk-float text-4xl mb-3 inline-block" style={`animation-delay: ${0.3 * i}s`}>{f.emoji}</div>
-									<h3 class="font-display font-bold text-lg text-sk-text mb-2">{f.title}</h3>
-									<p class="font-body text-sm text-sk-muted leading-relaxed">{f.desc}</p>
+									<div class="party-balloon"><span></span></div>
+									<div class="party-balloon"><span></span></div>
+									<div class="party-balloon"><span></span></div>
+									<div class="party-balloon"><span></span></div>
+									<div class="party-balloon"><span></span></div>
+									<div class="feature-inner bg-sk-surface rounded-sk-lg p-6 shadow-sk-sm border-2 border-sk-border/50 cursor-pointer">
+										<div class="sk-float text-4xl mb-3 inline-block" style={`animation-delay: ${0.3 * i}s`}>{f.emoji}</div>
+										<h3 class="font-display font-bold text-lg text-sk-text mb-2">{f.title}</h3>
+										<p class="font-body text-sm text-sk-muted leading-relaxed">{f.desc}</p>
+									</div>
 								</div>
 							))}
 						</div>
@@ -467,6 +589,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 							Sistema de gestão para parques infantis e espaços de diversão
 						</p>
 						<div class="flex items-center justify-center gap-4 mb-4 text-xs font-body">
+							<a href="/apresentacao.html" target="_blank" class="text-white/70 hover:text-white underline">Apresentação</a>
 							<a href="/legal/terms" class="text-white/70 hover:text-white underline">Termos de Uso</a>
 							<a href="/legal/privacy" class="text-white/70 hover:text-white underline">Privacidade</a>
 							<a href="/legal/lgpd" class="text-white/70 hover:text-white underline">LGPD</a>

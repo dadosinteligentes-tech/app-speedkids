@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giro Kids - Apresentação de Funcionalidades</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary: #FF7043;
+      --primary-dark: #E64A19;
+      --yellow: #FFC107;
+      --blue: #0288D1;
+      --green: #388E3C;
+      --purple: #7B1FA2;
+      --gray-50: #FAFAFA;
+      --gray-100: #F5F5F5;
+      --gray-200: #EEEEEE;
+      --gray-600: #757575;
+      --gray-800: #424242;
+      --gray-900: #212121;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      color: var(--gray-800);
+      background: white;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    @media print {
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: avoid; }
+      .no-print { display: none; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 20px;
+      padding: 40px 50px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media print {
+      .page { box-shadow: none; margin: 0; padding: 30px 40px; }
+    }
+
+    /* Cover */
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(135deg, #FF7043 0%, #E64A19 50%, #BF360C 100%);
+      color: white;
+    }
+
+    .cover-logo {
+      width: 120px;
+      height: 120px;
+      background: white;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .cover h1 { font-size: 52px; font-weight: 700; margin-bottom: 10px; letter-spacing: -1px; }
+    .cover .subtitle { font-size: 22px; font-weight: 500; opacity: 0.9; margin-bottom: 60px; }
+    .cover .tagline { font-size: 16px; opacity: 0.8; max-width: 500px; line-height: 1.8; }
+    .cover-footer { position: absolute; bottom: 40px; font-size: 13px; opacity: 0.7; }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid var(--primary);
+    }
+
+    .section-number {
+      width: 48px; height: 48px;
+      background: var(--primary); color: white;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .section-header h2 { font-size: 28px; color: var(--gray-900); }
+    .section-header .section-desc { font-size: 14px; color: var(--gray-600); margin-top: 2px; }
+
+    /* Feature cards - design limpo sem emojis/sombras */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .feature-card {
+      background: var(--gray-50);
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .feature-card.blue { border-left-color: var(--blue); }
+    .feature-card.green { border-left-color: var(--green); }
+    .feature-card.yellow { border-left-color: var(--yellow); }
+    .feature-card.purple { border-left-color: var(--purple); }
+
+    .feature-card h4 {
+      font-size: 15px;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+
+    .feature-full { grid-column: 1 / -1; }
+
+    /* Lists */
+    .feature-list { list-style: none; padding: 0; }
+
+    .feature-list li {
+      padding: 7px 0;
+      font-size: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .feature-list li::before {
+      content: "—";
+      color: var(--primary);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: #FFF8F0;
+      border: 1px solid #FFE0B2;
+      border-radius: 12px;
+      padding: 22px;
+      margin: 20px 0;
+    }
+
+    .highlight-box h3 { color: var(--primary-dark); margin-bottom: 10px; font-size: 17px; }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 25px 0;
+    }
+
+    .stat-box {
+      text-align: center;
+      background: var(--gray-50);
+      border-radius: 12px;
+      padding: 18px 12px;
+    }
+
+    .stat-number {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 34px; font-weight: 700;
+      color: var(--primary); line-height: 1;
+    }
+
+    .stat-label { font-size: 12px; color: var(--gray-600); margin-top: 6px; font-weight: 600; }
+
+    /* Role cards */
+    .role-card {
+      background: var(--gray-50);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+
+    .role-card h4 { font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+
+    .role-badge {
+      display: inline-block; padding: 3px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; color: white;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .role-badge.operator { background: var(--blue); }
+    .role-badge.manager { background: var(--green); }
+    .role-badge.owner { background: var(--primary); }
+
+    /* Flow */
+    .flow-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin: 25px 0; flex-wrap: wrap;
+    }
+
+    .flow-step {
+      background: var(--primary); color: white;
+      padding: 10px 18px; border-radius: 10px;
+      font-size: 13px; font-weight: 600; text-align: center; min-width: 100px;
+    }
+
+    .flow-arrow { color: var(--gray-600); font-size: 20px; }
+
+    /* Reports grid */
+    .reports-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .report-item {
+      background: var(--gray-50);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      border-top: 3px solid var(--primary);
+    }
+
+    .report-item:nth-child(2) { border-top-color: var(--blue); }
+    .report-item:nth-child(3) { border-top-color: var(--green); }
+    .report-item:nth-child(4) { border-top-color: var(--yellow); }
+    .report-item:nth-child(5) { border-top-color: var(--purple); }
+    .report-item:nth-child(6) { border-top-color: var(--blue); }
+    .report-item:nth-child(7) { border-top-color: var(--green); }
+    .report-item:nth-child(8) { border-top-color: var(--primary); }
+    .report-item:nth-child(9) { border-top-color: var(--yellow); }
+    .report-item:nth-child(10) { border-top-color: var(--purple); }
+    .report-item:nth-child(11) { border-top-color: var(--blue); }
+    .report-item:nth-child(12) { border-top-color: var(--green); }
+
+    .report-item h4 { font-size: 13px; color: var(--gray-900); margin-bottom: 4px; }
+    .report-item p { font-size: 11px; color: var(--gray-600); }
+
+    /* Plans */
+    .plan-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 12px 0;
+      margin: 20px 0;
+    }
+
+    .plan-col {
+      background: var(--gray-50); border-radius: 12px;
+      padding: 24px; text-align: center; vertical-align: top; width: 33%;
+    }
+
+    .plan-col.featured {
+      background: linear-gradient(135deg, #FF7043, #E64A19);
+      color: white;
+    }
+
+    .plan-col h3 { font-size: 20px; margin-bottom: 15px; }
+
+    .plan-col .plan-features { text-align: left; font-size: 13px; line-height: 2; }
+    .plan-col .plan-features li { list-style: none; }
+    .plan-col .plan-features li::before { content: "— "; font-weight: 700; }
+    .plan-col.featured .plan-features li::before { color: #FFE0B2; }
+
+    /* Two cols */
+    .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .col-content h3 { font-size: 18px; color: var(--gray-900); margin-bottom: 12px; }
+    .col-content p { font-size: 13px; color: var(--gray-600); line-height: 1.8; }
+
+    /* Contact cards */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .contact-card {
+      background: var(--gray-50);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .contact-card h4 {
+      font-size: 16px;
+      color: var(--gray-900);
+      margin-bottom: 8px;
+    }
+
+    .contact-card p {
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+
+    .contact-card a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .contact-card-full {
+      grid-column: 1 / -1;
+    }
+
+    /* Page footer */
+    .page-number { position: absolute; bottom: 25px; right: 50px; font-size: 12px; color: var(--gray-600); }
+    .page-watermark { position: absolute; bottom: 25px; left: 50px; font-size: 11px; color: #ccc; font-weight: 600; }
+
+    /* Print banner */
+    .print-banner {
+      background: #FFF8F0; border: 2px solid var(--primary);
+      border-radius: 12px; padding: 16px 24px; margin: 20px auto;
+      max-width: 210mm; text-align: center; font-size: 14px;
+      color: var(--primary-dark); font-weight: 600;
+    }
+
+    .print-banner kbd {
+      background: white; padding: 2px 8px; border-radius: 4px;
+      border: 1px solid #FFCCBC; font-family: monospace;
+    }
+
+    /* Closing page */
+    .closing {
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+      background: linear-gradient(135deg, #FF7043 0%, #E64A19 100%);
+      color: white;
+    }
+
+    .closing h2 { font-size: 36px; margin-bottom: 20px; }
+    .closing p { font-size: 18px; opacity: 0.9; max-width: 500px; line-height: 1.8; }
+
+    .closing .contact-info { margin-top: 40px; font-size: 15px; opacity: 0.9; }
+    .closing .contact-info div { margin: 10px 0; }
+    .closing .contact-info a { color: white; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.4); }
+  </style>
+</head>
+<body>
+
+  <div class="print-banner no-print">
+    Para salvar como PDF: pressione <kbd>Ctrl</kbd> + <kbd>P</kbd> e selecione "Salvar como PDF".<br>
+    Margens: Nenhuma | Escala: ajustar na pagina.
+  </div>
+
+  <!-- PAGE 1 - CAPA -->
+  <div class="page cover">
+    <div class="cover-logo">
+      <img src="/logo-girokids.png" alt="Giro Kids" style="width: 100px; height: 100px; object-fit: contain;">
+    </div>
+    <h1>Giro Kids</h1>
+    <div class="subtitle"><a href="https://giro-kids.com/" style="color: white; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.5);">giro-kids.com</a></div>
+    <div class="tagline">
+      Plataforma completa para gestão de parques infantis, locação de brinquedos e espaços de diversão.
+      Controle total de locações, financeiro, equipe e clientes em um único sistema.
+    </div>
+    <div class="cover-footer">
+      Dados Inteligentes &bull; Apresentação de Funcionalidades &bull; 2026
+    </div>
+  </div>
+
+  <!-- PAGE 2 - VISÃO GERAL -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">01</div>
+      <div>
+        <h2>Visão Geral</h2>
+        <div class="section-desc">O que é o Giro Kids e para quem ele foi feito</div>
+      </div>
+    </div>
+
+    <p style="font-size: 15px; color: var(--gray-800); line-height: 1.9; margin-bottom: 25px;">
+      O <strong>Giro Kids</strong> é uma plataforma completa desenvolvida para negócios de entretenimento infantil no Brasil.
+      Projetado para <strong>parques infantis, locadoras de brinquedos, casas de festas e espaços de diversão</strong>,
+      o sistema oferece desde o controle operacional em tempo real até relatórios avançados de performance.
+    </p>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-number">12+</div>
+        <div class="stat-label">Tipos de Relatórios</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">20+</div>
+        <div class="stat-label">Permissões Configuráveis</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">3</div>
+        <div class="stat-label">Níveis de Acesso</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">Na Nuvem</div>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <h3>Para quem é o Giro Kids?</h3>
+      <ul class="feature-list">
+        <li>Parques infantis com brinquedos motorizados e infláveis</li>
+        <li>Locadoras de brinquedos com controle de tempo</li>
+        <li>Espaços de diversão que precisam gerenciar ativos, equipe e financeiro</li>
+        <li>Redes e franquias que precisam de gestão multi-unidade centralizada</li>
+      </ul>
+    </div>
+
+    <div class="two-cols" style="margin-top: 25px;">
+      <div class="col-content">
+        <h3>Seu espaço, sua marca</h3>
+        <p>Cada cliente opera em seu próprio ambiente, com logo, cores e domínio personalizado. Seus dados ficam 100% isolados.</p>
+      </div>
+      <div class="col-content">
+        <h3>Acesse de qualquer lugar</h3>
+        <p>Sistema 100% web, funciona em celular, tablet ou computador. Sem instalação, sem atualizações manuais.</p>
+      </div>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">02</div>
+  </div>
+
+  <!-- PAGE 3 - PAINEL DE LOCAÇÃO -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">02</div>
+      <div>
+        <h2>Painel de Locação</h2>
+        <div class="section-desc">O coração do sistema: controle de brinquedos em tempo real</div>
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: var(--gray-600); margin-bottom: 20px;">
+      O painel principal exibe todos os brinquedos do parque com status visual em tempo real. Cada brinquedo é representado por um card com informações de status, tempo e bateria.
+    </p>
+
+    <div class="flow-steps">
+      <div class="flow-step">Selecionar Brinquedo</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Escolher Pacote</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Identificar Criança</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Iniciar Sessão</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Pagamento</div>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <h4>Timer em Tempo Real</h4>
+        <p>Cronômetro ativo para cada sessão com contagem regressiva, pausa e retomada. Alertas visuais quando o tempo está acabando.</p>
+      </div>
+      <div class="feature-card blue">
+        <h4>Status Visual dos Brinquedos</h4>
+        <p>Cards coloridos por status: disponível, em uso, manutenção e desativado. Ordene por nome, status, tempo restante ou bateria.</p>
+      </div>
+      <div class="feature-card green">
+        <h4>Múltiplas Formas de Pagamento</h4>
+        <p>Dinheiro, Cartão de Crédito, Débito, PIX ou pagamento misto. Integração direta com o caixa.</p>
+      </div>
+      <div class="feature-card yellow">
+        <h4>Gestão de Baterias</h4>
+        <p>Monitoramento do nível de bateria dos brinquedos motorizados. Troca rápida sem interromper a sessão.</p>
+      </div>
+      <div class="feature-card purple">
+        <h4>Tempo Extra Automático</h4>
+        <p>Cobrança automática de blocos de tempo extra configuráveis. Período de tolerância antes da cobrança adicional.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Identificação da Criança</h4>
+        <p>Nome, idade e peso da criança. Validação automática de restrições de peso e idade por brinquedo, garantindo a segurança.</p>
+      </div>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">03</div>
+  </div>
+
+  <!-- PAGE 4 - GESTÃO FINANCEIRA -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">03</div>
+      <div>
+        <h2>Gestão Financeira</h2>
+        <div class="section-desc">Caixa, turnos e controle completo das finanças</div>
+      </div>
+    </div>
+
+    <div class="two-cols" style="margin-bottom: 25px;">
+      <div>
+        <h3 style="font-size: 18px; margin-bottom: 15px; color: var(--gray-900);">Caixa Registradora</h3>
+        <ul class="feature-list">
+          <li>Abertura de caixa com saldo inicial</li>
+          <li>Registro de todas as transações em tempo real</li>
+          <li>Controle de denominações (notas e moedas)</li>
+          <li>Saldo esperado vs. saldo real</li>
+          <li>Tratamento de sobras e faltas</li>
+          <li>Depósitos e retiradas durante o turno</li>
+          <li>Fechamento com resumo completo</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size: 18px; margin-bottom: 15px; color: var(--gray-900);">Turnos de Trabalho</h3>
+        <ul class="feature-list">
+          <li>Entrada e saída com um clique</li>
+          <li>Duração do turno calculada automaticamente</li>
+          <li>Receita por turno vinculada ao operador</li>
+          <li>Histórico completo de turnos</li>
+          <li>Recibo de turno para impressão</li>
+          <li>Integração com relatório de operadores</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <h3>Venda de Produtos</h3>
+      <p style="font-size: 14px; color: var(--gray-800); line-height: 1.8;">
+        Além das locações, o Giro Kids permite a <strong>venda de produtos</strong> no ponto de venda — lanches, bebidas, brinquedos e acessórios.
+        Cada venda é registrada, vinculada ao caixa e gera recibo imprimível.
+      </p>
+    </div>
+
+    <div class="features-grid" style="margin-top: 20px;">
+      <div class="feature-card green">
+        <h4>Recibos Térmicos</h4>
+        <p>Recibos formatados para impressoras térmicas. Templates para locação, turno, caixa e venda de produtos. Suporte a templates personalizados.</p>
+      </div>
+      <div class="feature-card blue">
+        <h4>Promoções e Descontos</h4>
+        <p>Crie promoções com desconto fixo ou percentual. Aplique em locações ou vendas de produtos. Controle de uso e ativação.</p>
+      </div>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">04</div>
+  </div>
+
+  <!-- PAGE 5 - GESTÃO DE ATIVOS E PACOTES -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">04</div>
+      <div>
+        <h2>Gestão de Ativos e Pacotes</h2>
+        <div class="section-desc">Cadastro de brinquedos, pacotes de tempo e baterias</div>
+      </div>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card feature-full">
+        <h4>Cadastro de Brinquedos</h4>
+        <p>Cadastre todos os brinquedos do parque com foto, tipo, modelo, status e restrições de peso e idade.
+        Acompanhe a data da última manutenção e altere o status entre disponível, em uso, manutenção e desativado.</p>
+      </div>
+
+      <div class="feature-card blue">
+        <h4>Pacotes de Tempo</h4>
+        <p>Configure pacotes de locação com duração e preço personalizáveis. Defina blocos de tempo extra e período de tolerância para cada pacote.</p>
+      </div>
+
+      <div class="feature-card green">
+        <h4>Inventário de Baterias</h4>
+        <p>Gerencie baterias dos brinquedos motorizados: nível de carga, status (carregando, pronta, em uso, esgotada), tempo de carga e associação com brinquedos.</p>
+      </div>
+
+      <div class="feature-card yellow">
+        <h4>Modelos de Documentos</h4>
+        <p>Crie templates personalizados de documentos e recibos com variáveis dinâmicas (nome do cliente, data, valores). Pré-visualize antes de usar.</p>
+      </div>
+
+      <div class="feature-card purple">
+        <h4>Metas de Vendas</h4>
+        <p>Defina metas de receita ou quantidade para períodos diários, semanais, mensais ou customizados. Atribua a operadores e acompanhe o progresso.</p>
+      </div>
+
+      <div class="feature-card">
+        <h4>Catálogo de Produtos</h4>
+        <p>Cadastre produtos para venda no balcão — lanches, bebidas, acessórios — com foto e preço. Vendas integradas ao caixa registradora.</p>
+      </div>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">05</div>
+  </div>
+
+  <!-- PAGE 6 - CLIENTES -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">05</div>
+      <div>
+        <h2>Gestão de Clientes</h2>
+        <div class="section-desc">Cadastro, histórico e fidelização</div>
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: var(--gray-600); margin-bottom: 25px; line-height: 1.8;">
+      O Giro Kids mantém um cadastro completo dos seus clientes, permitindo acompanhar o histórico de locações, valor gasto e pontos de fidelidade.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <h4>Cadastro Completo</h4>
+        <p>Nome, telefone, e-mail, CPF, Instagram e observações. Cadastro de filhos com idade e data de nascimento para validação de restrições.</p>
+      </div>
+      <div class="feature-card blue">
+        <h4>Histórico de Locações</h4>
+        <p>Visualize todo o histórico de sessões por cliente, com detalhes de duração, valor pago, forma de pagamento e brinquedo utilizado.</p>
+      </div>
+      <div class="feature-card green">
+        <h4>Programa de Fidelidade</h4>
+        <p>Pontos de fidelidade acumulados automaticamente a cada locação. Acompanhe o total gasto e a frequência de visitas de cada cliente.</p>
+      </div>
+      <div class="feature-card yellow">
+        <h4>Busca e Filtros</h4>
+        <p>Pesquise clientes por nome, telefone ou CPF. Lista paginada com acesso rápido ao perfil completo.</p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 25px;">
+      <h3>Identificação na Locação</h3>
+      <p style="font-size: 14px; color: var(--gray-800); line-height: 1.8;">
+        Ao iniciar uma locação, o operador pode opcionalmente identificar o cliente e a criança. O sistema valida automaticamente
+        restrições de peso e idade do brinquedo, garantindo a segurança. Os dados alimentam os relatórios de clientes e o programa de fidelidade.
+      </p>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">06</div>
+  </div>
+
+  <!-- PAGE 7 - RELATÓRIOS -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">06</div>
+      <div>
+        <h2>Relatórios e Analytics</h2>
+        <div class="section-desc">12+ relatórios para tomada de decisão baseada em dados</div>
+      </div>
+    </div>
+
+    <div class="reports-grid">
+      <div class="report-item">
+        <h4>Financeiro</h4>
+        <p>Receita total, tendências diárias e formas de pagamento</p>
+      </div>
+      <div class="report-item">
+        <h4>Pacotes</h4>
+        <p>Receita por pacote, quantidade de locações e duração média</p>
+      </div>
+      <div class="report-item">
+        <h4>Brinquedos</h4>
+        <p>Utilização por brinquedo, horas de uso e receita gerada</p>
+      </div>
+      <div class="report-item">
+        <h4>Horários de Pico</h4>
+        <p>Identificação dos horários e dias mais movimentados</p>
+      </div>
+      <div class="report-item">
+        <h4>Operadores</h4>
+        <p>Performance individual de cada operador</p>
+      </div>
+      <div class="report-item">
+        <h4>Caixa</h4>
+        <p>Reconciliação e histórico de aberturas e fechamentos</p>
+      </div>
+      <div class="report-item">
+        <h4>Clientes</h4>
+        <p>Análise de frequência, valor e retenção de clientes</p>
+      </div>
+      <div class="report-item">
+        <h4>Não Pagos</h4>
+        <p>Sessões pendentes de pagamento para cobrança</p>
+      </div>
+      <div class="report-item">
+        <h4>Cancelados</h4>
+        <p>Sessões canceladas com motivos e receita perdida</p>
+      </div>
+      <div class="report-item">
+        <h4>Turnos</h4>
+        <p>Receita e sessões por turno de trabalho</p>
+      </div>
+      <div class="report-item">
+        <h4>Produtos</h4>
+        <p>Vendas de produtos, unidades e popularidade</p>
+      </div>
+      <div class="report-item">
+        <h4>Metas</h4>
+        <p>Progresso das metas de vendas da equipe</p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 20px;">
+      <h3>Detalhamento Completo</h3>
+      <p style="font-size: 14px; color: var(--gray-800); line-height: 1.8;">
+        Todos os relatórios suportam filtro por período e oferecem detalhamento por pacote, brinquedo, operador ou turno.
+        Dados acessíveis para qualquer intervalo de datas.
+      </p>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">07</div>
+  </div>
+
+  <!-- PAGE 8 - EQUIPE E PERMISSÕES -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">07</div>
+      <div>
+        <h2>Equipe e Permissões</h2>
+        <div class="section-desc">Controle de acesso por papel e permissão</div>
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: var(--gray-600); margin-bottom: 25px; line-height: 1.8;">
+      O Giro Kids possui um sistema de controle de acesso com mais de 20 permissões configuráveis, organizado em três níveis.
+    </p>
+
+    <div class="role-card">
+      <h4><span class="role-badge operator">Operador</span> Equipe Operacional</h4>
+      <p style="font-size: 13px; color: var(--gray-600); line-height: 1.8;">
+        Acesso ao painel de locação, abertura/fechamento de caixa e registro de turnos. Foco na operação diária sem acesso a configurações ou relatórios avançados.
+      </p>
+    </div>
+
+    <div class="role-card">
+      <h4><span class="role-badge manager">Gerente</span> Gestão e Supervisão</h4>
+      <p style="font-size: 13px; color: var(--gray-600); line-height: 1.8;">
+        Tudo do operador, mais acesso à administração de brinquedos, pacotes, baterias, clientes e relatórios. Pode gerenciar promoções e metas de vendas.
+      </p>
+    </div>
+
+    <div class="role-card">
+      <h4><span class="role-badge owner">Proprietário</span> Controle Total</h4>
+      <p style="font-size: 13px; color: var(--gray-600); line-height: 1.8;">
+        Acesso completo ao sistema, incluindo configuração de permissões, gestão de usuários, relatórios de performance de operadores, configurações do negócio e plano de assinatura.
+      </p>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 20px;">
+      <h3>Matriz de Permissões</h3>
+      <p style="font-size: 14px; color: var(--gray-800); line-height: 1.8;">
+        O proprietário pode personalizar as permissões de cada papel em uma <strong>matriz visual</strong> organizada por categorias:
+        clientes, locações, relatórios, metas, promoções, configurações, documentos e gestão de usuários.
+      </p>
+    </div>
+
+    <div class="features-grid" style="margin-top: 18px;">
+      <div class="feature-card blue">
+        <h4>Logs de Auditoria</h4>
+        <p>Toda ação no sistema é registrada com quem fez, o que fez e quando. Filtros por tipo e paginação completa.</p>
+      </div>
+      <div class="feature-card green">
+        <h4>Segurança</h4>
+        <p>Autenticação por sessão, senhas criptografadas, isolamento de dados entre clientes e registro de IP.</p>
+      </div>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">08</div>
+  </div>
+
+  <!-- PAGE 9 - PLANOS -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">08</div>
+      <div>
+        <h2>Planos</h2>
+        <div class="section-desc">Escolha o plano ideal para o tamanho do seu negócio</div>
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: var(--gray-600); margin-bottom: 25px; line-height: 1.8;">
+      O Giro Kids oferece planos que acompanham o crescimento do seu parque. Comece com um teste gratuito de 30 dias e escolha o plano que faz sentido para você.
+    </p>
+
+    <table class="plan-table">
+      <tr>
+        <td class="plan-col">
+          <h3>Starter</h3>
+          <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 15px;">Para quem está começando</p>
+          <ul class="plan-features">
+            <li>Até 3 usuários</li>
+            <li>Até 10 brinquedos</li>
+            <li>Relatórios básicos</li>
+            <li>Suporte por e-mail</li>
+            <li>Logo e cores personalizadas</li>
+          </ul>
+        </td>
+        <td class="plan-col featured">
+          <h3>Pro</h3>
+          <p style="font-size: 13px; opacity: 0.85; margin-bottom: 15px;">Para parques em crescimento</p>
+          <ul class="plan-features">
+            <li>Até 10 usuários</li>
+            <li>Até 30 brinquedos</li>
+            <li>Todos os relatórios</li>
+            <li>Metas de vendas</li>
+            <li>Promoções e descontos</li>
+            <li>Templates de documentos</li>
+            <li>Suporte prioritário</li>
+          </ul>
+        </td>
+        <td class="plan-col">
+          <h3>Enterprise</h3>
+          <p style="font-size: 13px; color: var(--gray-600); margin-bottom: 15px;">Para grandes operações</p>
+          <ul class="plan-features">
+            <li>Usuários ilimitados</li>
+            <li>Brinquedos ilimitados</li>
+            <li>Todos os recursos</li>
+            <li>Suporte premium</li>
+            <li>Onboarding assistido</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    <div class="highlight-box">
+      <h3>Comece grátis</h3>
+      <p style="font-size: 14px; color: var(--gray-800); line-height: 1.8;">
+        Teste o Giro Kids por <strong>30 dias grátis</strong>, sem compromisso. Cadastre-se em
+        <a href="https://giro-kids.com/" style="color: var(--primary-dark); font-weight: 700;">giro-kids.com</a>,
+        configure seu parque em minutos com nosso assistente de 3 etapas e comece a usar imediatamente.
+      </p>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">09</div>
+  </div>
+
+  <!-- PAGE 10 - SUPORTE E CONTATO -->
+  <div class="page">
+    <div class="section-header">
+      <div class="section-number">09</div>
+      <div>
+        <h2>Suporte e Contato</h2>
+        <div class="section-desc">Estamos aqui para ajudar você</div>
+      </div>
+    </div>
+
+    <p style="font-size: 15px; color: var(--gray-800); line-height: 1.9; margin-bottom: 25px;">
+      Nossa equipe está disponível para ajudar em todas as etapas — da configuração inicial ao uso diário.
+      Conte com canais diretos de atendimento para tirar dúvidas, resolver problemas ou sugerir melhorias.
+    </p>
+
+    <div class="contact-grid">
+      <div class="contact-card">
+        <h4>E-mail de Atendimento</h4>
+        <p>Envie suas dúvidas, solicitações ou sugestões diretamente para nossa equipe.</p>
+        <p style="margin-top: 12px;"><a href="mailto:atendimento@giro-kids.com">atendimento@giro-kids.com</a></p>
+      </div>
+      <div class="contact-card">
+        <h4>Sistema de Chamados</h4>
+        <p>Abra tickets de suporte diretamente pelo sistema. Acompanhe o status, prioridade e histórico de cada solicitação.</p>
+      </div>
+      <div class="contact-card">
+        <h4>Site Oficial</h4>
+        <p>Conheça nossos planos, funcionalidades e cadastre-se para o teste gratuito de 30 dias.</p>
+        <p style="margin-top: 12px;"><a href="https://giro-kids.com/">giro-kids.com</a></p>
+      </div>
+      <div class="contact-card">
+        <h4>Onboarding Assistido</h4>
+        <p>Clientes Enterprise contam com acompanhamento dedicado na configuração e treinamento da equipe.</p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 25px;">
+      <h3>Como funciona o suporte?</h3>
+      <ul class="feature-list">
+        <li>Abra um chamado diretamente dentro do sistema Giro Kids — sem precisar sair da plataforma</li>
+        <li>Cada chamado tem status (aberto, em andamento, resolvido) e prioridade para organizar o atendimento</li>
+        <li>Acompanhe o histórico completo de conversas e respostas em cada chamado</li>
+        <li>Envie anexos (prints, documentos) para facilitar a análise do seu problema</li>
+        <li>Clientes Pro e Enterprise têm atendimento prioritário</li>
+      </ul>
+    </div>
+
+    <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-top: 20px; text-align: center;">
+      <p style="font-size: 14px; color: var(--gray-800); font-weight: 600;">
+        Ficou com alguma dúvida? Entre em contato pelo
+        <a href="mailto:atendimento@giro-kids.com" style="color: var(--primary); text-decoration: none; font-weight: 700;">atendimento@giro-kids.com</a>
+      </p>
+    </div>
+
+    <div class="page-watermark">giro-kids.com</div>
+    <div class="page-number">10</div>
+  </div>
+
+  <!-- PAGE 11 - FECHAMENTO -->
+  <div class="page closing">
+    <div style="margin-bottom: 30px;">
+      <img src="/logo-girokids.png" alt="Giro Kids" style="width: 80px; height: 80px; object-fit: contain; border-radius: 16px; background: white; padding: 10px;">
+    </div>
+    <h2>Giro Kids</h2>
+    <p>
+      A plataforma completa para transformar a gestão do seu parque infantil.
+      Mais controle, mais dados, mais crescimento.
+    </p>
+    <div class="contact-info">
+      <div><a href="https://giro-kids.com/">giro-kids.com</a></div>
+      <div><a href="mailto:atendimento@giro-kids.com">atendimento@giro-kids.com</a></div>
+      <div style="margin-top: 20px; font-size: 13px; opacity: 0.7;">
+        <strong>DADOS INTELIGENTES LTDA</strong><br>
+        CNPJ: 47.773.826/0001-57
+      </div>
+    </div>
+    <div class="cover-footer">
+      Apresentação de Funcionalidades &bull; 2026
+    </div>
+  </div>
+
+</body>
+</html>
