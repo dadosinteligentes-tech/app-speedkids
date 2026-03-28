@@ -29,7 +29,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 	const brandName = tenant?.name || "SpeedKids";
 	const brandColor = tenant?.primary_color || "#FF7043";
 	const brandPalette = generateBrandPalette(brandColor);
-	const logoUrl = tenant?.logo_url || "/logo.svg";
+	const logoUrl = tenant?.logo_url || "/logo-default.svg";
 
 	return (
 	<html lang="pt-BR">

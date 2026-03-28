@@ -63,6 +63,17 @@ function toggleTenant(action) {
 		.then(function(r) { if (r.ok) { showToast(action === 'suspend' ? 'Tenant suspenso' : 'Tenant ativado'); setTimeout(function(){location.reload()},800); } else showToast('Erro', 'error'); });
 }
 
+function sendCredentials() {
+	if (!confirm('Isso vai gerar uma nova senha e enviar por email ao owner do tenant. Continuar?')) return;
+	fetch('/api/platform/tenants/' + tenantId + '/send-credentials', { method: 'POST' })
+		.then(function(r) { return r.json(); })
+		.then(function(d) {
+			if (d.ok && d.sent) showToast('Email enviado para ' + d.email);
+			else if (d.ok) showToast('Senha gerada mas email falhou (verifique RESEND_API_KEY)', 'error');
+			else showToast(d.error || 'Erro', 'error');
+		}).catch(function() { showToast('Erro de conexão', 'error'); });
+}
+
 function resetPassword(userId, userName) {
 	var pwd = prompt('Nova senha para ' + userName + ':');
 	if (!pwd) return;
@@ -146,6 +157,7 @@ function showTab(tab) {
 				? `<button onclick="impersonateUser(${users[0].id})" class="px-3 py-1.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk text-sm font-display font-medium transition-colors">Impersonar</button>`
 				: ''
 			)}
+			<button onclick="sendCredentials()" class="px-3 py-1.5 bg-sk-blue-light hover:bg-sk-blue-light/80 text-sk-blue-dark rounded-sk text-sm font-display font-medium transition-colors">Enviar Credenciais</button>
 		</div>
 	`;
 

@@ -137,7 +137,7 @@ stripeWebhookRoutes.post("/", async (c) => {
 				});
 				welcomeEmail.to = ownerEmail;
 
-				await sendAndLogEmail(
+				const emailSent = await sendAndLogEmail(
 					c.env.DB,
 					c.env.RESEND_API_KEY,
 					`Giro Kids <noreply@${domain}>`,
@@ -150,6 +150,7 @@ stripeWebhookRoutes.post("/", async (c) => {
 						metadata: { plan, slug, stripe_customer_id: session.customer as string },
 					},
 				);
+				console.log(`Welcome email for ${ownerEmail}: ${emailSent ? "SENT" : "FAILED"} (RESEND_API_KEY ${c.env.RESEND_API_KEY ? "configured" : "MISSING"})`);
 			} catch (err) {
 				console.error(`Failed to provision tenant ${slug}:`, err);
 			}

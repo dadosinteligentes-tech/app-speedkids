@@ -75,16 +75,15 @@ export async function provisionTenant(
 			.bind(tenantId, "patinete", "Patinete"),
 	]);
 
-	// 6. Create subscription record if Stripe IDs provided
-	if (params.stripeCustomerId || params.stripeSubscriptionId) {
-		await db
-			.prepare(`
-				INSERT INTO subscriptions (tenant_id, stripe_customer_id, stripe_subscription_id, plan, status)
-				VALUES (?, ?, ?, ?, 'active')
-			`)
-			.bind(tenantId, params.stripeCustomerId ?? null, params.stripeSubscriptionId ?? null, params.plan)
-			.run();
-	}
+	// 6. Create subscription record (always — with or without Stripe IDs)
+	const subStatus = params.stripeCustomerId ? "active" : "pending";
+	await db
+		.prepare(`
+			INSERT INTO subscriptions (tenant_id, stripe_customer_id, stripe_subscription_id, plan, status)
+			VALUES (?, ?, ?, ?, ?)
+		`)
+		.bind(tenantId, params.stripeCustomerId ?? null, params.stripeSubscriptionId ?? null, params.plan, subStatus)
+		.run();
 
 	return tenant;
 }

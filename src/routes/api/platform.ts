@@ -127,6 +127,43 @@ platformApiRoutes.post("/tenants/:id/users/:userId/reset-password", async (c) =>
 	return c.json({ ok: true });
 });
 
+// Send/resend welcome email with new credentials
+platformApiRoutes.post("/tenants/:id/send-credentials", async (c) => {
+	const tenantId = parseInt(c.req.param("id"), 10);
+	const tenant = await getTenantDetail(c.env.DB, tenantId);
+	if (!tenant) return c.json({ error: "Tenant não encontrado" }, 404);
+
+	// Get the owner user
+	const owner = await c.env.DB
+		.prepare("SELECT id, name, email FROM users WHERE tenant_id = ? AND role = 'owner' LIMIT 1")
+		.bind(tenantId)
+		.first<{ id: number; name: string; email: string }>();
+	if (!owner) return c.json({ error: "Usuário owner não encontrado" }, 404);
+
+	// Generate new temp password and reset
+	const tempPassword = crypto.randomUUID().slice(0, 12);
+	const salt = generateSalt();
+	const passwordHash = await hashPassword(tempPassword, salt);
+	await c.env.DB.prepare("UPDATE users SET password_hash = ?, salt = ?, updated_at = datetime('now') WHERE id = ?")
+		.bind(passwordHash, salt, owner.id).run();
+
+	// Send welcome email
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	const plans = await getPlanDefinitions(c.env.DB);
+	const planCfg = plans[tenant.plan];
+	const { buildWelcomeEmail, sendAndLogEmail } = await import("../../lib/email");
+	const welcomeEmail = buildWelcomeEmail({
+		ownerName: owner.name, businessName: tenant.name, slug: tenant.slug, domain,
+		tempPassword, plan: tenant.plan,
+		planLabel: planCfg?.label || tenant.plan, priceCents: planCfg?.priceCents || 0, trialDays: 30,
+	});
+	welcomeEmail.to = owner.email;
+	const sent = await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+		{ tenantId, recipient: owner.email, subject: welcomeEmail.subject, eventType: "welcome_manual" });
+
+	return c.json({ ok: true, sent, email: owner.email });
+});
+
 // Impersonate a tenant user
 platformApiRoutes.post("/tenants/:id/impersonate/:userId", async (c) => {
 	const tenantId = parseInt(c.req.param("id"), 10);
