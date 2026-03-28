@@ -269,6 +269,8 @@ async function applyMigrations(db: D1Database) {
 				has_competition INTEGER DEFAULT 0,
 				map_embed TEXT,
 				estimated_value_cents INTEGER DEFAULT 0,
+				tags TEXT,
+				temperature TEXT DEFAULT 'morno',
 				converted_tenant_id INTEGER REFERENCES tenants(id),
 				created_at TEXT NOT NULL DEFAULT (datetime('now')),
 				updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -850,6 +852,48 @@ describe("Platform Admin API", () => {
 		it("returns 403 for non-platform user via API", async () => {
 			const res = await req("/api/platform/crm/leads", {}, clientCookie);
 			expect(res.status).toBe(403);
+		});
+
+		it("creates lead with tags and temperature", async () => {
+			const { createLead, getLeadById } = await import("../../src/db/queries/crm-leads");
+			const lead = await createLead(env.DB, {
+				company_name: "Tagged Corp",
+				contact_name: "Ana",
+				tags: "feira-2026, calhau",
+				temperature: "quente",
+			});
+			expect(lead.tags).toBe("feira-2026, calhau");
+			expect(lead.temperature).toBe("quente");
+		});
+
+		it("getTodayAgenda returns follow-ups for today and overdue", async () => {
+			const { getTodayAgenda, createLead } = await import("../../src/db/queries/crm-leads");
+			await createLead(env.DB, {
+				company_name: "Agenda Corp",
+				contact_name: "Carlos",
+				next_followup_at: new Date().toISOString(),
+			});
+			const agenda = await getTodayAgenda(env.DB);
+			expect(agenda.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it("getFunnelVelocity returns stats", async () => {
+			const { getFunnelVelocity } = await import("../../src/db/queries/crm-leads");
+			const velocity = await getFunnelVelocity(env.DB);
+			expect(velocity).toHaveProperty("avg_total_days");
+			expect(velocity).toHaveProperty("total_ganhos");
+		});
+
+		it("findDuplicateLeads detects similar names", async () => {
+			const { findDuplicateLeads } = await import("../../src/db/queries/crm-leads");
+			const dupes = await findDuplicateLeads(env.DB, "Parque");
+			expect(dupes.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it("LOSS_REASONS contains structured reasons", async () => {
+			const { LOSS_REASONS, LOSS_REASON_LABELS } = await import("../../src/db/queries/crm-leads");
+			expect(LOSS_REASONS.length).toBeGreaterThanOrEqual(7);
+			expect(LOSS_REASON_LABELS.preco).toBe("Preço alto");
 		});
 	});
 });

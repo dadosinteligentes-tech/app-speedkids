@@ -416,6 +416,8 @@ export interface CrmLead {
 	has_competition: number;
 	map_embed: string | null;
 	estimated_value_cents: number;
+	tags: string | null;
+	temperature: "frio" | "morno" | "quente";
 	converted_tenant_id: number | null;
 	created_at: string;
 	updated_at: string;

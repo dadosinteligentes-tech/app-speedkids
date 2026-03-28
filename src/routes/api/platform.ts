@@ -439,7 +439,8 @@ platformApiRoutes.post("/tickets/:id/status", async (c) => {
 import {
 	listLeads, getLeadById, createLead, updateLead, updateLeadStatus,
 	deleteLead, getLeadNotes, addLeadNote, getOverdueLeads, getCrmStats,
-	getLeadsByStatus, markLeadConverted,
+	getLeadsByStatus, markLeadConverted, getTodayAgenda, getFunnelVelocity,
+	findDuplicateLeads, LOSS_REASONS,
 } from "../../db/queries/crm-leads";
 import { buildPresentationEmail, buildWelcomeEmail, sendAndLogEmail } from "../../lib/email";
 
@@ -661,4 +662,25 @@ platformApiRoutes.post("/crm/leads/:id/convert", async (c) => {
 	);
 
 	return c.json({ ok: true, tenant: { id: tenant.id, slug: tenant.slug } }, 201);
+});
+
+// Agenda do dia
+platformApiRoutes.get("/crm/agenda", async (c) => {
+	const agenda = await getTodayAgenda(c.env.DB);
+	return c.json(agenda);
+});
+
+// Velocidade do funil
+platformApiRoutes.get("/crm/funnel-velocity", async (c) => {
+	const velocity = await getFunnelVelocity(c.env.DB);
+	return c.json(velocity);
+});
+
+// Verificar duplicidade
+platformApiRoutes.get("/crm/check-duplicate", async (c) => {
+	const name = c.req.query("name") || "";
+	const email = c.req.query("email");
+	if (!name) return c.json([]);
+	const duplicates = await findDuplicateLeads(c.env.DB, name, email || undefined);
+	return c.json(duplicates);
 });

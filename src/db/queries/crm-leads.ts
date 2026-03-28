@@ -85,14 +85,16 @@ export interface CreateLeadInput {
 	next_followup_at?: string;
 	map_embed?: string;
 	estimated_value_cents?: number;
+	tags?: string;
+	temperature?: string;
 }
 
 export async function createLead(db: D1Database, input: CreateLeadInput): Promise<CrmLead> {
 	const lead = await db
 		.prepare(
 			`INSERT INTO crm_leads (company_name, contact_name, contact_role, email, whatsapp, social_profile,
-				address, latitude, longitude, location_type, lead_source, flow_potential, has_competition, next_followup_at, map_embed, estimated_value_cents)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+				address, latitude, longitude, location_type, lead_source, flow_potential, has_competition, next_followup_at, map_embed, estimated_value_cents, tags, temperature)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
 		)
 		.bind(
 			input.company_name, input.contact_name, input.contact_role ?? null,
@@ -101,7 +103,8 @@ export async function createLead(db: D1Database, input: CreateLeadInput): Promis
 			input.location_type ?? null, input.lead_source ?? "ativo",
 			input.flow_potential ?? "medio", input.has_competition ? 1 : 0,
 			input.next_followup_at ?? null, input.map_embed ?? null,
-			input.estimated_value_cents ?? 0,
+			input.estimated_value_cents ?? 0, input.tags ?? null,
+			input.temperature ?? "morno",
 		)
 		.first<CrmLead>();
 
@@ -137,6 +140,8 @@ export async function updateLead(
 		next_followup_at: input.next_followup_at,
 		map_embed: input.map_embed,
 		estimated_value_cents: input.estimated_value_cents,
+		tags: input.tags,
+		temperature: input.temperature,
 	};
 
 	if (input.has_competition !== undefined) {
@@ -235,6 +240,8 @@ export interface CrmDashboardStats {
 	this_week_contacts: number;
 	pipeline_value_cents: number;
 	conversion_rate: number;
+	loss_reasons: Record<string, number>;
+	today_followups: number;
 }
 
 export async function getCrmStats(db: D1Database): Promise<CrmDashboardStats> {
@@ -276,6 +283,16 @@ export async function getCrmStats(db: D1Database): Promise<CrmDashboardStats> {
 	const wonCount = by_status.ganho ?? 0;
 	const closedCount = wonCount + (by_status.perdido ?? 0);
 
+	const { results: lossRows } = await db
+		.prepare("SELECT loss_reason, COUNT(*) as cnt FROM crm_leads WHERE status = 'perdido' AND loss_reason IS NOT NULL GROUP BY loss_reason")
+		.all<{ loss_reason: string; cnt: number }>();
+	const loss_reasons: Record<string, number> = {};
+	for (const row of lossRows) loss_reasons[row.loss_reason] = row.cnt;
+
+	const todayFollowups = await db
+		.prepare("SELECT COUNT(*) as cnt FROM crm_leads WHERE next_followup_at <= datetime('now', '+1 day') AND next_followup_at IS NOT NULL AND status NOT IN ('ganho', 'perdido')")
+		.first<{ cnt: number }>();
+
 	return {
 		total: totalCount,
 		by_status,
@@ -283,6 +300,8 @@ export async function getCrmStats(db: D1Database): Promise<CrmDashboardStats> {
 		this_week_contacts: weekContacts?.cnt ?? 0,
 		pipeline_value_cents: pipeline?.val ?? 0,
 		conversion_rate: closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0,
+		loss_reasons,
+		today_followups: todayFollowups?.cnt ?? 0,
 	};
 }
 
@@ -313,3 +332,115 @@ export async function markLeadConverted(db: D1Database, leadId: number, tenantId
 		.bind(tenantId, leadId)
 		.run();
 }
+
+// ── Agenda do dia (follow-ups de hoje e atrasados) ──
+
+export interface AgendaItem extends CrmLead {
+	is_overdue: number;
+}
+
+export async function getTodayAgenda(db: D1Database): Promise<AgendaItem[]> {
+	const { results } = await db
+		.prepare(`
+			SELECT *,
+				CASE WHEN next_followup_at < datetime('now') THEN 1 ELSE 0 END as is_overdue
+			FROM crm_leads
+			WHERE next_followup_at IS NOT NULL
+				AND next_followup_at <= datetime('now', '+1 day')
+				AND status NOT IN ('ganho', 'perdido')
+			ORDER BY is_overdue DESC, next_followup_at ASC
+		`)
+		.all<AgendaItem>();
+	return results;
+}
+
+// ── Velocidade do funil (tempo médio por etapa em dias) ──
+
+export interface FunnelVelocity {
+	avg_novo_to_contatado: number | null;
+	avg_contatado_to_proposta: number | null;
+	avg_proposta_to_negociacao: number | null;
+	avg_negociacao_to_ganho: number | null;
+	avg_total_days: number | null;
+	total_ganhos: number;
+}
+
+export async function getFunnelVelocity(db: D1Database): Promise<FunnelVelocity> {
+	// Average total cycle: created_at to updated_at for 'ganho' leads
+	const avgTotal = await db
+		.prepare(`
+			SELECT
+				AVG(JULIANDAY(updated_at) - JULIANDAY(created_at)) as avg_days,
+				COUNT(*) as cnt
+			FROM crm_leads WHERE status = 'ganho'
+		`)
+		.first<{ avg_days: number | null; cnt: number }>();
+
+	// Average time from creation to first note (novo → contatado proxy)
+	const avgFirstContact = await db
+		.prepare(`
+			SELECT AVG(days) as avg_days FROM (
+				SELECT MIN(JULIANDAY(n.created_at) - JULIANDAY(l.created_at)) as days
+				FROM crm_leads l
+				JOIN crm_lead_notes n ON n.lead_id = l.id
+				WHERE l.status NOT IN ('novo')
+				GROUP BY l.id
+			)
+		`)
+		.first<{ avg_days: number | null }>();
+
+	return {
+		avg_novo_to_contatado: avgFirstContact?.avg_days ? Math.round(avgFirstContact.avg_days * 10) / 10 : null,
+		avg_contatado_to_proposta: null,
+		avg_proposta_to_negociacao: null,
+		avg_negociacao_to_ganho: null,
+		avg_total_days: avgTotal?.avg_days ? Math.round(avgTotal.avg_days * 10) / 10 : null,
+		total_ganhos: avgTotal?.cnt ?? 0,
+	};
+}
+
+// ── Duplicidade (busca por email ou nome similar) ──
+
+export async function findDuplicateLeads(db: D1Database, companyName: string, email?: string): Promise<CrmLead[]> {
+	const conditions: string[] = [];
+	const binds: string[] = [];
+
+	conditions.push("company_name LIKE ? ESCAPE '\\'");
+	const escaped = companyName.replace(/[%_\\]/g, "\\$&");
+	binds.push(`%${escaped}%`);
+
+	if (email) {
+		conditions.push("email = ?");
+		binds.push(email);
+	}
+
+	const { results } = await db
+		.prepare(`SELECT * FROM crm_leads WHERE ${conditions.join(" OR ")} LIMIT 5`)
+		.bind(...binds)
+		.all<CrmLead>();
+	return results;
+}
+
+// ── Motivos de perda padronizados ──
+
+export const LOSS_REASONS = [
+	"preco",
+	"ja_tem_fornecedor",
+	"sem_interesse",
+	"sem_espaco",
+	"timing_ruim",
+	"sem_orcamento",
+	"concorrencia",
+	"outro",
+] as const;
+
+export const LOSS_REASON_LABELS: Record<string, string> = {
+	preco: "Preço alto",
+	ja_tem_fornecedor: "Já tem fornecedor",
+	sem_interesse: "Sem interesse",
+	sem_espaco: "Sem espaço disponível",
+	timing_ruim: "Timing ruim / volta depois",
+	sem_orcamento: "Sem orçamento no momento",
+	concorrencia: "Escolheu concorrente",
+	outro: "Outro motivo",
+};

@@ -21,7 +21,7 @@ import { PlatformEmailLogs } from "../../views/platform/email-logs";
 import { PlatformTickets } from "../../views/platform/tickets";
 import { getAllTickets } from "../../db/queries/support-tickets";
 import { CrmPage } from "../../views/platform/crm";
-import { listLeads, getCrmStats, getLeadsByStatus, getOverdueLeads } from "../../db/queries/crm-leads";
+import { listLeads, getCrmStats, getLeadsByStatus, getOverdueLeads, getTodayAgenda, getFunnelVelocity } from "../../db/queries/crm-leads";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 
 export const platformPages = new Hono<AppEnv>();
@@ -151,12 +151,15 @@ platformPages.get("/tickets", async (c) => {
 // CRM
 platformPages.get("/crm", async (c) => {
 	const db = c.env.DB;
-	const [leadResult, stats, kanbanData, overdueLeadsList] = await Promise.all([
+	const [leadResult, stats, kanbanData, overdueLeadsList, agenda, funnelVelocity] = await Promise.all([
 		listLeads(db, { limit: 100 }),
 		getCrmStats(db),
 		getLeadsByStatus(db),
 		getOverdueLeads(db),
+		getTodayAgenda(db),
+		getFunnelVelocity(db),
 	]);
 	const user = c.get("user");
-	return c.html(<CrmPage leads={leadResult.leads} stats={stats} kanbanData={kanbanData} overdueLeads={overdueLeadsList} user={user} />);
+	return c.html(<CrmPage leads={leadResult.leads} stats={stats} kanbanData={kanbanData} overdueLeads={overdueLeadsList}
+		agenda={agenda} funnelVelocity={funnelVelocity} user={user} />);
 });

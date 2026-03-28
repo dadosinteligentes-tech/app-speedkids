@@ -1,7 +1,7 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { CrmLead } from "../../db/schema";
-import type { CrmDashboardStats } from "../../db/queries/crm-leads";
+import type { CrmDashboardStats, AgendaItem, FunnelVelocity } from "../../db/queries/crm-leads";
 import { PlatformLayout } from "./layout";
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
 	stats: CrmDashboardStats;
 	kanbanData: Record<string, CrmLead[]>;
 	overdueLeads: CrmLead[];
+	agenda: AgendaItem[];
+	funnelVelocity: FunnelVelocity;
 	user: { name: string; email: string } | null;
 }
 
@@ -29,7 +31,7 @@ const POTENTIAL_CFG: Record<string, { bg: string; text: string; label: string }>
 
 const STATUS_ORDER = ["novo", "contatado", "proposta_enviada", "negociacao", "ganho", "perdido"];
 
-export const CrmPage: FC<Props> = ({ leads, stats, kanbanData, overdueLeads, user }) => {
+export const CrmPage: FC<Props> = ({ leads, stats, kanbanData, overdueLeads, agenda, funnelVelocity, user }) => {
 	const script = html`<script>
 ${raw(`
 var crmView = 'list';
@@ -60,19 +62,43 @@ function onDragEnd(e) { e.target.style.opacity = '1'; draggedLeadId = null; drag
 function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
 function onDragEnter(e) { e.currentTarget.style.background = 'rgba(59,130,246,0.08)'; }
 function onDragLeave(e) { e.currentTarget.style.background = ''; }
+var LOSS_REASON_OPTIONS = ${JSON.stringify(Object.entries(
+	{ preco: "Preço alto", ja_tem_fornecedor: "Já tem fornecedor", sem_interesse: "Sem interesse", sem_espaco: "Sem espaço disponível", timing_ruim: "Timing ruim / volta depois", sem_orcamento: "Sem orçamento", concorrencia: "Escolheu concorrente", outro: "Outro motivo" }
+))};
+
+function pickLossReason(callback) {
+	var modal = document.getElementById('loss-reason-modal');
+	modal.classList.remove('hidden');
+	window._lossCallback = callback;
+}
+function selectLossReason(reason) {
+	document.getElementById('loss-reason-modal').classList.add('hidden');
+	if (window._lossCallback) window._lossCallback(reason);
+}
+function cancelLossReason() {
+	document.getElementById('loss-reason-modal').classList.add('hidden');
+	if (window._lossCallback) window._lossCallback(null);
+}
+
 function onDrop(e, newStatus) {
 	e.preventDefault();
 	e.currentTarget.style.background = '';
 	if (!draggedLeadId || dropPending) return;
 	if (newStatus === draggedLeadStatus) { draggedLeadId = null; return; }
-	var lossReason = '';
-	if (newStatus === 'perdido') {
-		lossReason = prompt('Motivo da perda:');
-		if (lossReason === null) { draggedLeadId = null; return; }
-	}
-	dropPending = true;
 	var lid = draggedLeadId;
 	draggedLeadId = null;
+	if (newStatus === 'perdido') {
+		pickLossReason(function(reason) {
+			if (reason === null) return;
+			submitStatusChange(lid, newStatus, reason);
+		});
+	} else {
+		submitStatusChange(lid, newStatus, '');
+	}
+}
+
+function submitStatusChange(lid, newStatus, lossReason) {
+	dropPending = true;
 	fetch('/api/platform/crm/leads/' + lid + '/status', {
 		method: 'PUT', headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ status: newStatus, loss_reason: lossReason })
@@ -195,12 +221,18 @@ function addNote(e) {
 }
 
 function changeLeadStatus(status) {
-	var lossReason = '';
-	if (status === 'perdido') { lossReason = prompt('Motivo da perda:'); if (lossReason === null) return; }
-	fetch('/api/platform/crm/leads/' + currentLeadId + '/status', {
-		method: 'PUT', headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ status: status, loss_reason: lossReason })
-	}).then(function(r) { if (r.ok) { showToast('Status atualizado'); openLead(currentLeadId); } });
+	if (status === 'perdido') {
+		pickLossReason(function(reason) {
+			if (reason === null) return;
+			submitStatusChange(currentLeadId, status, reason);
+			setTimeout(function() { openLead(currentLeadId); }, 700);
+		});
+	} else {
+		fetch('/api/platform/crm/leads/' + currentLeadId + '/status', {
+			method: 'PUT', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ status: status })
+		}).then(function(r) { if (r.ok) { showToast('Status atualizado'); openLead(currentLeadId); } });
+	}
 }
 
 function sendPresentation() {
@@ -231,6 +263,8 @@ function showEditModal() {
 	document.getElementById('edit-has_competition').checked = !!l.has_competition;
 	document.getElementById('edit-map_embed').value = l.map_embed || '';
 	document.getElementById('edit-estimated_value').value = l.estimated_value_cents > 0 ? (l.estimated_value_cents / 100).toFixed(2) : '';
+	document.getElementById('edit-temperature').value = l.temperature || 'morno';
+	document.getElementById('edit-tags').value = l.tags || '';
 	if (l.next_followup_at) document.getElementById('edit-next_followup_at').value = l.next_followup_at.slice(0, 10);
 }
 function hideEditModal() { document.getElementById('crm-edit-modal').classList.add('hidden'); }
@@ -238,7 +272,7 @@ function hideEditModal() { document.getElementById('crm-edit-modal').classList.a
 function saveEdit(e) {
 	e.preventDefault();
 	var data = {};
-	['company_name','contact_name','contact_role','email','whatsapp','social_profile','address','location_type','lead_source','flow_potential','next_followup_at','map_embed'].forEach(function(f) {
+	['company_name','contact_name','contact_role','email','whatsapp','social_profile','address','location_type','lead_source','flow_potential','next_followup_at','map_embed','temperature','tags'].forEach(function(f) {
 		var el = document.getElementById('edit-' + f);
 		if (el) data[f] = el.value.trim() || null;
 	});
@@ -268,7 +302,7 @@ function hideCreateModal() { document.getElementById('crm-create-modal').classLi
 function createLead(e) {
 	e.preventDefault();
 	var data = {};
-	['company_name','contact_name','contact_role','email','whatsapp','social_profile','address','location_type','lead_source','flow_potential','next_followup_at','map_embed'].forEach(function(f) {
+	['company_name','contact_name','contact_role','email','whatsapp','social_profile','address','location_type','lead_source','flow_potential','next_followup_at','map_embed','temperature','tags'].forEach(function(f) {
 		var el = document.getElementById('new-' + f);
 		if (el && el.value.trim()) data[f] = el.value.trim();
 	});
@@ -356,7 +390,7 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 			breadcrumb={[{ label: "Dashboard", href: "/platform" }, { label: "CRM" }]}>
 
 			{/* Stats */}
-			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+			<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
 				<div class="bg-sk-surface rounded-sk p-4 shadow-sk-sm border-2 border-sk-border/50">
 					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Leads</p>
 					<p class="text-2xl font-bold font-display text-sk-text">{stats.total}</p>
@@ -396,7 +430,42 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 					<p class="text-xs text-sk-green font-display font-medium uppercase tracking-wider mb-1">Conversão</p>
 					<p class="text-2xl font-bold font-display text-sk-green-dark">{stats.conversion_rate}%</p>
 				</div>
+				<div class={`bg-sk-surface rounded-sk p-4 shadow-sk-sm border-2 ${stats.today_followups > 0 ? "border-sk-orange" : "border-sk-border/50"}`}>
+					<p class="text-xs text-sk-orange font-display font-medium uppercase tracking-wider mb-1">Agenda hoje</p>
+					<p class="text-2xl font-bold font-display text-sk-orange">{stats.today_followups}</p>
+				</div>
+				{funnelVelocity.avg_total_days !== null && (
+					<div class="bg-sk-surface rounded-sk p-4 shadow-sk-sm border-2 border-sk-border/50">
+						<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-1">Ciclo médio</p>
+						<p class="text-2xl font-bold font-display text-sk-text">{funnelVelocity.avg_total_days}d</p>
+					</div>
+				)}
 			</div>
+
+			{/* Agenda do dia */}
+			{agenda.length > 0 && (
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm border-2 border-sk-orange/50 p-4 mb-4">
+					<h3 class="font-display font-bold text-sm text-sk-text mb-2">Agenda de Hoje ({agenda.length} follow-ups)</h3>
+					<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+						{agenda.map((a) => (
+							<div onclick={`openLead(${a.id})`}
+								class={`cursor-pointer bg-sk-bg rounded-sk p-2.5 hover:shadow-sk-sm transition-shadow flex items-center gap-2 ${a.is_overdue ? "border-l-4 border-sk-danger" : "border-l-4 border-sk-orange"}`}>
+								<div class="flex-1 min-w-0">
+									<p class="font-display font-bold text-xs text-sk-text truncate">{a.company_name}</p>
+									<p class="text-xs text-sk-muted font-body truncate">{a.contact_name}</p>
+								</div>
+								<div class="flex items-center gap-1 flex-shrink-0">
+									{a.is_overdue ? <span class="text-xs text-sk-danger font-bold">Atrasado</span> : <span class="text-xs text-sk-orange">Hoje</span>}
+									{a.whatsapp && (
+										<a href={`https://wa.me/${a.whatsapp.replace(/\D/g, "")}`} target="_blank"
+											onclick="event.stopPropagation()" class="text-sk-green hover:text-sk-green-dark text-xs font-bold">W</a>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
 
 			{/* View toggle + filters */}
 			<div class="flex flex-col sm:flex-row gap-2 mb-3">
@@ -492,10 +561,18 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 											class={`bg-sk-surface rounded-sk p-2.5 shadow-sk-sm border border-sk-border/30 cursor-grab hover:shadow-sk-md transition-shadow ${isOverdue ? "border-l-4 border-sk-danger" : ""}`}>
 											<p class="font-display font-bold text-xs text-sk-text truncate">{l.company_name}</p>
 											<p class="text-xs text-sk-muted font-body truncate">{l.contact_name}</p>
+											{l.tags && <p class="text-xs text-sk-blue font-body truncate mt-0.5">{l.tags}</p>}
 											<div class="flex items-center justify-between mt-1.5">
 												<span class={`${pc.bg} ${pc.text} px-1.5 py-0.5 rounded text-xs font-display`}>{pc.label}</span>
-												{isOverdue && <span class="text-xs text-sk-danger font-bold">!</span>}
-												{l.has_competition === 1 && <span class="text-xs" title="Concorrência">⚔️</span>}
+												<div class="flex items-center gap-1">
+													{isOverdue && <span class="text-xs text-sk-danger font-bold">!</span>}
+													{l.has_competition === 1 && <span class="text-xs" title="Concorrência">⚔️</span>}
+													{l.whatsapp && (
+														<a href={`https://wa.me/${l.whatsapp.replace(/\D/g, "")}`} target="_blank"
+															onclick="event.stopPropagation()" title="WhatsApp"
+															class="text-sk-green hover:text-sk-green-dark text-xs font-bold">W</a>
+													)}
+												</div>
 											</div>
 										</div>
 									);
@@ -562,11 +639,17 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 								<label class="text-sm font-display font-medium text-sk-text">Concorrência</label>
 							</div>
 						</div>
-						<div class="grid grid-cols-2 gap-3">
+						<div class="grid grid-cols-3 gap-3">
 							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Valor estimado (R$)</label>
 								<input id="edit-estimated_value" type="number" step="0.01" min="0" placeholder="0,00" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" /></div>
+							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Temperatura</label>
+								<select id="edit-temperature" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body">
+									<option value="frio">Frio</option><option value="morno">Morno</option><option value="quente">Quente</option>
+								</select></div>
 							<div></div>
 						</div>
+						<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Tags (separadas por vírgula)</label>
+							<input id="edit-tags" type="text" placeholder="feira-2026, calhau, shopping" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" /></div>
 						<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Mapa (cole o iframe do Google Maps)</label>
 							<textarea id="edit-map_embed" placeholder='Cole o <iframe> do Google Maps aqui...' class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body resize-none h-16 focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none"></textarea></div>
 						<div class="flex gap-2 pt-2">
@@ -625,11 +708,17 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 								<label class="text-sm font-display font-medium text-sk-text">Concorrência</label>
 							</div>
 						</div>
-						<div class="grid grid-cols-2 gap-3">
+						<div class="grid grid-cols-3 gap-3">
 							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Valor estimado (R$)</label>
 								<input id="new-estimated_value" type="number" step="0.01" min="0" placeholder="0,00" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" /></div>
+							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Temperatura</label>
+								<select id="new-temperature" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body">
+									<option value="frio">Frio</option><option value="morno" selected>Morno</option><option value="quente">Quente</option>
+								</select></div>
 							<div></div>
 						</div>
+						<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Tags (separadas por vírgula)</label>
+							<input id="new-tags" type="text" placeholder="feira-2026, calhau, shopping" class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" /></div>
 						<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Mapa (cole o iframe do Google Maps)</label>
 							<textarea id="new-map_embed" placeholder='Cole o <iframe> do Google Maps aqui...' class="w-full px-3 py-2 border-2 border-sk-border rounded-sk text-sm font-body resize-none h-14 focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none"></textarea></div>
 						<div class="flex gap-2 pt-2">
@@ -660,6 +749,23 @@ function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(
 							<button type="button" onclick="hideConvertModal()" class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-display font-medium text-sm">Cancelar</button>
 						</div>
 					</form>
+				</div>
+			</div>
+			{/* ── Loss Reason Modal ── */}
+			<div id="loss-reason-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-sk-lg shadow-sk-xl w-full max-w-xs p-5 fade-in">
+					<h3 class="text-base font-display font-bold text-sk-text mb-3">Motivo da perda</h3>
+					<div class="space-y-2">
+						<button onclick="selectLossReason('preco')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Preço alto</button>
+						<button onclick="selectLossReason('ja_tem_fornecedor')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Já tem fornecedor</button>
+						<button onclick="selectLossReason('sem_interesse')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Sem interesse</button>
+						<button onclick="selectLossReason('sem_espaco')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Sem espaço disponível</button>
+						<button onclick="selectLossReason('timing_ruim')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Timing ruim / volta depois</button>
+						<button onclick="selectLossReason('sem_orcamento')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Sem orçamento</button>
+						<button onclick="selectLossReason('concorrencia')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Escolheu concorrente</button>
+						<button onclick="selectLossReason('outro')" class="btn-touch w-full py-2 px-3 bg-sk-bg hover:bg-sk-border/30 rounded-sk text-sm font-body text-left">Outro motivo</button>
+					</div>
+					<button onclick="cancelLossReason()" class="w-full mt-3 py-2 text-sm text-sk-muted font-display text-center">Cancelar</button>
 				</div>
 			</div>
 		</PlatformLayout>
