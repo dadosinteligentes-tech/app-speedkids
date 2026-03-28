@@ -375,6 +375,18 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 				}
 			</script>`}
 
+			{html`<script>
+				function showToast(msg, type) {
+					var el = document.createElement('div');
+					var bg = type === 'error' ? '#EF5350' : '#388E3C';
+					el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:12px;color:#fff;font-family:Quicksand,sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.15);opacity:0;transition:opacity 0.3s;background:' + bg;
+					el.textContent = msg;
+					document.body.appendChild(el);
+					requestAnimationFrame(function() { el.style.opacity = '1'; });
+					setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+				}
+			</script>`}
+
 			{bodyScripts ?? ""}
 
 			{/* Footer */}

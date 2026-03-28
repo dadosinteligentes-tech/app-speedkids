@@ -110,6 +110,28 @@ receiptPages.get("/product-sale/:id", async (c) => {
 	return c.html(<ProductSaleReceipt sale={sale} config={config} tenant={tenant} />);
 });
 
+// Document template preview (with sample data) — must be registered before :sessionId to avoid "preview" matching as sessionId
+receiptPages.get("/document/:templateId/preview", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const config = await requireConfig(c.env.DB, tenantId);
+	if (!config) {
+		return c.html(<html><body style="font-family:monospace;padding:20px;text-align:center"><p>Configure os dados primeiro.</p></body></html>);
+	}
+
+	const templateId = Number(c.req.param("templateId"));
+	const template = await getTemplateById(c.env.DB, tenantId, templateId);
+	if (!template) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Modelo nao encontrado.</p></body></html>, 404);
+
+	const vars = getSampleVariables();
+	vars.empresa = config.name;
+	vars.cnpj = config.cnpj || "";
+	vars.endereco = config.address || "";
+	vars.telefone = config.phone || "";
+
+	const rendered = renderTemplate(template.content, vars);
+	return c.html(<DocumentReceipt title={`[PREVIEW] ${template.name}`} renderedContent={rendered} config={config} />);
+});
+
 // Document template receipt (with rental session data)
 receiptPages.get("/document/:templateId/:sessionId", async (c) => {
 	const tenantId = c.get("tenant_id");
@@ -141,26 +163,4 @@ receiptPages.get("/document/:templateId/:sessionId", async (c) => {
 	const rendered = renderTemplate(template.content, vars);
 
 	return c.html(<DocumentReceipt title={template.name} renderedContent={rendered} config={config} />);
-});
-
-// Document template preview (with sample data)
-receiptPages.get("/document/:templateId/preview", async (c) => {
-	const tenantId = c.get("tenant_id");
-	const config = await requireConfig(c.env.DB, tenantId);
-	if (!config) {
-		return c.html(<html><body style="font-family:monospace;padding:20px;text-align:center"><p>Configure os dados primeiro.</p></body></html>);
-	}
-
-	const templateId = Number(c.req.param("templateId"));
-	const template = await getTemplateById(c.env.DB, tenantId, templateId);
-	if (!template) return c.html(<html><body style="font-family:monospace;padding:20px"><p>Modelo nao encontrado.</p></body></html>, 404);
-
-	const vars = getSampleVariables();
-	vars.empresa = config.name;
-	vars.cnpj = config.cnpj || "";
-	vars.endereco = config.address || "";
-	vars.telefone = config.phone || "";
-
-	const rendered = renderTemplate(template.content, vars);
-	return c.html(<DocumentReceipt title={`[PREVIEW] ${template.name}`} renderedContent={rendered} config={config} />);
 });

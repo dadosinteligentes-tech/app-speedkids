@@ -1034,23 +1034,33 @@ const dashboardControllerScript = `
 		fetch('/api/rentals/' + sessionId + '/documents')
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
-				if (!data.templates || !data.templates.length) {
-					list.innerHTML = '<p class="text-sm text-sk-muted font-body text-center py-6">Nenhum modelo de documento cadastrado.<br><a href="/admin/documents" class="text-sk-blue underline">Cadastrar em Admin</a></p>';
-					return;
+				// Comprovante de Locação padrão (sempre presente, não editável)
+				var defaultReceipt = '<div class="flex items-center justify-between gap-2 p-3 bg-sk-green-light rounded-sk border border-sk-green/20">'
+					+ '<div class="flex-1 min-w-0">'
+					+ '<p class="font-display font-medium text-sm text-sk-text">🧾 Comprovante de Locação</p>'
+					+ '<p class="text-xs text-sk-muted font-body">Padrão do sistema</p>'
+					+ '</div>'
+					+ '<button onclick="printReceiptFromModal(\\'' + sessionId + '\\')" class="btn-touch px-3 py-2 rounded-sk text-xs font-display font-bold flex-shrink-0 bg-sk-green text-white hover:bg-sk-green-dark">Imprimir</button>'
+					+ '</div>';
+
+				var customDocs = '';
+				if (data.templates && data.templates.length) {
+					customDocs = data.templates.map(function(t) {
+						var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
+						var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
+						var btnText = t.printed ? 'Reimprimir' : 'Imprimir';
+						var btnCls = t.printed ? 'bg-sk-bg text-sk-muted border border-sk-border' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
+						return '<div class="flex items-center justify-between gap-2 p-3 bg-sk-bg rounded-sk">'
+							+ '<div class="flex-1 min-w-0">'
+							+ '<p class="font-display font-medium text-sm text-sk-text">' + icon + ' ' + t.name + '</p>'
+							+ '<p class="text-xs text-sk-muted font-body">' + label + (t.description ? ' — ' + t.description : '') + '</p>'
+							+ '</div>'
+							+ '<button onclick="printDocFromModal(' + t.id + ')" class="btn-touch px-3 py-2 rounded-sk text-xs font-display font-bold flex-shrink-0 ' + btnCls + '">' + btnText + '</button>'
+							+ '</div>';
+					}).join('');
 				}
-				list.innerHTML = data.templates.map(function(t) {
-					var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
-					var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
-					var btnText = t.printed ? 'Reimprimir' : 'Imprimir';
-					var btnCls = t.printed ? 'bg-sk-bg text-sk-muted border border-sk-border' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
-					return '<div class="flex items-center justify-between gap-2 p-3 bg-sk-bg rounded-sk">'
-						+ '<div class="flex-1 min-w-0">'
-						+ '<p class="font-display font-medium text-sm text-sk-text">' + icon + ' ' + t.name + '</p>'
-						+ '<p class="text-xs text-sk-muted font-body">' + label + (t.description ? ' — ' + t.description : '') + '</p>'
-						+ '</div>'
-						+ '<button onclick="printDocFromModal(' + t.id + ')" class="btn-touch px-3 py-2 rounded-sk text-xs font-display font-bold flex-shrink-0 ' + btnCls + '">' + btnText + '</button>'
-						+ '</div>';
-				}).join('');
+
+				list.innerHTML = defaultReceipt + customDocs;
 			})
 			.catch(function() {
 				list.innerHTML = '<p class="text-sm text-sk-danger font-body text-center py-4">Erro ao carregar documentos</p>';
@@ -1060,6 +1070,11 @@ const dashboardControllerScript = `
 	window.closeDocumentsModal = function() {
 		document.getElementById('documents-modal').classList.add('hidden');
 		window.__SK_DOC_SESSION_ID__ = null;
+	};
+
+	window.printReceiptFromModal = function(sessionId) {
+		closeDocumentsModal();
+		window.open('/receipts/rental/' + sessionId, '_blank');
 	};
 
 	window.printDocFromModal = function(templateId) {
@@ -1081,20 +1096,32 @@ const dashboardControllerScript = `
 		fetch('/api/rentals/' + sess.id + '/documents')
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
-				if (!data.templates || !data.templates.length) return;
 				container.classList.remove('hidden');
-				var hasMandatory = data.templates.some(function(t) { return t.print_mode === 'mandatory' && !t.printed; });
-				list.innerHTML = data.templates.map(function(t) {
-					var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
-					var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
-					var btnCls = t.printed ? 'bg-sk-bg text-sk-muted' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
-					return '<div class="flex items-center justify-between gap-2 p-2 bg-sk-bg rounded-sk">'
-						+ '<div class="flex-1 min-w-0"><span class="text-sm font-display font-medium text-sk-text">' + icon + ' ' + t.name + '</span>'
-						+ '<span class="text-xs text-sk-muted ml-1">(' + label + ')</span></div>'
-						+ '<button onclick="printDocument(' + t.id + ',\\'' + sess.id + '\\')" class="btn-touch px-3 py-1.5 rounded-sk text-xs font-display font-bold ' + btnCls + '">'
-						+ (t.printed ? 'Reimprimir' : 'Imprimir') + '</button>'
-						+ '</div>';
-				}).join('');
+				var hasMandatory = data.templates && data.templates.some(function(t) { return t.print_mode === 'mandatory' && !t.printed; });
+
+				// Comprovante de Locação padrão
+				var defaultReceipt = '<div class="flex items-center justify-between gap-2 p-2 bg-sk-green-light rounded-sk">'
+					+ '<div class="flex-1 min-w-0"><span class="text-sm font-display font-medium text-sk-text">🧾 Comprovante de Locação</span>'
+					+ '<span class="text-xs text-sk-muted ml-1">(Padrão)</span></div>'
+					+ '<button onclick="window.open(\\'/receipts/rental/' + sess.id + '\\',\\'_blank\\')" class="btn-touch px-3 py-1.5 rounded-sk text-xs font-display font-bold bg-sk-green text-white hover:bg-sk-green-dark">Imprimir</button>'
+					+ '</div>';
+
+				var customDocs = '';
+				if (data.templates && data.templates.length) {
+					customDocs = data.templates.map(function(t) {
+						var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
+						var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
+						var btnCls = t.printed ? 'bg-sk-bg text-sk-muted' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
+						return '<div class="flex items-center justify-between gap-2 p-2 bg-sk-bg rounded-sk">'
+							+ '<div class="flex-1 min-w-0"><span class="text-sm font-display font-medium text-sk-text">' + icon + ' ' + t.name + '</span>'
+							+ '<span class="text-xs text-sk-muted ml-1">(' + label + ')</span></div>'
+							+ '<button onclick="printDocument(' + t.id + ',\\'' + sess.id + '\\')" class="btn-touch px-3 py-1.5 rounded-sk text-xs font-display font-bold ' + btnCls + '">'
+							+ (t.printed ? 'Reimprimir' : 'Imprimir') + '</button>'
+							+ '</div>';
+					}).join('');
+				}
+
+				list.innerHTML = defaultReceipt + customDocs;
 				// Block OK if mandatory docs not printed
 				if (hasMandatory && okBtn) {
 					okBtn.disabled = true;
@@ -2196,6 +2223,7 @@ const dashboardControllerScript = `
 					: '<button onclick="pauseRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-yellow text-sk-text rounded-sk font-display font-bold active:bg-sk-yellow-dark" aria-label="Pausar">PAUSAR</button>')
 				+ '<button onclick="stopRental(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce flex-1 py-3 bg-sk-danger text-white rounded-sk font-display font-bold active:bg-red-700" aria-label="Parar">PARAR</button>'
 				+ (hasPaidReceipt ? '<button onclick="window.open(\\'/receipts/rental/' + session.id + '\\',\\'_blank\\')" class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white" title="Imprimir comprovante">&#128424;</button>' : '')
+				+ '<button onclick="openDocumentsModal(\\'' + session.id + '\\')" class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white" title="Documentos">\\u{1F4C4}</button>'
 				+ '</div>'
 				+ (canExtend ? '<button onclick="showExtendModal(\\'' + session.id + '\\',' + assetId + ')" class="btn-touch btn-bounce w-full mt-1 py-2 bg-sk-purple-light text-sk-purple rounded-sk text-xs font-display font-medium active:bg-purple-200">+ Estender</button>' : '');
 			var pkgName = card.querySelector('.package-name');

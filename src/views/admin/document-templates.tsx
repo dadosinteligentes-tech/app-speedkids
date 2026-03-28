@@ -106,6 +106,54 @@ function insertVar(v) {
 	ta.selectionStart = ta.selectionEnd = start + insert.length;
 	ta.focus();
 }
+
+/* ── Reorder ── */
+function moveTemplate(id, direction) {
+	var rows = Array.from(document.querySelectorAll('[data-tpl-id]'));
+	var idx = rows.findIndex(function(r) { return r.getAttribute('data-tpl-id') === String(id); });
+	if (idx < 0) return;
+	var swapIdx = idx + direction;
+	if (swapIdx < 0 || swapIdx >= rows.length) return;
+
+	var myId = parseInt(rows[idx].getAttribute('data-tpl-id'));
+	var otherId = parseInt(rows[swapIdx].getAttribute('data-tpl-id'));
+	var myOrder = parseInt(rows[idx].getAttribute('data-tpl-order'));
+	var otherOrder = parseInt(rows[swapIdx].getAttribute('data-tpl-order'));
+
+	// If same order value, assign based on position
+	if (myOrder === otherOrder) {
+		myOrder = idx;
+		otherOrder = swapIdx;
+	}
+
+	// Swap the sort_order values
+	var btn = rows[idx].querySelector('.move-btn');
+	if (btn) btn.disabled = true;
+
+	Promise.all([
+		fetch('/api/document-templates/' + myId, {
+			method: 'PUT', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sort_order: otherOrder })
+		}),
+		fetch('/api/document-templates/' + otherId, {
+			method: 'PUT', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ sort_order: myOrder })
+		})
+	]).then(function() {
+		// Animate swap
+		var parent = rows[idx].parentNode;
+		if (direction === -1) {
+			rows[idx].style.transform = 'translateY(-' + rows[swapIdx].offsetHeight + 'px)';
+			rows[swapIdx].style.transform = 'translateY(' + rows[idx].offsetHeight + 'px)';
+		} else {
+			rows[idx].style.transform = 'translateY(' + rows[swapIdx].offsetHeight + 'px)';
+			rows[swapIdx].style.transform = 'translateY(-' + rows[idx].offsetHeight + 'px)';
+		}
+		rows[idx].style.transition = 'transform 0.25s ease';
+		rows[swapIdx].style.transition = 'transform 0.25s ease';
+		setTimeout(function() { location.reload(); }, 300);
+	});
+}
 `)}
 </script>`;
 
@@ -124,31 +172,61 @@ function insertVar(v) {
 
 				{/* Templates list */}
 				{templates.length > 0 ? (
-					<div class="space-y-3">
-						{templates.map((t) => (
-							<div class={`bg-sk-surface rounded-sk-lg p-4 shadow-sk-sm border-2 ${t.is_active ? "border-sk-border/50" : "border-sk-border/20 opacity-60"}`}>
-								<div class="flex items-start justify-between gap-3">
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center gap-2 mb-1">
-											<h3 class="font-display font-bold text-base text-sk-text">{t.name}</h3>
-											<span class={`px-2 py-0.5 rounded text-xs font-display font-medium ${t.print_mode === "mandatory" ? "bg-sk-danger-light text-sk-danger" : "bg-sk-blue-light text-sk-blue-dark"}`}>
-												{t.print_mode === "mandatory" ? "Obrigatório" : "Opcional"}
-											</span>
-											{!t.is_active && <span class="px-2 py-0.5 rounded text-xs font-display font-medium bg-gray-100 text-gray-500">Inativo</span>}
-										</div>
-										{t.description && <p class="text-sm text-sk-muted font-body mb-1">{t.description}</p>}
-										<p class="text-xs text-sk-muted font-body font-mono truncate">{t.content.slice(0, 80)}...</p>
+					<div class="space-y-2" id="templates-list">
+						{templates.map((t, idx) => (
+							<div
+								data-tpl-id={String(t.id)}
+								data-tpl-order={String(t.sort_order)}
+								class={`bg-sk-surface rounded-sk-lg shadow-sk-sm border-2 ${t.is_active ? "border-sk-border/50" : "border-sk-border/20 opacity-60"}`}
+							>
+								<div class="flex items-center gap-0">
+									{/* Reorder arrows */}
+									<div class="flex flex-col items-center justify-center px-2 py-2 border-r border-sk-border/30 self-stretch" style="min-width:44px">
+										<button
+											onclick={`moveTemplate(${t.id}, -1)`}
+											disabled={idx === 0}
+											class={`move-btn p-1 rounded transition-colors ${idx === 0 ? "text-gray-300 cursor-not-allowed" : "text-sk-muted hover:text-sk-orange hover:bg-sk-orange-light"}`}
+											title="Mover para cima"
+										>
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+										</button>
+										<span class="text-xs font-mono text-sk-muted/60 leading-none my-0.5">{idx + 1}</span>
+										<button
+											onclick={`moveTemplate(${t.id}, 1)`}
+											disabled={idx === templates.length - 1}
+											class={`move-btn p-1 rounded transition-colors ${idx === templates.length - 1 ? "text-gray-300 cursor-not-allowed" : "text-sk-muted hover:text-sk-orange hover:bg-sk-orange-light"}`}
+											title="Mover para baixo"
+										>
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+										</button>
 									</div>
-									<div class="flex gap-1 flex-shrink-0">
-										<button onclick={`previewTemplate(${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-green-light text-sk-green-dark rounded-sk text-xs font-display font-medium" title="Preview térmico">
-											Preview
-										</button>
-										<button onclick={`showModal('edit',${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium">
-											Editar
-										</button>
-										<button onclick={`deleteTemplate(${t.id},'${t.name.replace(/'/g, "\\'")}')`} class="btn-touch px-2.5 py-1.5 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium">
-											Excluir
-										</button>
+
+									{/* Content */}
+									<div class="flex-1 min-w-0 p-4">
+										<div class="flex items-start justify-between gap-3">
+											<div class="flex-1 min-w-0">
+												<div class="flex items-center gap-2 mb-1">
+													<h3 class="font-display font-bold text-base text-sk-text">{t.name}</h3>
+													<span class={`px-2 py-0.5 rounded text-xs font-display font-medium ${t.print_mode === "mandatory" ? "bg-sk-danger-light text-sk-danger" : "bg-sk-blue-light text-sk-blue-dark"}`}>
+														{t.print_mode === "mandatory" ? "Obrigatório" : "Opcional"}
+													</span>
+													{!t.is_active && <span class="px-2 py-0.5 rounded text-xs font-display font-medium bg-gray-100 text-gray-500">Inativo</span>}
+												</div>
+												{t.description && <p class="text-sm text-sk-muted font-body mb-1">{t.description}</p>}
+												<p class="text-xs text-sk-muted font-body font-mono truncate">{t.content.slice(0, 80)}...</p>
+											</div>
+											<div class="flex gap-1 flex-shrink-0">
+												<button onclick={`previewTemplate(${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-green-light text-sk-green-dark rounded-sk text-xs font-display font-medium" title="Preview térmico">
+													Preview
+												</button>
+												<button onclick={`showModal('edit',${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium">
+													Editar
+												</button>
+												<button onclick={`deleteTemplate(${t.id},'${t.name.replace(/'/g, "\\'")}')`} class="btn-touch px-2.5 py-1.5 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium">
+													Excluir
+												</button>
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -208,14 +286,12 @@ function insertVar(v) {
 							</p>
 						</div>
 
-						<div class="grid grid-cols-3 gap-3">
+						<div class="grid grid-cols-2 gap-3">
 							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Modo de impressão</label>
 								<select id="tpl-print-mode" class="w-full px-3 py-2.5 border-2 border-sk-border rounded-sk text-sm font-body">
 									<option value="optional">Opcional</option>
 									<option value="mandatory">Obrigatório</option>
 								</select></div>
-							<div><label class="block text-xs font-display font-medium text-sk-text mb-1">Ordem</label>
-								<input id="tpl-sort" type="number" min="0" value="0" class="w-full px-3 py-2.5 border-2 border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue outline-none" /></div>
 							<div class="flex items-end pb-1 gap-2">
 								<input id="tpl-active" type="checkbox" checked class="w-4 h-4 rounded accent-sk-blue" />
 								<label class="text-sm font-display font-medium text-sk-text">Ativo</label>
