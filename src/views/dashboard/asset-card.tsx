@@ -197,6 +197,15 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 								&#128424;
 							</button>
 						) : null}
+						{session ? (
+							<button
+								onclick={`openDocumentsModal('${session.id}')`}
+								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
+								title="Documentos"
+							>
+								📄
+							</button>
+						) : null}
 					</>
 				) : isRunning && session ? (
 					<>
@@ -221,6 +230,15 @@ export const AssetCard: FC<AssetCardProps> = ({ asset, session, battery }) => {
 								title="Imprimir comprovante"
 							>
 								&#128424;
+							</button>
+						) : null}
+						{session ? (
+							<button
+								onclick={`openDocumentsModal('${session.id}')`}
+								class="btn-touch px-3 py-3 bg-white/80 text-sk-text rounded-sk text-lg active:bg-white"
+								title="Documentos"
+							>
+								📄
 							</button>
 						) : null}
 					</>

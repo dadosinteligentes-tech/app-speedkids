@@ -77,6 +77,26 @@ ${raw(dashboardControllerScript)}
 			<PackageSelector packages={packages} />
 			<IdentificationForm />
 			<PaymentModal />
+
+			{/* Documents Modal */}
+			<div id="documents-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-sm p-5 modal-slide-up">
+					<div class="flex items-center justify-between mb-3">
+						<div class="flex items-center gap-2">
+							<span class="text-lg">📄</span>
+							<h3 class="font-display font-bold text-base text-sk-text">Documentos</h3>
+						</div>
+						<button onclick="closeDocumentsModal()" class="text-sk-muted hover:text-sk-text text-xl">&times;</button>
+					</div>
+					<div id="documents-modal-list" class="space-y-2">
+						<p class="text-sm text-sk-muted font-body text-center py-4">Carregando...</p>
+					</div>
+					<button onclick="closeDocumentsModal()" class="btn-touch w-full mt-3 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-display font-medium text-sm">
+						Fechar
+					</button>
+				</div>
+			</div>
+
 			<BatterySwapModal />
 
 			{/* Battery Level Adjust Modal */}
@@ -607,6 +627,8 @@ const dashboardControllerScript = `
 				var sess = window.__SK_PAYING_SESSION__;
 				printBtn.classList.toggle('hidden', !(sess && sess.id));
 			}
+			// Load document templates for this session
+			loadSessionDocuments();
 			// Check if any sales goals were achieved
 			if (typeof checkGoalAchievements === 'function') {
 				checkGoalAchievements();
@@ -998,6 +1020,97 @@ const dashboardControllerScript = `
 		.catch(function() {
 			alert('Erro ao registrar cortesia. Tente novamente.');
 		});
+	};
+
+	// ---- Document templates ----
+	window.__SK_DOC_SESSION_ID__ = null;
+
+	window.openDocumentsModal = function(sessionId) {
+		window.__SK_DOC_SESSION_ID__ = sessionId;
+		document.getElementById('documents-modal').classList.remove('hidden');
+		var list = document.getElementById('documents-modal-list');
+		list.innerHTML = '<p class="text-sm text-sk-muted font-body text-center py-4">Carregando...</p>';
+
+		fetch('/api/rentals/' + sessionId + '/documents')
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (!data.templates || !data.templates.length) {
+					list.innerHTML = '<p class="text-sm text-sk-muted font-body text-center py-6">Nenhum modelo de documento cadastrado.<br><a href="/admin/documents" class="text-sk-blue underline">Cadastrar em Admin</a></p>';
+					return;
+				}
+				list.innerHTML = data.templates.map(function(t) {
+					var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
+					var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
+					var btnText = t.printed ? 'Reimprimir' : 'Imprimir';
+					var btnCls = t.printed ? 'bg-sk-bg text-sk-muted border border-sk-border' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
+					return '<div class="flex items-center justify-between gap-2 p-3 bg-sk-bg rounded-sk">'
+						+ '<div class="flex-1 min-w-0">'
+						+ '<p class="font-display font-medium text-sm text-sk-text">' + icon + ' ' + t.name + '</p>'
+						+ '<p class="text-xs text-sk-muted font-body">' + label + (t.description ? ' — ' + t.description : '') + '</p>'
+						+ '</div>'
+						+ '<button onclick="printDocFromModal(' + t.id + ')" class="btn-touch px-3 py-2 rounded-sk text-xs font-display font-bold flex-shrink-0 ' + btnCls + '">' + btnText + '</button>'
+						+ '</div>';
+				}).join('');
+			})
+			.catch(function() {
+				list.innerHTML = '<p class="text-sm text-sk-danger font-body text-center py-4">Erro ao carregar documentos</p>';
+			});
+	};
+
+	window.closeDocumentsModal = function() {
+		document.getElementById('documents-modal').classList.add('hidden');
+		window.__SK_DOC_SESSION_ID__ = null;
+	};
+
+	window.printDocFromModal = function(templateId) {
+		var sessionId = window.__SK_DOC_SESSION_ID__;
+		if (!sessionId) return;
+		window.open('/receipts/document/' + templateId + '/' + sessionId, '_blank');
+		fetch('/api/rentals/' + sessionId + '/documents/' + templateId + '/print', { method: 'POST' })
+			.then(function() { openDocumentsModal(sessionId); })
+			.catch(function() {});
+	};
+
+	window.loadSessionDocuments = function() {
+		var sess = window.__SK_PAYING_SESSION__;
+		var container = document.getElementById('payment-documents');
+		var list = document.getElementById('payment-documents-list');
+		var okBtn = document.getElementById('payment-ok-btn');
+		if (!sess || !sess.id || !container || !list) return;
+
+		fetch('/api/rentals/' + sess.id + '/documents')
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (!data.templates || !data.templates.length) return;
+				container.classList.remove('hidden');
+				var hasMandatory = data.templates.some(function(t) { return t.print_mode === 'mandatory' && !t.printed; });
+				list.innerHTML = data.templates.map(function(t) {
+					var icon = t.printed ? '✅' : (t.print_mode === 'mandatory' ? '🔴' : '⚪');
+					var label = t.print_mode === 'mandatory' ? 'Obrigatório' : 'Opcional';
+					var btnCls = t.printed ? 'bg-sk-bg text-sk-muted' : 'bg-sk-blue text-white hover:bg-sk-blue-dark';
+					return '<div class="flex items-center justify-between gap-2 p-2 bg-sk-bg rounded-sk">'
+						+ '<div class="flex-1 min-w-0"><span class="text-sm font-display font-medium text-sk-text">' + icon + ' ' + t.name + '</span>'
+						+ '<span class="text-xs text-sk-muted ml-1">(' + label + ')</span></div>'
+						+ '<button onclick="printDocument(' + t.id + ',\\'' + sess.id + '\\')" class="btn-touch px-3 py-1.5 rounded-sk text-xs font-display font-bold ' + btnCls + '">'
+						+ (t.printed ? 'Reimprimir' : 'Imprimir') + '</button>'
+						+ '</div>';
+				}).join('');
+				// Block OK if mandatory docs not printed
+				if (hasMandatory && okBtn) {
+					okBtn.disabled = true;
+					okBtn.classList.add('opacity-50');
+					okBtn.title = 'Imprima os documentos obrigatórios primeiro';
+				}
+			})
+			.catch(function() { /* silent */ });
+	};
+
+	window.printDocument = function(templateId, sessionId) {
+		var win = window.open('/receipts/document/' + templateId + '/' + sessionId, '_blank');
+		// Record print and refresh list
+		fetch('/api/rentals/' + sessionId + '/documents/' + templateId + '/print', { method: 'POST' })
+			.then(function() { loadSessionDocuments(); })
+			.catch(function() {});
 	};
 
 	// ---- Dismiss sucesso ----

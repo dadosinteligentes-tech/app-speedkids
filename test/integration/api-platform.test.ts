@@ -277,6 +277,30 @@ async function applyMigrations(db: D1Database) {
 			)
 		`),
 		db.prepare(`
+			CREATE TABLE IF NOT EXISTS document_templates (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				tenant_id INTEGER NOT NULL REFERENCES tenants(id),
+				name TEXT NOT NULL,
+				description TEXT,
+				content TEXT NOT NULL,
+				print_mode TEXT NOT NULL DEFAULT 'optional',
+				is_active INTEGER DEFAULT 1,
+				sort_order INTEGER DEFAULT 0,
+				created_at TEXT DEFAULT (datetime('now')),
+				updated_at TEXT DEFAULT (datetime('now'))
+			)
+		`),
+		db.prepare(`
+			CREATE TABLE IF NOT EXISTS rental_signed_documents (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				rental_session_id TEXT NOT NULL,
+				template_id INTEGER NOT NULL REFERENCES document_templates(id),
+				tenant_id INTEGER NOT NULL REFERENCES tenants(id),
+				printed_at TEXT NOT NULL DEFAULT (datetime('now')),
+				printed_by INTEGER REFERENCES users(id)
+			)
+		`),
+		db.prepare(`
 			CREATE TABLE IF NOT EXISTS crm_lead_notes (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
@@ -894,6 +918,68 @@ describe("Platform Admin API", () => {
 			const { LOSS_REASONS, LOSS_REASON_LABELS } = await import("../../src/db/queries/crm-leads");
 			expect(LOSS_REASONS.length).toBeGreaterThanOrEqual(7);
 			expect(LOSS_REASON_LABELS.preco).toBe("Preço alto");
+		});
+	});
+
+	describe("Document Templates", () => {
+		it("CRUD: create, list, update, get, delete", async () => {
+			const { createTemplate, listTemplates, updateTemplate, getTemplateById, deleteTemplate, getActiveTemplates, getMandatoryTemplates }
+				= await import("../../src/db/queries/document-templates");
+
+			// Create
+			const tpl = await createTemplate(env.DB, clientTenantId, {
+				name: "Termo de Responsabilidade",
+				content: "[CENTRO]TERMO\n---\nEu, {{cliente}}, autorizo.",
+				print_mode: "mandatory",
+			});
+			expect(tpl.id).toBeGreaterThan(0);
+			expect(tpl.print_mode).toBe("mandatory");
+
+			// List
+			const all = await listTemplates(env.DB, clientTenantId);
+			expect(all.length).toBeGreaterThanOrEqual(1);
+
+			// Update
+			await updateTemplate(env.DB, clientTenantId, tpl.id, { name: "Termo Atualizado" });
+			const updated = await getTemplateById(env.DB, clientTenantId, tpl.id);
+			expect(updated!.name).toBe("Termo Atualizado");
+
+			// Active
+			const active = await getActiveTemplates(env.DB, clientTenantId);
+			expect(active.every((t) => t.is_active === 1)).toBe(true);
+
+			// Mandatory
+			const mandatory = await getMandatoryTemplates(env.DB, clientTenantId);
+			expect(mandatory.length).toBeGreaterThanOrEqual(1);
+
+			// Delete
+			const temp = await createTemplate(env.DB, clientTenantId, { name: "Temp", content: "x" });
+			await deleteTemplate(env.DB, clientTenantId, temp.id);
+			expect(await getTemplateById(env.DB, clientTenantId, temp.id)).toBeNull();
+		});
+
+		it("records and retrieves prints", async () => {
+			const { createTemplate, recordPrint, getSessionPrintedDocs } = await import("../../src/db/queries/document-templates");
+			const tpl = await createTemplate(env.DB, clientTenantId, { name: "Print Test", content: "test", print_mode: "optional" });
+			await recordPrint(env.DB, "sess-print-test", tpl.id, clientTenantId, adminUserId);
+			const printed = await getSessionPrintedDocs(env.DB, "sess-print-test");
+			expect(printed.length).toBe(1);
+			expect(printed[0].template_id).toBe(tpl.id);
+		});
+
+		it("renderTemplate substitutes variables correctly", async () => {
+			const { renderTemplate } = await import("../../src/db/queries/document-templates");
+			expect(renderTemplate("Olá {{cliente}}, brinquedo: {{brinquedo}}.", { cliente: "João", brinquedo: "Kart" }))
+				.toBe("Olá João, brinquedo: Kart.");
+			expect(renderTemplate("{{inexistente}}", {})).toBe("{{inexistente}}");
+		});
+
+		it("getSampleVariables has all keys", async () => {
+			const { getSampleVariables } = await import("../../src/db/queries/document-templates");
+			const vars = getSampleVariables();
+			expect(vars.empresa).toBeDefined();
+			expect(vars.cliente).toBeDefined();
+			expect(vars.brinquedo).toBeDefined();
 		});
 	});
 });

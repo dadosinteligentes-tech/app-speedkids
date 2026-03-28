@@ -24,6 +24,7 @@ const NAV_ITEMS = [
 	{ href: "/admin/logs", label: "Logs", icon: "📋", roles: ["manager", "owner"] },
 	{ href: "/admin/users", label: "Usuários", icon: "👤", roles: ["owner"] },
 	{ href: "/admin/permissions", label: "Permissões", icon: "🔐", roles: ["owner"] },
+	{ href: "/admin/documents", label: "Documentos", icon: "📄", roles: ["manager", "owner"] },
 	{ href: "/admin/settings", label: "Configurações", icon: "⚙️", roles: ["owner"] },
 	{ href: "/admin/plan", label: "Meu Plano", icon: "📋", roles: ["manager", "owner"] },
 ];

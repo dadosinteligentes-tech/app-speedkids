@@ -304,3 +304,30 @@ rentalRoutes.put("/:id/edit", async (c) => {
 	const updated = await getSessionById(c.env.DB, id, tenantId);
 	return c.json(updated);
 });
+
+// ── Document templates for rental ──
+
+import { getActiveTemplates, getSessionPrintedDocs, recordPrint } from "../../db/queries/document-templates";
+
+rentalRoutes.get("/:id/documents", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const id = c.req.param("id");
+	const [templates, printed] = await Promise.all([
+		getActiveTemplates(c.env.DB, tenantId),
+		getSessionPrintedDocs(c.env.DB, id),
+	]);
+	const printedIds = new Set(printed.map((p) => p.template_id));
+	return c.json({
+		templates: templates.map((t) => ({ ...t, printed: printedIds.has(t.id) })),
+		printed,
+	});
+});
+
+rentalRoutes.post("/:id/documents/:docId/print", requirePermission("documents.print"), async (c) => {
+	const tenantId = c.get("tenant_id");
+	const sessionId = c.req.param("id");
+	const docId = parseInt(c.req.param("docId"), 10);
+	const user = c.get("user");
+	await recordPrint(c.env.DB, sessionId, docId, tenantId, user?.id ?? 0);
+	return c.json({ ok: true });
+});

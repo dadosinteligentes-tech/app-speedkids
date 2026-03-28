@@ -24,6 +24,8 @@ import { getLimitsForPlan, getTenantUsage } from "../../lib/plan-limits";
 import { getPlanDefinitions } from "../../db/queries/platform";
 import { getPromotionUsageStats } from "../../db/queries/promotions";
 import { PromotionsList } from "../../views/admin/promotions-list";
+import { listTemplates } from "../../db/queries/document-templates";
+import { DocumentTemplatesPage } from "../../views/admin/document-templates";
 
 export const adminPages = new Hono<AppEnv>();
 
@@ -120,6 +122,16 @@ adminPages.get("/promotions", requirePermission("promotions.manage"), async (c) 
 	const promotions = await getPromotionUsageStats(c.env.DB, tenantId);
 	const user = c.get("user");
 	return c.html(<PromotionsList promotions={promotions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+});
+
+// Document templates
+adminPages.get("/documents", async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const user = c.get("user");
+	const templates = await listTemplates(c.env.DB, tenantId);
+	return c.html(<DocumentTemplatesPage templates={templates} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
 });
 
 // My plan page

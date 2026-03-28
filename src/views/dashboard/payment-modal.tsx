@@ -396,8 +396,15 @@ export const PaymentModal: FC = () => (
 					</div>
 				</div>
 
+				{/* Document templates */}
+				<div id="payment-documents" class="hidden mb-4 text-left max-w-sm mx-auto">
+					<p class="text-xs text-sk-muted font-display font-medium uppercase tracking-wider mb-2 text-center">Documentos</p>
+					<div id="payment-documents-list" class="space-y-1"></div>
+				</div>
+
 				<div class="flex gap-2 justify-center">
 					<button
+						id="payment-ok-btn"
 						onclick="dismissPayment()"
 						class="btn-touch btn-bounce px-8 py-3 bg-sk-green text-white rounded-sk font-display font-bold text-lg active:bg-sk-green-dark shadow-sk-sm"
 					>

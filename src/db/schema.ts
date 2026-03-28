@@ -432,3 +432,25 @@ export interface CrmLeadNote {
 	next_step: string;
 	created_at: string;
 }
+
+export interface DocumentTemplate {
+	id: number;
+	tenant_id: number;
+	name: string;
+	description: string | null;
+	content: string;
+	print_mode: "mandatory" | "optional";
+	is_active: number;
+	sort_order: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RentalSignedDocument {
+	id: number;
+	rental_session_id: string;
+	template_id: number;
+	tenant_id: number;
+	printed_at: string;
+	printed_by: number | null;
+}
