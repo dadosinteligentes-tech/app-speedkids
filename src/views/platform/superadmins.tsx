@@ -74,10 +74,16 @@ function hideResetForm() { document.getElementById('reset-modal').classList.add(
 function submitReset(e) {
 	e.preventDefault();
 	var newPass = document.getElementById('reset-password').value;
+	var confirmPass = document.getElementById('reset-password-confirm').value;
 	var errEl = document.getElementById('reset-error');
 	var btn = document.getElementById('reset-btn');
 	if (!newPass || newPass.length < 6) {
 		errEl.textContent = 'A senha deve ter pelo menos 6 caracteres';
+		errEl.classList.remove('hidden');
+		return;
+	}
+	if (newPass !== confirmPass) {
+		errEl.textContent = 'As senhas não coincidem';
 		errEl.classList.remove('hidden');
 		return;
 	}
@@ -87,7 +93,7 @@ function submitReset(e) {
 	fetch('/api/platform/superadmins/' + _resetAdminId + '/reset-password', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ password: newPass })
+		body: JSON.stringify({ new_password: newPass })
 	})
 	.then(function(r) {
 		if (r.ok) { hideResetForm(); showToast('Senha redefinida com sucesso'); }
@@ -205,7 +211,11 @@ function submitReset(e) {
 					<form onsubmit="submitReset(event)" class="space-y-4">
 						<div>
 							<label class="block text-sm font-medium font-display text-sk-text mb-1">Nova senha</label>
-							<input id="reset-password" type="text" required minlength={6} class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue text-base outline-none transition-colors" placeholder="Mínimo 6 caracteres" />
+							<input id="reset-password" type="password" required minlength={6} class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue text-base outline-none transition-colors" placeholder="Mínimo 6 caracteres" />
+						</div>
+						<div>
+							<label class="block text-sm font-medium font-display text-sk-text mb-1">Confirmar senha</label>
+							<input id="reset-password-confirm" type="password" required minlength={6} class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body focus:ring-2 focus:ring-sk-blue/30 focus:border-sk-blue text-base outline-none transition-colors" placeholder="Repita a senha" />
 						</div>
 						<div class="flex gap-2">
 							<button type="submit" id="reset-btn" class="btn-bounce flex-1 py-2.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-display font-bold text-sm transition-colors">Redefinir senha</button>
