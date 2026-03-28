@@ -54,7 +54,7 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 
 				<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg p-8 w-full max-w-sm relative z-10">
 					<div class="text-center mb-6">
-						<img src={tenant?.logo_url || "/logo.svg"} alt={tenant?.name || "Logo"} class="h-16 mx-auto mb-2" />
+						<img src={tenant?.logo_url || "/logo-default.svg"} alt={tenant?.name || "Logo"} class="h-16 mx-auto mb-2" />
 						<p class="text-sk-muted font-body text-sm mt-1">Faca login para continuar</p>
 					</div>
 

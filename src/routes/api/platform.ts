@@ -133,12 +133,18 @@ platformApiRoutes.post("/tenants/:id/send-credentials", async (c) => {
 	const tenant = await getTenantDetail(c.env.DB, tenantId);
 	if (!tenant) return c.json({ error: "Tenant não encontrado" }, 404);
 
-	// Get the owner user
-	const owner = await c.env.DB
-		.prepare("SELECT id, name, email FROM users WHERE tenant_id = ? AND role = 'owner' LIMIT 1")
+	// Get the owner user (fallback to any active user if no owner role)
+	let owner = await c.env.DB
+		.prepare("SELECT id, name, email FROM users WHERE tenant_id = ? AND role = 'owner' AND active = 1 LIMIT 1")
 		.bind(tenantId)
 		.first<{ id: number; name: string; email: string }>();
-	if (!owner) return c.json({ error: "Usuário owner não encontrado" }, 404);
+	if (!owner) {
+		owner = await c.env.DB
+			.prepare("SELECT id, name, email FROM users WHERE tenant_id = ? AND active = 1 ORDER BY id ASC LIMIT 1")
+			.bind(tenantId)
+			.first<{ id: number; name: string; email: string }>();
+	}
+	if (!owner) return c.json({ error: "Nenhum usuário ativo encontrado neste tenant" }, 404);
 
 	// Generate new temp password and reset
 	const tempPassword = crypto.randomUUID().slice(0, 12);
