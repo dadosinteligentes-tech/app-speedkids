@@ -676,6 +676,81 @@ platformApiRoutes.get("/crm/funnel-velocity", async (c) => {
 	return c.json(velocity);
 });
 
+// ── Reprocessar checkout Stripe (recuperação manual) ──
+platformApiRoutes.post("/recover-checkout", async (c) => {
+	const body = await c.req.json<{ session_id: string }>();
+	if (!body.session_id) return c.json({ error: "session_id é obrigatório" }, 400);
+	if (!c.env.STRIPE_SECRET_KEY) return c.json({ error: "STRIPE_SECRET_KEY não configurada" }, 500);
+
+	const { getCheckoutSession } = await import("../../lib/stripe");
+	const { isSlugAvailable, provisionTenant } = await import("../../services/provisioning");
+	const { buildWelcomeEmail, sendAndLogEmail } = await import("../../lib/email");
+	const { markCheckoutConverted } = await import("../../db/queries/platform");
+
+	// Fetch session from Stripe
+	const session = await getCheckoutSession(c.env.STRIPE_SECRET_KEY, body.session_id);
+	const sub = session.subscription as unknown as Record<string, unknown>;
+	const meta = (sub?.metadata ?? session.metadata ?? {}) as Record<string, string>;
+
+	// Try metadata, then fallback to abandoned_checkouts
+	let slug = meta.tenant_slug;
+	let tenantName = meta.tenant_name;
+	let ownerName = meta.owner_name;
+	let ownerEmail = meta.owner_email;
+	let plan = meta.plan || "starter";
+
+	if (!slug) {
+		const email = ownerEmail || (session as any).customer_details?.email;
+		if (email) {
+			const abandoned = await c.env.DB
+				.prepare("SELECT slug, business_name, owner_name, owner_email, plan FROM abandoned_checkouts WHERE owner_email = ? AND converted = 0 ORDER BY created_at DESC LIMIT 1")
+				.bind(email)
+				.first<{ slug: string; business_name: string; owner_name: string; owner_email: string; plan: string }>();
+			if (abandoned) {
+				slug = abandoned.slug;
+				tenantName = abandoned.business_name;
+				ownerName = abandoned.owner_name;
+				ownerEmail = abandoned.owner_email;
+				plan = abandoned.plan;
+			}
+		}
+	}
+
+	if (!slug || !ownerEmail) {
+		return c.json({ error: `Dados insuficientes: slug=${slug}, email=${ownerEmail}` }, 400);
+	}
+
+	// Check if tenant already exists
+	const existing = await c.env.DB.prepare("SELECT id, slug FROM tenants WHERE slug = ?").bind(slug).first();
+	if (existing) return c.json({ error: `Tenant ${slug} já existe`, tenant: existing }, 409);
+
+	// Provision
+	const tempPassword = crypto.randomUUID().slice(0, 12);
+	const tenant = await provisionTenant(c.env.DB, {
+		slug, name: tenantName || slug, ownerName: ownerName || "Administrador",
+		ownerEmail, ownerPassword: tempPassword, plan,
+		stripeCustomerId: session.customer as string,
+		stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : undefined,
+	});
+
+	try { await markCheckoutConverted(c.env.DB, slug); } catch { /* non-critical */ }
+
+	// Send welcome email
+	const domain = c.env.APP_DOMAIN || "giro-kids.com";
+	const plans = await getPlanDefinitions(c.env.DB);
+	const planCfg = plans[plan];
+	const welcomeEmail = buildWelcomeEmail({
+		ownerName: ownerName || "Administrador", businessName: tenantName || slug,
+		slug, domain, tempPassword, plan,
+		planLabel: planCfg?.label || plan, priceCents: planCfg?.priceCents || 0, trialDays: 30,
+	});
+	welcomeEmail.to = ownerEmail;
+	await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+		{ tenantId: tenant.id, recipient: ownerEmail, subject: welcomeEmail.subject, eventType: "welcome_recovery", metadata: { slug, plan } });
+
+	return c.json({ ok: true, tenant: { id: tenant.id, slug: tenant.slug }, emailSent: true });
+});
+
 // Verificar duplicidade
 platformApiRoutes.get("/crm/check-duplicate", async (c) => {
 	const name = c.req.query("name") || "";

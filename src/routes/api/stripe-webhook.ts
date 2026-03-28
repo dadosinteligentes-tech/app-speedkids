@@ -29,23 +29,59 @@ stripeWebhookRoutes.post("/", async (c) => {
 				customer: string;
 				subscription: string;
 				metadata: Record<string, string>;
-				customer_details?: { email?: string };
+				customer_details?: { email?: string; name?: string };
 			};
 
-			// The metadata is on the subscription, not the checkout session
-			const sub = session.subscription
-				? await fetchSubscription(c.env.STRIPE_SECRET_KEY, session.subscription as string)
-				: null;
+			// Try to get metadata from subscription (primary source)
+			let sub: { metadata: Record<string, string> } | null = null;
+			if (session.subscription && c.env.STRIPE_SECRET_KEY) {
+				sub = await fetchSubscription(c.env.STRIPE_SECRET_KEY, session.subscription as string);
+			} else if (!c.env.STRIPE_SECRET_KEY) {
+				console.error("STRIPE_SECRET_KEY not configured — cannot fetch subscription metadata");
+			}
 
-			const metadata = sub?.metadata || session.metadata || {};
-			const slug = metadata.tenant_slug;
-			const tenantName = metadata.tenant_name;
-			const ownerName = metadata.owner_name;
-			const ownerEmail = metadata.owner_email || session.customer_details?.email;
-			const plan = metadata.plan || "starter";
+			let metadata = sub?.metadata || session.metadata || {};
+			let slug = metadata.tenant_slug;
+			let tenantName = metadata.tenant_name;
+			let ownerName = metadata.owner_name;
+			let ownerEmail = metadata.owner_email || session.customer_details?.email;
+			let plan = metadata.plan || "starter";
+
+			// Fallback: if metadata is empty, try to recover from abandoned_checkouts
+			if (!slug && ownerEmail) {
+				console.log(`No metadata found, trying to recover from abandoned_checkouts for ${ownerEmail}`);
+				const abandoned = await c.env.DB
+					.prepare("SELECT slug, business_name, owner_name, owner_email, plan FROM abandoned_checkouts WHERE owner_email = ? AND converted = 0 ORDER BY created_at DESC LIMIT 1")
+					.bind(ownerEmail)
+					.first<{ slug: string; business_name: string; owner_name: string; owner_email: string; plan: string }>();
+				if (abandoned) {
+					slug = abandoned.slug;
+					tenantName = abandoned.business_name;
+					ownerName = abandoned.owner_name;
+					ownerEmail = abandoned.owner_email;
+					plan = abandoned.plan;
+					console.log(`Recovered from abandoned_checkouts: slug=${slug}, email=${ownerEmail}`);
+				}
+			}
+
+			// Last resort: try customer_details from the checkout event itself
+			if (!slug && session.customer_details?.email) {
+				const abandoned = await c.env.DB
+					.prepare("SELECT slug, business_name, owner_name, owner_email, plan FROM abandoned_checkouts WHERE owner_email = ? AND converted = 0 ORDER BY created_at DESC LIMIT 1")
+					.bind(session.customer_details.email)
+					.first<{ slug: string; business_name: string; owner_name: string; owner_email: string; plan: string }>();
+				if (abandoned) {
+					slug = abandoned.slug;
+					tenantName = abandoned.business_name;
+					ownerName = abandoned.owner_name;
+					ownerEmail = abandoned.owner_email;
+					plan = abandoned.plan;
+					console.log(`Recovered from abandoned_checkouts via customer_details: slug=${slug}`);
+				}
+			}
 
 			if (!slug || !ownerEmail) {
-				console.error("Missing metadata in checkout session:", event.id);
+				console.error(`FAILED to provision — missing data in checkout ${event.id}: slug=${slug}, email=${ownerEmail}, metadata=${JSON.stringify(metadata)}, customer_details=${JSON.stringify(session.customer_details)}`);
 				return c.json({ received: true });
 			}
 
@@ -144,7 +180,8 @@ stripeWebhookRoutes.post("/", async (c) => {
 			break;
 		}
 
-		case "invoice.paid": {
+		case "invoice.paid":
+		case "invoice.payment_succeeded": {
 			const invoice = event.data.object as {
 				subscription: string;
 				customer: string;
