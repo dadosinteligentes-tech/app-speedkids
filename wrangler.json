@@ -25,7 +25,7 @@
 	"vars": {
 		"APP_DOMAIN": "giro-kids.com",
 		"APP_DOMAIN_LEGACY": "dadosinteligentes.app.br",
-		"STRIPE_PUBLISHABLE_KEY": "",
+		"STRIPE_PUBLISHABLE_KEY": "pk_live_51T1T94CT620c3AruFasYiNA5e8nJDrC6965O9zLwCTkOM8OpcdiBZmQ43uMHI7phqLQbJllVsje4W4goJ77BDnTg007nN2TzXH",
 		"STRIPE_PRICE_STARTER": "price_1TEiSjCT620c3AruKjStyQVz",
 		"STRIPE_PRICE_PRO": "price_1TF3cxCT620c3Aru61tx0rD5",
 		"STRIPE_PRICE_ENTERPRISE": "price_1TEivaCT620c3ArufuMRngpR",
