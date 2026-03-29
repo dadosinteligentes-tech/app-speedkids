@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "../../types";
 import { constructWebhookEvent } from "../../lib/stripe";
 import { provisionTenant } from "../../services/provisioning";
-import { sendAndLogEmail, buildWelcomeEmail } from "../../lib/email";
+import { sendAndLogEmail, buildWelcomeEmail, notifySuperadmins, buildNewPurchaseNotification } from "../../lib/email";
 import { getPlanDefinitions, markCheckoutConverted } from "../../db/queries/platform";
 
 export const stripeWebhookRoutes = new Hono<AppEnv>();
@@ -140,7 +140,7 @@ stripeWebhookRoutes.post("/", async (c) => {
 				const emailSent = await sendAndLogEmail(
 					c.env.DB,
 					c.env.RESEND_API_KEY,
-					`Giro Kids <noreply@${domain}>`,
+					`Giro Kids <contato@${domain}>`,
 					welcomeEmail,
 					{
 						tenantId: tenant.id,
@@ -151,6 +151,20 @@ stripeWebhookRoutes.post("/", async (c) => {
 					},
 				);
 				console.log(`Welcome email for ${ownerEmail}: ${emailSent ? "SENT" : "FAILED"} (RESEND_API_KEY ${c.env.RESEND_API_KEY ? "configured" : "MISSING"})`);
+
+					// Notify superadmins about new purchase
+					try {
+						const notification = buildNewPurchaseNotification({
+							businessName: tenantName || slug,
+							ownerName: ownerName || "Administrador",
+							ownerEmail,
+							plan,
+							planLabel,
+							slug,
+							domain,
+						});
+						await notifySuperadmins(c.env.DB, c.env.RESEND_API_KEY, domain, notification.subject, notification.html, "admin_new_purchase", { plan, slug, owner_email: ownerEmail });
+					} catch { /* non-critical */ }
 			} catch (err) {
 				console.error(`Failed to provision tenant ${slug}:`, err);
 			}
@@ -237,7 +251,7 @@ stripeWebhookRoutes.post("/", async (c) => {
 					await sendAndLogEmail(
 						c.env.DB,
 						c.env.RESEND_API_KEY,
-						`Giro Kids <noreply@${domain}>`,
+						`Giro Kids <contato@${domain}>`,
 						{
 							to: tenantInfo.owner_email,
 							subject: `Problema no pagamento — ${tenantInfo.tenant_name}`,

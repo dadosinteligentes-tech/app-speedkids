@@ -177,6 +177,94 @@ export function buildWelcomeEmail(params: {
 	};
 }
 
+// ── Superadmin notification helpers ──
+
+export async function getSuperadminEmails(db: D1Database): Promise<string[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT email FROM users WHERE tenant_id = (SELECT id FROM tenants WHERE slug = '_platform') AND active = 1`,
+		)
+		.all<{ email: string }>();
+	return results.map((r) => r.email);
+}
+
+export async function notifySuperadmins(
+	db: D1Database,
+	apiKey: string | undefined,
+	domain: string,
+	subject: string,
+	html: string,
+	eventType: string,
+	metadata?: Record<string, string>,
+): Promise<void> {
+	const emails = await getSuperadminEmails(db);
+	if (!emails.length) return;
+
+	const fromAddress = `Giro Kids <contato@${domain}>`;
+	for (const email of emails) {
+		await sendAndLogEmail(db, apiKey, fromAddress, { to: email, subject, html }, {
+			tenantId: null,
+			recipient: email,
+			subject,
+			eventType,
+			metadata,
+		});
+	}
+}
+
+function adminNotificationHtml(title: string, emoji: string, rows: Array<[string, string]>, ctaLabel?: string, ctaUrl?: string): string {
+	const rowsHtml = rows.map(([k, v]) =>
+		`<tr><td style="padding:4px 0;color:#6B7280;font-size:13px;">${k}</td><td style="padding:4px 0;text-align:right;font-weight:bold;color:#3E2723;font-size:13px;">${v}</td></tr>`
+	).join("");
+	const ctaHtml = ctaLabel && ctaUrl
+		? `<a href="${ctaUrl}" style="display:block;background:#F97316;color:white;text-align:center;padding:12px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;margin-top:20px;">${ctaLabel}</a>`
+		: "";
+	return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;margin:0;padding:20px;"><div style="max-width:480px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.08);"><div style="background:linear-gradient(135deg,#F97316,#EA580C);padding:24px;text-align:center;color:white;"><h1 style="margin:0;font-size:20px;">${emoji} ${title}</h1></div><div style="padding:24px;"><table style="width:100%;">${rowsHtml}</table>${ctaHtml}</div><div style="padding:16px;text-align:center;border-top:1px solid #eee;"><p style="margin:0;font-size:10px;color:#C0C4CC;">Notificação interna — Giro Kids Platform</p></div></div></body></html>`;
+}
+
+export function buildNewPurchaseNotification(params: {
+	businessName: string; ownerName: string; ownerEmail: string; plan: string; planLabel: string; slug: string; domain: string;
+}): { subject: string; html: string } {
+	return {
+		subject: `Nova compra: ${params.businessName} (${params.planLabel})`,
+		html: adminNotificationHtml("Nova Compra", "🎉", [
+			["Estabelecimento", params.businessName],
+			["Responsável", params.ownerName],
+			["E-mail", params.ownerEmail],
+			["Plano", params.planLabel],
+			["Subdomínio", `${params.slug}.${params.domain}`],
+		], "Ver no painel", `https://${params.domain}/platform`),
+	};
+}
+
+export function buildPlanChangeNotification(params: {
+	tenantName: string; tenantSlug: string; oldPlan: string; newPlan: string; domain: string;
+}): { subject: string; html: string } {
+	return {
+		subject: `Mudança de plano: ${params.tenantName} (${params.oldPlan} → ${params.newPlan})`,
+		html: adminNotificationHtml("Mudança de Plano", "🔄", [
+			["Estabelecimento", params.tenantName],
+			["Subdomínio", params.tenantSlug],
+			["Plano anterior", params.oldPlan],
+			["Novo plano", params.newPlan],
+		], "Ver tenant", `https://${params.domain}/platform`),
+	};
+}
+
+export function buildNewTicketNotification(params: {
+	tenantName: string; userName: string; subject: string; ticketId: number; domain: string;
+}): { subject: string; html: string } {
+	return {
+		subject: `Novo ticket: ${params.subject} (${params.tenantName})`,
+		html: adminNotificationHtml("Novo Ticket de Suporte", "🎫", [
+			["Estabelecimento", params.tenantName],
+			["Usuário", params.userName],
+			["Assunto", params.subject],
+			["Ticket #", String(params.ticketId)],
+		], "Ver tickets", `https://${params.domain}/platform/tickets`),
+	};
+}
+
 export function buildPresentationEmail(params: {
 	contactName: string;
 	companyName: string;

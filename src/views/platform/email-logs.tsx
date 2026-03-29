@@ -29,8 +29,15 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> 
 
 const EVENT_LABELS: Record<string, string> = {
 	welcome: "Boas-vindas",
+	welcome_manual: "Boas-vindas (manual)",
+	welcome_conversion: "Boas-vindas (conversão)",
+	welcome_recovery: "Boas-vindas (recuperação)",
 	payment_failed: "Falha no pagamento",
 	subscription_cancelled: "Cancelamento",
+	crm_presentation: "Apresentação CRM",
+	admin_new_purchase: "Notif. nova compra",
+	admin_plan_change: "Notif. mudança plano",
+	admin_new_ticket: "Notif. novo ticket",
 };
 
 export const PlatformEmailLogs: FC<Props> = ({ logs, user }) => {

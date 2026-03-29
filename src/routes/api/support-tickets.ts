@@ -64,6 +64,22 @@ supportTicketRoutes.post("/", async (c) => {
 	const ticket = await createTicket(
 		c.env.DB, tenantId, user.id, body.subject.trim(), body.message.trim(), user.name,
 	);
+
+	// Notify superadmins about new ticket
+	try {
+		const { notifySuperadmins, buildNewTicketNotification } = await import("../../lib/email");
+		const domain = c.env.APP_DOMAIN || "giro-kids.com";
+		const tenantRow = await c.env.DB.prepare("SELECT name FROM tenants WHERE id = ?").bind(tenantId).first<{ name: string }>();
+		const notification = buildNewTicketNotification({
+			tenantName: tenantRow?.name || `Tenant #${tenantId}`,
+			userName: user.name,
+			subject: body.subject.trim(),
+			ticketId: ticket.id,
+			domain,
+		});
+		await notifySuperadmins(c.env.DB, c.env.RESEND_API_KEY, domain, notification.subject, notification.html, "admin_new_ticket", { tenant_id: String(tenantId), ticket_id: String(ticket.id) });
+	} catch { /* non-critical */ }
+
 	return c.json(ticket, 201);
 });
 

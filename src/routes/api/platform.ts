@@ -164,7 +164,7 @@ platformApiRoutes.post("/tenants/:id/send-credentials", async (c) => {
 		planLabel: planCfg?.label || tenant.plan, priceCents: planCfg?.priceCents || 0, trialDays: 30,
 	});
 	welcomeEmail.to = owner.email;
-	const sent = await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+	const sent = await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <contato@${domain}>`, welcomeEmail,
 		{ tenantId, recipient: owner.email, subject: welcomeEmail.subject, eventType: "welcome_manual" });
 
 	return c.json({ ok: true, sent, email: owner.email });
@@ -260,7 +260,28 @@ platformApiRoutes.put("/tenants/:id/plan", async (c) => {
 	const maxUsers = body.max_users ?? defaults.maxUsers;
 	const maxAssets = body.max_assets ?? defaults.maxAssets;
 
+	// Get current plan before updating to detect changes
+	const tenant = await getTenantDetail(c.env.DB, id);
+	const oldPlan = tenant?.plan || "unknown";
+
 	await updateTenantPlan(c.env.DB, id, body.plan, maxUsers, maxAssets);
+
+	// Notify superadmins if plan changed
+	if (tenant && oldPlan !== body.plan) {
+		try {
+			const { notifySuperadmins, buildPlanChangeNotification } = await import("../../lib/email");
+			const domain = c.env.APP_DOMAIN || "giro-kids.com";
+			const notification = buildPlanChangeNotification({
+				tenantName: tenant.name,
+				tenantSlug: tenant.slug,
+				oldPlan,
+				newPlan: body.plan,
+				domain,
+			});
+			await notifySuperadmins(c.env.DB, c.env.RESEND_API_KEY, domain, notification.subject, notification.html, "admin_plan_change", { tenant_id: String(id), old_plan: oldPlan, new_plan: body.plan });
+		} catch { /* non-critical */ }
+	}
+
 	return c.json({ ok: true });
 });
 
@@ -632,7 +653,7 @@ platformApiRoutes.post("/crm/leads/:id/send-presentation", async (c) => {
 	emailParams.to = lead.email;
 
 	const sent = await sendAndLogEmail(
-		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, emailParams,
+		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <contato@${domain}>`, emailParams,
 		{ tenantId: null, recipient: lead.email, subject: emailParams.subject, eventType: "crm_presentation", metadata: { lead_id: String(id) } },
 	);
 
@@ -700,7 +721,7 @@ platformApiRoutes.post("/crm/leads/:id/convert", async (c) => {
 	});
 	welcomeEmail.to = lead.email;
 	await sendAndLogEmail(
-		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+		c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <contato@${domain}>`, welcomeEmail,
 		{ tenantId: tenant.id, recipient: lead.email, subject: welcomeEmail.subject, eventType: "welcome_conversion", metadata: { lead_id: String(id), plan } },
 	);
 
@@ -788,7 +809,7 @@ platformApiRoutes.post("/recover-checkout", async (c) => {
 		planLabel: planCfg?.label || plan, priceCents: planCfg?.priceCents || 0, trialDays: 30,
 	});
 	welcomeEmail.to = ownerEmail;
-	await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <noreply@${domain}>`, welcomeEmail,
+	await sendAndLogEmail(c.env.DB, c.env.RESEND_API_KEY, `Giro Kids <contato@${domain}>`, welcomeEmail,
 		{ tenantId: tenant.id, recipient: ownerEmail, subject: welcomeEmail.subject, eventType: "welcome_recovery", metadata: { slug, plan } });
 
 	return c.json({ ok: true, tenant: { id: tenant.id, slug: tenant.slug }, emailSent: true });
