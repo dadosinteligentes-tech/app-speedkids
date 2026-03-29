@@ -247,12 +247,22 @@ export async function getTenantConfig(
 	phone: string | null;
 	receipt_footer: string | null;
 } | null> {
-	return db
+	const config = await db
 		.prepare(
 			`SELECT name, cnpj, address, phone, receipt_footer FROM business_config WHERE tenant_id = ?`,
 		)
 		.bind(tenantId)
-		.first();
+		.first<{ name: string; cnpj: string | null; address: string | null; phone: string | null; receipt_footer: string | null }>();
+
+	if (config) return config;
+
+	// Fallback: return tenant name if business_config row is missing
+	const tenant = await db
+		.prepare(`SELECT name FROM tenants WHERE id = ?`)
+		.bind(tenantId)
+		.first<{ name: string }>();
+
+	return tenant ? { name: tenant.name, cnpj: null, address: null, phone: null, receipt_footer: null } : null;
 }
 
 // Get recent logs for a tenant
@@ -368,6 +378,12 @@ export async function updateTenantConfig(
 
 	sets.push("updated_at = datetime('now')");
 	values.push(tenantId);
+
+	// Ensure row exists (may be missing if provisioning partially failed)
+	await db
+		.prepare(`INSERT OR IGNORE INTO business_config (tenant_id, name) VALUES (?, '')`)
+		.bind(tenantId)
+		.run();
 
 	await db
 		.prepare(`UPDATE business_config SET ${sets.join(", ")} WHERE tenant_id = ?`)
@@ -830,12 +846,14 @@ export interface AbandonedCheckout {
 export async function getAbandonedCheckouts(db: D1Database): Promise<AbandonedCheckout[]> {
 	const { results } = await db
 		.prepare(`
-			SELECT id, slug, business_name, owner_name, owner_email, plan, created_at,
-				CAST((JULIANDAY('now') - JULIANDAY(created_at)) * 24 AS INTEGER) as hours_ago
-			FROM abandoned_checkouts
-			WHERE converted = 0
-				AND created_at >= datetime('now', '-30 days')
-			ORDER BY created_at DESC
+			SELECT ac.id, ac.slug, ac.business_name, ac.owner_name, ac.owner_email, ac.plan, ac.created_at,
+				CAST((JULIANDAY('now') - JULIANDAY(ac.created_at)) * 24 AS INTEGER) as hours_ago
+			FROM abandoned_checkouts ac
+			LEFT JOIN tenants t ON LOWER(ac.owner_email) = LOWER(t.owner_email)
+			WHERE ac.converted = 0
+				AND ac.created_at >= datetime('now', '-30 days')
+				AND t.id IS NULL
+			ORDER BY ac.created_at DESC
 		`)
 		.all<AbandonedCheckout>();
 	return results;

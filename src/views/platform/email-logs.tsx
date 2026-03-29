@@ -1,5 +1,6 @@
 import type { FC } from "hono/jsx";
 import { PlatformLayout } from "./layout";
+import { toBrazilDateTime } from "../../lib/timezone";
 
 interface EmailLogRow {
 	id: number;
@@ -83,7 +84,7 @@ export const PlatformEmailLogs: FC<Props> = ({ logs, user }) => {
 								return (
 									<tr class="hover:bg-sk-blue-light/30 transition-colors">
 										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums whitespace-nowrap">
-											{log.created_at?.slice(0, 16).replace("T", " ")}
+											{log.created_at ? toBrazilDateTime(log.created_at) : "—"}
 										</td>
 										<td class="px-5 py-3">
 											{log.tenant_id ? (

@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import { PlatformLayout } from "./layout";
+import { toBrazilDateTime } from "../../lib/timezone";
 
 interface ReportsProps {
 	revenue: Array<{ period: string; revenue_cents: number; rental_count: number }>;
@@ -259,7 +260,7 @@ function showSection(name) {
 											</a>
 										</td>
 										<td class="px-5 py-3 text-sk-muted">{t.slug}</td>
-										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums">{t.last_activity?.slice(0, 16).replace("T", " ")}</td>
+										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums">{t.last_activity ? toBrazilDateTime(t.last_activity) : null}</td>
 										<td class="px-5 py-3 text-right font-medium">{t.login_count}</td>
 									</tr>
 								))}
@@ -299,7 +300,7 @@ function showSection(name) {
 											</td>
 											<td class="px-5 py-3 text-sk-muted">{t.slug}</td>
 											<td class="px-5 py-3 text-sk-muted text-xs tabular-nums">
-												{t.last_activity ? t.last_activity.slice(0, 16).replace("T", " ") : <span class="text-sk-border">Nunca</span>}
+												{t.last_activity ? toBrazilDateTime(t.last_activity) : <span class="text-sk-border">Nunca</span>}
 											</td>
 											<td class="px-5 py-3 text-right">
 												<span class={`font-medium ${isHighRisk ? "text-sk-danger" : "text-yellow-600"}`}>

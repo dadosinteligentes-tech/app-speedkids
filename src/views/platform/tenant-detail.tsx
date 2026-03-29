@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import { html, raw } from "hono/html";
 import type { TenantWithStats } from "../../db/queries/platform";
 import { PlatformLayout } from "./layout";
+import { toBrazilDateTime, toBrazilTime } from "../../lib/timezone";
 
 interface TenantDetailProps {
 	tenant: TenantWithStats & { rentals_today: number; rentals_week: number; revenue_today_cents: number; last_login: string | null };
@@ -19,7 +20,8 @@ function fmtBRL(cents: number): string {
 
 function daysAgo(dateStr: string | null): string {
 	if (!dateStr) return "Nunca";
-	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+	const d = new Date(dateStr + (dateStr.endsWith("Z") ? "" : "Z"));
+	const diff = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
 	if (diff === 0) return "Hoje";
 	if (diff === 1) return "Ontem";
 	return `${diff} dias atras`;
@@ -291,7 +293,7 @@ function showTab(tab) {
 											<td class="px-5 py-3 font-body">{s.package_name}</td>
 											<td class="px-5 py-3 text-sk-muted font-body">{s.customer_name || "—"}</td>
 											<td class="px-5 py-3"><span class={`${sBadge.bg} ${sBadge.text} px-2 py-0.5 rounded text-xs font-display font-medium`}>{sBadge.label}</span></td>
-											<td class="px-5 py-3 text-sk-muted text-xs font-body">{s.start_time?.slice(11, 16)}</td>
+											<td class="px-5 py-3 text-sk-muted text-xs font-body">{s.start_time ? toBrazilTime(s.start_time) : "—"}</td>
 											<td class="px-5 py-3 text-right font-display font-medium">{fmtBRL(s.amount_cents)}</td>
 											<td class="px-5 py-3 text-right">
 												<button onclick={`forceComplete('${s.id}','${s.asset_name.replace(/'/g, "\\'")}')`} class="text-sk-danger hover:text-sk-danger/80 text-xs font-display font-medium transition-colors">Forcar finalizacao</button>
@@ -381,7 +383,7 @@ function showTab(tab) {
 							<tbody class="divide-y">
 								{logs.map((l) => (
 									<tr class="hover:bg-sk-blue-light/30 transition-colors">
-										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums font-body">{l.created_at?.slice(0, 16).replace("T", " ")}</td>
+										<td class="px-5 py-3 text-sk-muted text-xs tabular-nums font-body">{l.created_at ? toBrazilDateTime(l.created_at) : "—"}</td>
 										<td class="px-5 py-3 font-body">{l.user_name || <span class="text-sk-border">Sistema</span>}</td>
 										<td class="px-5 py-3 font-medium">{l.action}</td>
 										<td class="px-5 py-3"><span class="bg-sk-yellow-light text-sk-yellow-dark px-2 py-0.5 rounded text-xs font-display">{l.entity_type}</span></td>

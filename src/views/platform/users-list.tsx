@@ -10,7 +10,8 @@ const ROLE_LABELS: Record<string, string> = { owner: "Socio", manager: "Gerente"
 
 function daysAgo(dateStr: string | null): string {
 	if (!dateStr) return "Nunca";
-	const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+	const d = new Date(dateStr + (dateStr.endsWith("Z") ? "" : "Z"));
+	const diff = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
 	if (diff === 0) return "Hoje";
 	if (diff === 1) return "Ontem";
 	return `${diff} dias atras`;
