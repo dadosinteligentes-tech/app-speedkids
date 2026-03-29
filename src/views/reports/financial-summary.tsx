@@ -227,7 +227,7 @@ export const FinancialSummaryView: FC<Props> = ({
 
 			{/* Daily trend table */}
 			{trend.length > 0 && (
-				<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 					<div class="px-4 py-3 bg-sk-yellow-light/50">
 						<h3 class="text-sm font-display font-bold text-sk-text">
 							Tendencia Diaria

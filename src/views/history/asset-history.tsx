@@ -39,12 +39,12 @@ export const AssetHistory: FC<AssetHistoryProps> = ({ asset, sessions, total, pa
 				<span class="text-sm text-sk-muted font-body">{total} locações</span>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm font-body">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>
 							<th class="px-4 py-3 font-medium">Data</th>
-							<th class="px-4 py-3 font-medium">Pacote</th>
+							<th class="px-4 py-3 font-medium hidden md:table-cell">Pacote</th>
 							<th class="px-4 py-3 font-medium">Duração</th>
 							<th class="px-4 py-3 font-medium">Valor</th>
 							<th class="px-4 py-3 font-medium">Status</th>
@@ -55,7 +55,7 @@ export const AssetHistory: FC<AssetHistoryProps> = ({ asset, sessions, total, pa
 						{sessions.map((s) => (
 							<tr class="hover:bg-sk-yellow-light">
 								<td class="px-4 py-3 text-xs text-sk-muted whitespace-nowrap">{formatDate(s.start_time)}</td>
-								<td class="px-4 py-3">{s.package_name}</td>
+								<td class="px-4 py-3 hidden md:table-cell">{s.package_name}</td>
 								<td class="px-4 py-3 text-sk-muted">{s.duration_minutes} min</td>
 								<td class="px-4 py-3 text-sk-muted">R$ {(s.amount_cents / 100).toFixed(2).replace(".", ",")}</td>
 								<td class="px-4 py-3">

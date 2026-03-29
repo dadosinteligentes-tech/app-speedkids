@@ -91,12 +91,12 @@ function deactivateUser(id, name) {
 				</button>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm font-body">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>
 							<th class="px-4 py-3 font-medium">Nome</th>
-							<th class="px-4 py-3 font-medium">Email</th>
+							<th class="px-4 py-3 font-medium hidden md:table-cell">Email</th>
 							<th class="px-4 py-3 font-medium">Perfil</th>
 							<th class="px-4 py-3 font-medium">Status</th>
 							<th class="px-4 py-3 font-medium">Ações</th>
@@ -106,7 +106,7 @@ function deactivateUser(id, name) {
 						{users.map((u) => (
 							<tr class={`hover:bg-sk-yellow-light ${!u.active ? "opacity-50" : ""}`}>
 								<td class="px-4 py-3 font-medium">{u.name}</td>
-								<td class="px-4 py-3 text-sk-muted">{u.email}</td>
+								<td class="px-4 py-3 text-sk-muted hidden md:table-cell">{u.email}</td>
 								<td class="px-4 py-3">
 									<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-sk-blue-light text-sk-blue-dark">
 										{ROLE_LABELS[u.role] ?? u.role}
@@ -142,8 +142,8 @@ function deactivateUser(id, name) {
 			</div>
 
 			{/* Form Modal */}
-			<div id="user-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up">
+			<div id="user-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up max-h-[90vh] overflow-y-auto">
 					<h3 id="user-form-title" class="text-lg font-display font-bold mb-4 text-sk-text">Novo Usuário</h3>
 					<form id="user-form" class="space-y-3">
 						<div>

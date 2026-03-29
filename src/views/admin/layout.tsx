@@ -36,7 +36,26 @@ export const AdminLayout: FC<PropsWithChildren<AdminLayoutProps>> = ({ title, us
 		</div>
 		<div class="flex flex-col md:flex-row gap-6">
 			<nav class="md:w-48 flex-shrink-0">
-				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-2 flex md:flex-col gap-1">
+				{/* Mobile: horizontal scroll tabs */}
+				<div class="md:hidden bg-sk-surface rounded-sk shadow-sk-sm p-2 overflow-x-auto">
+					<div class="flex gap-1 min-w-max">
+						{NAV_ITEMS.filter((item) => user && item.roles.includes(user.role)).map((item) => (
+							<a
+								href={item.href}
+								class={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium font-body whitespace-nowrap transition-colors ${
+									activeTab === item.href
+										? "bg-sk-orange-light text-sk-orange-dark"
+										: "text-sk-muted hover:bg-sk-yellow-light"
+								}`}
+							>
+								<span>{item.icon}</span>
+								{item.label}
+							</a>
+						))}
+					</div>
+				</div>
+				{/* Desktop: vertical sidebar */}
+				<div class="hidden md:flex flex-col bg-sk-surface rounded-sk shadow-sk-sm p-2 gap-1">
 					{NAV_ITEMS.filter((item) => user && item.roles.includes(user.role)).map((item) => (
 						<a
 							href={item.href}

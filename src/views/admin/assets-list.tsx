@@ -262,7 +262,7 @@ function deleteType(id, label) {
 				</button>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>
@@ -292,21 +292,21 @@ function deleteType(id, label) {
 									<div class="flex gap-2">
 										<button
 											onclick={`showAssetForm(${JSON.stringify({ id: asset.id, name: asset.name, asset_type: asset.asset_type, model: asset.model, notes: asset.notes, uses_battery: asset.uses_battery, max_weight_kg: asset.max_weight_kg, min_age: asset.min_age, max_age: asset.max_age, sort_order: asset.sort_order, photo_url: asset.photo_url })})`}
-											class="text-sk-blue-dark hover:underline text-xs font-body"
+											class="text-sk-blue-dark hover:underline text-xs font-body px-2 py-2 rounded-sk"
 										>
 											Editar
 										</button>
 										{asset.status !== "retired" && (
 											<button
 												onclick={`retireAsset(${asset.id},'${asset.name.replace(/'/g, "\\'")}')`}
-												class="text-sk-yellow-dark hover:underline text-xs font-body"
+												class="text-sk-yellow-dark hover:underline text-xs font-body px-2 py-2 rounded-sk"
 											>
 												Aposentar
 											</button>
 										)}
 										<button
 											onclick={`showDeleteModal(${asset.id},'${asset.name.replace(/'/g, "\\'")}')`}
-											class="text-sk-danger hover:underline text-xs font-body"
+											class="text-sk-danger hover:underline text-xs font-body px-2 py-2 rounded-sk"
 										>
 											Excluir
 										</button>
@@ -332,7 +332,7 @@ function deleteType(id, label) {
 					</button>
 				</div>
 
-				<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+				<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 							<tr>
@@ -350,14 +350,14 @@ function deleteType(id, label) {
 										<div class="flex gap-2">
 											<button
 												onclick={`showTypeForm(${JSON.stringify({ id: t.id, name: t.name, label: t.label })})`}
-												class="text-sk-blue-dark hover:underline text-xs font-body"
+												class="text-sk-blue-dark hover:underline text-xs font-body px-2 py-2 rounded-sk"
 											>
 												Editar
 											</button>
 											{isOwner && (
 												<button
 													onclick={`deleteType(${t.id},'${t.label.replace(/'/g, "\\'")}')`}
-													class="text-sk-danger hover:underline text-xs font-body"
+													class="text-sk-danger hover:underline text-xs font-body px-2 py-2 rounded-sk"
 												>
 													Excluir
 												</button>
@@ -377,8 +377,8 @@ function deleteType(id, label) {
 			</div>
 
 			{/* Asset Form Modal */}
-			<div id="asset-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up">
+			<div id="asset-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up max-h-[90vh] overflow-y-auto">
 					<h3 id="form-title" class="text-lg font-display font-bold mb-4 text-sk-text">Novo Ativo</h3>
 					<form id="asset-form" class="space-y-3">
 						<div>
@@ -449,8 +449,8 @@ function deleteType(id, label) {
 			</div>
 
 			{/* Type Form Modal */}
-			<div id="type-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up">
+			<div id="type-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up max-h-[90vh] overflow-y-auto">
 					<h3 id="type-form-title" class="text-lg font-display font-bold mb-4 text-sk-text">Novo Tipo</h3>
 					<form id="type-form" class="space-y-3">
 						<div>
@@ -471,8 +471,8 @@ function deleteType(id, label) {
 				</div>
 			</div>
 			{/* Delete Confirmation Modal */}
-			<div id="delete-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-sm p-6 modal-slide-up text-center">
+			<div id="delete-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-sm p-6 modal-slide-up text-center max-h-[90vh] overflow-y-auto">
 					<div class="text-4xl mb-3">⚠️</div>
 					<h3 class="text-lg font-display font-bold text-sk-text mb-2">Excluir Ativo</h3>
 					<p class="text-sm text-sk-muted font-body mb-1">

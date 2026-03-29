@@ -229,7 +229,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 					<a href="/" class="flex items-center gap-2">
 						<img src={logoUrl} alt={brandName} class="h-9" />
 					</a>
-					<div class="flex items-center gap-3">
+
+					{/* Desktop nav */}
+					<div class="hidden md:flex items-center gap-3">
 						<span id="online-status" class="flex items-center gap-1 text-sm">
 							<span class="w-2 h-2 rounded-full bg-white"></span>
 							Online
@@ -271,7 +273,58 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 							</>
 						)}
 					</div>
+
+					{/* Mobile: cash badge + hamburger */}
+					<div class="flex md:hidden items-center gap-2">
+						{user && cashStatus && (
+							<a
+								href="/cash"
+								class={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-display font-medium ${
+									cashStatus.open ? "bg-white/20 text-white" : "bg-sk-danger-light text-sk-danger"
+								}`}
+							>
+								<span class={`w-2 h-2 rounded-full ${cashStatus.open ? "bg-sk-green" : "bg-sk-danger"}`}></span>
+								{cashStatus.open ? formatBadgeCurrency(cashStatus.balance_cents ?? 0) : "Sem caixa"}
+							</a>
+						)}
+						{user && (
+							<button
+								onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+								class="btn-touch p-2 rounded-sk text-white active:bg-white/20"
+								aria-label="Menu"
+							>
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+							</button>
+						)}
+					</div>
 				</div>
+
+				{/* Mobile drawer */}
+				{user && (
+					<div id="mobile-menu" class="hidden md:hidden border-t border-white/20">
+						<div class="px-4 py-3 space-y-1">
+							<a href="/rentals" class="block px-4 py-3 rounded-sk text-white font-body text-base active:bg-white/20">Locações</a>
+							<a href="/shift" class="block px-4 py-3 rounded-sk text-white font-body text-base active:bg-white/20">Turno</a>
+							<a href="/cash" class="block px-4 py-3 rounded-sk text-white font-body text-base active:bg-white/20">Caixa</a>
+							<a href="/products" class="block px-4 py-3 rounded-sk text-white font-body text-base active:bg-white/20">Produtos</a>
+							{(user.role === "manager" || user.role === "owner") && (
+								<a href="/admin" class="block px-4 py-3 rounded-sk text-white font-body text-base active:bg-white/20">Admin</a>
+							)}
+							{isPlatformAdmin && (
+								<a href="/platform" class="block px-4 py-3 rounded-sk text-white font-body text-base bg-white/10 active:bg-white/20">Platform</a>
+							)}
+							<div class="border-t border-white/20 pt-2 mt-2">
+								<div class="px-4 py-2 text-white/70 text-sm">{user.name} ({ROLE_LABELS[user.role] ?? user.role})</div>
+								<button
+									onclick="fetch('/api/auth/logout',{method:'POST'}).then(function(){location.href='/login'})"
+									class="block w-full text-left px-4 py-3 rounded-sk text-white/90 font-body text-base active:bg-white/20"
+								>
+									Sair
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 			</nav>
 			<div class="wave-separator"></div>
 			<main class="max-w-7xl mx-auto px-4 py-6 font-body">{children}</main>

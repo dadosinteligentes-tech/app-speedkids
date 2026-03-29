@@ -67,7 +67,7 @@ function saveCustomer() {
 				</button>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm font-body">
 					<thead class="bg-sk-yellow-light/50 text-sk-muted">
 						<tr>
@@ -75,7 +75,7 @@ function saveCustomer() {
 							<th class="px-4 py-3 text-left">Telefone</th>
 							<th class="px-4 py-3 text-left hidden md:table-cell">Email</th>
 							<th class="px-4 py-3 text-right">Locações</th>
-							<th class="px-4 py-3 text-right">Total Gasto</th>
+							<th class="px-4 py-3 text-right hidden md:table-cell">Total Gasto</th>
 							<th class="px-4 py-3 text-center">Ações</th>
 						</tr>
 					</thead>
@@ -88,11 +88,11 @@ function saveCustomer() {
 								<td class="px-4 py-3 text-sk-muted">{c.phone ?? "-"}</td>
 								<td class="px-4 py-3 text-sk-muted hidden md:table-cell">{c.email ?? "-"}</td>
 								<td class="px-4 py-3 text-right">{c.total_rentals}</td>
-								<td class="px-4 py-3 text-right">R$ {(c.total_spent_cents / 100).toFixed(2).replace(".", ",")}</td>
+								<td class="px-4 py-3 text-right hidden md:table-cell">R$ {(c.total_spent_cents / 100).toFixed(2).replace(".", ",")}</td>
 								<td class="px-4 py-3 text-center">
 									<button
 										onclick={`openCustomerModal(${JSON.stringify({ id: c.id, name: c.name, phone: c.phone, cpf: c.cpf, email: c.email, instagram: c.instagram, notes: c.notes })})`}
-										class="text-sk-blue-dark hover:underline text-xs"
+										class="text-sk-blue-dark hover:underline text-xs px-2 py-2 rounded-sk"
 									>
 										Editar
 									</button>

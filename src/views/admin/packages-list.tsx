@@ -90,14 +90,14 @@ function togglePackage(id) {
 				</button>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm font-body">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>
 							<th class="px-4 py-3 font-medium">Nome</th>
 							<th class="px-4 py-3 font-medium">Duração</th>
 							<th class="px-4 py-3 font-medium">Preço</th>
-							<th class="px-4 py-3 font-medium">Excedente</th>
+							<th class="px-4 py-3 font-medium hidden md:table-cell">Excedente</th>
 							<th class="px-4 py-3 font-medium">Status</th>
 							<th class="px-4 py-3 font-medium">Ações</th>
 						</tr>
@@ -111,7 +111,7 @@ function togglePackage(id) {
 								</td>
 								<td class="px-4 py-3 text-sk-muted">{pkg.duration_minutes} min</td>
 								<td class="px-4 py-3 text-sk-muted">R$ {(pkg.price_cents / 100).toFixed(2).replace(".", ",")}</td>
-								<td class="px-4 py-3 text-sk-muted text-xs">
+								<td class="px-4 py-3 text-sk-muted text-xs hidden md:table-cell">
 									{pkg.overtime_block_price_cents > 0
 										? `R$ ${(pkg.overtime_block_price_cents / 100).toFixed(2).replace(".", ",")} / ${pkg.overtime_block_minutes}min`
 										: "—"}
@@ -128,13 +128,13 @@ function togglePackage(id) {
 									<div class="flex gap-2">
 										<button
 											onclick={`showPackageForm(${JSON.stringify({ id: pkg.id, name: pkg.name, duration_minutes: pkg.duration_minutes, price_cents: pkg.price_cents, sort_order: pkg.sort_order, overtime_block_minutes: pkg.overtime_block_minutes, overtime_block_price_cents: pkg.overtime_block_price_cents, grace_period_minutes: pkg.grace_period_minutes, is_extension: pkg.is_extension })})`}
-											class="btn-bounce text-sk-blue-dark hover:underline text-xs"
+											class="btn-bounce text-sk-blue-dark hover:underline text-xs px-2 py-2 rounded-sk"
 										>
 											Editar
 										</button>
 										<button
 											onclick={`togglePackage(${pkg.id})`}
-											class={`btn-bounce hover:underline text-xs ${pkg.active ? "text-sk-yellow-dark" : "text-sk-green-dark"}`}
+											class={`btn-bounce hover:underline text-xs px-2 py-2 rounded-sk ${pkg.active ? "text-sk-yellow-dark" : "text-sk-green-dark"}`}
 										>
 											{pkg.active ? "Desativar" : "Ativar"}
 										</button>
@@ -152,8 +152,8 @@ function togglePackage(id) {
 			</div>
 
 			{/* Form Modal */}
-			<div id="pkg-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up">
+			<div id="pkg-form-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl w-full max-w-md p-6 modal-slide-up max-h-[90vh] overflow-y-auto">
 					<h3 id="pkg-form-title" class="text-lg font-display font-bold mb-4 text-sk-text">Novo Pacote</h3>
 					<form id="pkg-form" class="space-y-3">
 						<div>
@@ -183,7 +183,7 @@ function togglePackage(id) {
 						<p class="text-xs text-sk-muted font-body -mt-2">Pacotes de prorrogação aparecem apenas na opção "Estender" durante uma locação ativa.</p>
 						<div class="border-t border-sk-border pt-3 mt-1">
 							<p class="text-sm font-display font-medium text-sk-text mb-2">Cobranca por excedente</p>
-							<div class="grid grid-cols-3 gap-2">
+							<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
 								<div>
 									<label class="block text-xs font-medium text-sk-muted mb-1 font-body">Bloco (min)</label>
 									<input id="pf-ot-block" type="number" min="1" value="5" class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body focus:ring-sk-blue/30 focus:border-sk-blue" />

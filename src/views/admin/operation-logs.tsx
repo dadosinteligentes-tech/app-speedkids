@@ -71,7 +71,7 @@ function filterLogs() {
 				</div>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table class="w-full text-sm font-body">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>

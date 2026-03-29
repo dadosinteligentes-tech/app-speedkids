@@ -307,7 +307,7 @@ function uninstallBattery(id, label) {
 				<button onclick="showBatteryTab('lowest')" id="tab-lowest" class="px-3 py-1.5 rounded-lg text-xs font-medium font-body text-sk-muted hover:bg-sk-yellow-light">Menor Carga</button>
 			</div>
 
-			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-hidden">
+			<div class="bg-sk-surface rounded-sk shadow-sk-sm overflow-x-auto">
 				<table id="battery-table" class="w-full text-sm">
 					<thead class="bg-sk-yellow-light/50 text-left text-sk-muted">
 						<tr>

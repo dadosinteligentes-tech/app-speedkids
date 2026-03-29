@@ -126,19 +126,19 @@ function deletePromo(id, name) {
 							<div class="flex gap-2 flex-shrink-0">
 								<button
 									onclick={`editPromo(${p.id}, ${JSON.stringify(p.name)}, ${JSON.stringify(p.description || "")}, '${p.discount_type}', ${p.discount_value})`}
-									class="px-3 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium hover:bg-sk-blue/20"
+									class="px-3 py-2 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium hover:bg-sk-blue/20"
 								>
 									Editar
 								</button>
 								<button
 									onclick={`togglePromo(${p.id})`}
-									class={`px-3 py-1.5 rounded-sk text-xs font-display font-medium ${p.active ? "bg-sk-yellow-light text-sk-yellow-dark hover:bg-sk-yellow/20" : "bg-sk-green-light text-sk-green-dark hover:bg-sk-green/20"}`}
+									class={`px-3 py-2 rounded-sk text-xs font-display font-medium ${p.active ? "bg-sk-yellow-light text-sk-yellow-dark hover:bg-sk-yellow/20" : "bg-sk-green-light text-sk-green-dark hover:bg-sk-green/20"}`}
 								>
 									{p.active ? "Desativar" : "Ativar"}
 								</button>
 								<button
 									onclick={`deletePromo(${p.id}, ${JSON.stringify(p.name)})`}
-									class="px-3 py-1.5 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium hover:bg-sk-danger/20"
+									class="px-3 py-2 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium hover:bg-sk-danger/20"
 								>
 									Excluir
 								</button>
@@ -149,8 +149,8 @@ function deletePromo(id, name) {
 			)}
 
 			{/* Modal */}
-			<div id="promo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl p-6 w-full max-w-md mx-4">
+			<div id="promo-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30">
+				<div class="bg-sk-surface rounded-t-sk-xl sm:rounded-sk-xl shadow-sk-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
 					<h3 id="modal-title" class="text-lg font-display font-bold text-sk-text mb-4">Nova Promoção</h3>
 					<input type="hidden" id="promo-id" />
 					<div class="space-y-4">

@@ -219,19 +219,19 @@ function deleteGoal(id, title) {
 								<div class="flex gap-1">
 									<button
 										onclick={`showGoalForm(${JSON.stringify({ id: g.id, title: g.title, goal_type: g.goal_type, period_type: g.period_type, target_value: g.target_value, user_id: g.user_id, start_date: g.start_date, end_date: g.end_date, celebration_message: g.celebration_message })})`}
-										class="px-2 py-1 text-xs bg-sk-blue-light text-sk-blue-dark rounded font-body hover:bg-sk-blue/20"
+										class="px-3 py-2 text-xs bg-sk-blue-light text-sk-blue-dark rounded font-body hover:bg-sk-blue/20"
 									>
 										Editar
 									</button>
 									<button
 										onclick={`toggleGoal(${g.id}, true)`}
-										class="px-2 py-1 text-xs bg-gray-100 text-sk-muted rounded font-body hover:bg-gray-200"
+										class="px-3 py-2 text-xs bg-gray-100 text-sk-muted rounded font-body hover:bg-gray-200"
 									>
 										Desativar
 									</button>
 									<button
 										onclick={`deleteGoal(${g.id}, '${g.title.replace(/'/g, "\\'")}')`}
-										class="px-2 py-1 text-xs bg-sk-danger-light text-sk-danger rounded font-body hover:bg-red-100"
+										class="px-3 py-2 text-xs bg-sk-danger-light text-sk-danger rounded font-body hover:bg-red-100"
 									>
 										Excluir
 									</button>
@@ -296,13 +296,13 @@ function deleteGoal(id, title) {
 										<td class="px-4 py-2 text-right">
 											<button
 												onclick={`toggleGoal(${g.id}, false)`}
-												class="px-2 py-1 text-xs bg-sk-green-light text-sk-green-dark rounded font-body"
+												class="px-3 py-2 text-xs bg-sk-green-light text-sk-green-dark rounded font-body"
 											>
 												Ativar
 											</button>
 											<button
 												onclick={`deleteGoal(${g.id}, '${g.title.replace(/'/g, "\\'")}')`}
-												class="px-2 py-1 text-xs bg-sk-danger-light text-sk-danger rounded font-body ml-1"
+												class="px-3 py-2 text-xs bg-sk-danger-light text-sk-danger rounded font-body ml-1"
 											>
 												Excluir
 											</button>
@@ -316,8 +316,8 @@ function deleteGoal(id, title) {
 			)}
 
 			{/* Form Modal */}
-			<div id="goal-form-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-				<div class="w-full max-w-md bg-sk-surface rounded-sk p-6 shadow-sk-xl mx-4 max-h-[90vh] overflow-y-auto">
+			<div id="goal-form-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30">
+				<div class="w-full max-w-md bg-sk-surface rounded-t-sk sm:rounded-sk p-6 shadow-sk-xl mx-4 max-h-[90vh] overflow-y-auto">
 					<div class="flex items-center justify-between mb-4">
 						<h3 id="goal-form-title" class="text-lg font-display font-bold text-sk-text">Nova Meta</h3>
 						<button onclick="closeGoalForm()" class="text-sk-muted hover:text-sk-text text-lg">&times;</button>

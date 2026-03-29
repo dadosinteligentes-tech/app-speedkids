@@ -45,7 +45,7 @@ export const ReportLayout: FC<PropsWithChildren<ReportLayoutProps>> = ({
 			{REPORT_NAV.filter((r) => user && r.roles.includes(user.role)).map((r) => (
 				<a
 					href={`${r.href}?from=${from}&to=${to}`}
-					class={`px-3 py-1.5 rounded-lg text-xs font-medium font-body transition-colors ${
+					class={`px-3 py-2.5 rounded-lg text-xs font-medium font-body transition-colors ${
 						activeReport === r.href
 							? "bg-sk-orange text-white"
 							: "text-sk-muted hover:bg-sk-yellow-light"
@@ -91,19 +91,19 @@ export const ReportLayout: FC<PropsWithChildren<ReportLayoutProps>> = ({
 			</button>
 			<a
 				href={`${activeReport}?from=${todayISO()}&to=${todayISO()}`}
-				class="px-3 py-1.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
+				class="px-3 py-2.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
 			>
 				Hoje
 			</a>
 			<a
 				href={`${activeReport}?from=${daysAgoISO(7)}&to=${todayISO()}`}
-				class="px-3 py-1.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
+				class="px-3 py-2.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
 			>
 				7 dias
 			</a>
 			<a
 				href={`${activeReport}?from=${daysAgoISO(30)}&to=${todayISO()}`}
-				class="px-3 py-1.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
+				class="px-3 py-2.5 bg-sk-yellow-light text-sk-muted rounded-sk font-body text-xs hover:bg-sk-yellow"
 			>
 				30 dias
 			</a>

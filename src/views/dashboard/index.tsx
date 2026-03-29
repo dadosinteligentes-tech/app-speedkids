@@ -59,16 +59,16 @@ ${raw(dashboardControllerScript)}
 			{/* Sort bar */}
 			<div id="sort-bar" class="flex items-center gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
 				<span class="text-xs font-body text-sk-muted flex-shrink-0">Ordenar:</span>
-				<button onclick="sortCards('default')" class="sort-btn active sort-btn-active flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="default">Padrao</button>
-				<button onclick="sortCards('name-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-asc">Nome A-Z</button>
-				<button onclick="sortCards('name-desc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-desc">Nome Z-A</button>
-				<button onclick="sortCards('status')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="status">Status</button>
-				<button onclick="sortCards('time-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="time-asc">Tempo (menor)</button>
-				<button onclick="sortCards('battery-asc')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="battery-asc">Bateria (menor)</button>
-				<button onclick="sortCards('type')" class="sort-btn flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="type">Tipo</button>
+				<button onclick="sortCards('default')" class="sort-btn active sort-btn-active flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="default">Padrao</button>
+				<button onclick="sortCards('name-asc')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-asc">Nome A-Z</button>
+				<button onclick="sortCards('name-desc')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="name-desc">Nome Z-A</button>
+				<button onclick="sortCards('status')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="status">Status</button>
+				<button onclick="sortCards('time-asc')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="time-asc">Tempo (menor)</button>
+				<button onclick="sortCards('battery-asc')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="battery-asc">Bateria (menor)</button>
+				<button onclick="sortCards('type')" class="sort-btn flex-shrink-0 px-3 py-2.5 rounded-full text-xs font-display font-semibold transition-all" data-sort="type">Tipo</button>
 			</div>
 
-			<div id="assets-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+			<div id="assets-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
 				{assets.map((asset) => (
 					<AssetCard asset={asset} session={sessionMap.get(asset.id) ?? null} battery={batteryMap.get(asset.id) ?? null} />
 				))}

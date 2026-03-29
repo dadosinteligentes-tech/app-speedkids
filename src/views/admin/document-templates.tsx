@@ -242,8 +242,8 @@ function moveTemplate(id, direction) {
 			</div>
 
 			{/* Create/Edit Modal */}
-			<div id="template-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-				<div class="bg-sk-surface rounded-sk-lg shadow-sk-xl w-full max-w-2xl p-6 fade-in max-h-[90vh] overflow-y-auto">
+			<div id="template-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-t-sk-lg sm:rounded-sk-lg shadow-sk-xl w-full max-w-2xl p-6 fade-in max-h-[90vh] overflow-y-auto">
 					<div class="flex items-center justify-between mb-4">
 						<h3 id="modal-title" class="text-lg font-display font-bold text-sk-text">Novo Documento</h3>
 						<button onclick="closeTemplateModal()" class="text-sk-muted hover:text-sk-text text-xl">&times;</button>
