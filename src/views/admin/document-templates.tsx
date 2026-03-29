@@ -33,7 +33,7 @@ const VARIABLES = [
 export const DocumentTemplatesPage: FC<Props> = ({ templates, user, tenant, isPlatformAdmin }) => {
 	const script = html`<script>
 ${raw(`
-function showModal(mode, id) {
+function openTemplateModal(mode, id) {
 	var modal = document.getElementById('template-modal');
 	document.getElementById('modal-title').textContent = mode === 'edit' ? 'Editar Documento' : 'Novo Documento';
 	document.getElementById('modal-mode').value = mode;
@@ -47,7 +47,6 @@ function showModal(mode, id) {
 				document.getElementById('tpl-content').value = t.content;
 				document.getElementById('tpl-print-mode').value = t.print_mode;
 				document.getElementById('tpl-active').checked = !!t.is_active;
-				document.getElementById('tpl-sort').value = t.sort_order || 0;
 			});
 	} else {
 		document.getElementById('tpl-name').value = '';
@@ -55,11 +54,10 @@ function showModal(mode, id) {
 		document.getElementById('tpl-content').value = '';
 		document.getElementById('tpl-print-mode').value = 'optional';
 		document.getElementById('tpl-active').checked = true;
-		document.getElementById('tpl-sort').value = '0';
 	}
 	modal.classList.remove('hidden');
 }
-function hideModal() { document.getElementById('template-modal').classList.add('hidden'); }
+function closeTemplateModal() { document.getElementById('template-modal').classList.add('hidden'); }
 
 function saveTemplate(e) {
 	e.preventDefault();
@@ -71,7 +69,6 @@ function saveTemplate(e) {
 		content: document.getElementById('tpl-content').value,
 		print_mode: document.getElementById('tpl-print-mode').value,
 		is_active: document.getElementById('tpl-active').checked,
-		sort_order: parseInt(document.getElementById('tpl-sort').value, 10) || 0,
 	};
 	if (!data.name || !data.content) { showToast('Nome e conteúdo são obrigatórios', 'error'); return; }
 
@@ -79,7 +76,7 @@ function saveTemplate(e) {
 	var method = mode === 'edit' ? 'PUT' : 'POST';
 	fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
 		.then(function(r) {
-			if (r.ok) { hideModal(); showToast(mode === 'edit' ? 'Documento atualizado' : 'Documento criado'); setTimeout(function(){ location.reload(); }, 800); }
+			if (r.ok) { closeTemplateModal(); showToast(mode === 'edit' ? 'Documento atualizado' : 'Documento criado'); setTimeout(function(){ location.reload(); }, 800); }
 			else { r.json().then(function(d) { showToast(d.error || 'Erro', 'error'); }); }
 		});
 }
@@ -165,7 +162,7 @@ function moveTemplate(id, direction) {
 						<h2 class="text-xl font-display font-bold text-sk-text">Modelos de Documentos</h2>
 						<p class="text-sm text-sk-muted font-body">Crie termos, recibos e autorizações para imprimir na térmica durante a locação.</p>
 					</div>
-					<button onclick="showModal('create')" class="btn-bounce bg-sk-orange hover:bg-sk-orange-dark text-white px-4 py-2 rounded-sk text-sm font-display font-bold shadow-sk-sm">
+					<button onclick="openTemplateModal('create')" class="btn-bounce bg-sk-orange hover:bg-sk-orange-dark text-white px-4 py-2 rounded-sk text-sm font-display font-bold shadow-sk-sm">
 						+ Novo Documento
 					</button>
 				</div>
@@ -219,7 +216,7 @@ function moveTemplate(id, direction) {
 												<button onclick={`previewTemplate(${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-green-light text-sk-green-dark rounded-sk text-xs font-display font-medium" title="Preview térmico">
 													Preview
 												</button>
-												<button onclick={`showModal('edit',${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium">
+												<button onclick={`openTemplateModal('edit',${t.id})`} class="btn-touch px-2.5 py-1.5 bg-sk-blue-light text-sk-blue-dark rounded-sk text-xs font-display font-medium">
 													Editar
 												</button>
 												<button onclick={`deleteTemplate(${t.id},'${t.name.replace(/'/g, "\\'")}')`} class="btn-touch px-2.5 py-1.5 bg-sk-danger-light text-sk-danger rounded-sk text-xs font-display font-medium">
@@ -237,7 +234,7 @@ function moveTemplate(id, direction) {
 						<p class="text-3xl mb-2">📄</p>
 						<p class="font-display font-bold text-sk-text mb-1">Nenhum modelo cadastrado</p>
 						<p class="text-sm text-sk-muted font-body mb-4">Crie seu primeiro modelo de documento para imprimir durante as locações.</p>
-						<button onclick="showModal('create')" class="btn-bounce bg-sk-orange hover:bg-sk-orange-dark text-white px-6 py-2.5 rounded-sk font-display font-bold text-sm">
+						<button onclick="openTemplateModal('create')" class="btn-bounce bg-sk-orange hover:bg-sk-orange-dark text-white px-6 py-2.5 rounded-sk font-display font-bold text-sm">
 							Criar primeiro documento
 						</button>
 					</div>
@@ -249,7 +246,7 @@ function moveTemplate(id, direction) {
 				<div class="bg-sk-surface rounded-sk-lg shadow-sk-xl w-full max-w-2xl p-6 fade-in max-h-[90vh] overflow-y-auto">
 					<div class="flex items-center justify-between mb-4">
 						<h3 id="modal-title" class="text-lg font-display font-bold text-sk-text">Novo Documento</h3>
-						<button onclick="hideModal()" class="text-sk-muted hover:text-sk-text text-xl">&times;</button>
+						<button onclick="closeTemplateModal()" class="text-sk-muted hover:text-sk-text text-xl">&times;</button>
 					</div>
 					<input type="hidden" id="modal-mode" value="create" />
 					<input type="hidden" id="modal-id" value="" />
@@ -300,7 +297,7 @@ function moveTemplate(id, direction) {
 
 						<div class="flex gap-2 pt-2">
 							<button type="submit" class="btn-bounce flex-1 py-2.5 bg-sk-blue hover:bg-sk-blue-dark text-white rounded-sk font-display font-bold text-sm">Salvar</button>
-							<button type="button" onclick="hideModal()" class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-display font-medium text-sm">Cancelar</button>
+							<button type="button" onclick="closeTemplateModal()" class="flex-1 py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-display font-medium text-sm">Cancelar</button>
 						</div>
 					</form>
 				</div>
