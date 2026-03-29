@@ -6,11 +6,17 @@ import { recordAbandonedCheckout } from "../../db/queries/platform";
 
 export const signupRoutes = new Hono<AppEnv>();
 
-function getPlanPrices(env: { STRIPE_PRICE_STARTER: string; STRIPE_PRICE_PRO: string; STRIPE_PRICE_ENTERPRISE: string }): Record<string, string> {
+function getPlanPrices(env: {
+	STRIPE_PRICE_STARTER: string; STRIPE_PRICE_PRO: string; STRIPE_PRICE_ENTERPRISE: string;
+	STRIPE_PRICE_STARTER_ANNUAL: string; STRIPE_PRICE_PRO_ANNUAL: string; STRIPE_PRICE_ENTERPRISE_ANNUAL: string;
+}): Record<string, string> {
 	return {
 		starter: env.STRIPE_PRICE_STARTER,
 		pro: env.STRIPE_PRICE_PRO,
 		enterprise: env.STRIPE_PRICE_ENTERPRISE,
+		"starter-annual": env.STRIPE_PRICE_STARTER_ANNUAL,
+		"pro-annual": env.STRIPE_PRICE_PRO_ANNUAL,
+		"enterprise-annual": env.STRIPE_PRICE_ENTERPRISE_ANNUAL,
 	};
 }
 
@@ -48,6 +54,9 @@ signupRoutes.post("/checkout", async (c) => {
 		return c.json({ error: "Plano invalido" }, 400);
 	}
 
+	// Base plan for provisioning (strip -annual suffix)
+	const basePlan = body.plan.replace("-annual", "");
+
 	const domain = c.env.APP_DOMAIN || "giro-kids.com";
 
 	// Track checkout attempt for abandoned checkout detection
@@ -70,7 +79,7 @@ signupRoutes.post("/checkout", async (c) => {
 				tenant_name: body.businessName,
 				owner_name: body.ownerName,
 				owner_email: body.ownerEmail,
-				plan: body.plan,
+				plan: basePlan,
 			},
 		});
 

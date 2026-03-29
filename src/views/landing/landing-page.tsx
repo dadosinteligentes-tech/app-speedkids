@@ -105,6 +105,63 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
 	});
 });
 
+// Revenue calculator
+function calcRevenue() {
+	var price = parseFloat(document.getElementById('calc-price').value) || 0;
+	var rentals = parseInt(document.getElementById('calc-rentals').value) || 0;
+	var extraMinutes = 3; // average extra minutes not charged
+	var avgDuration = 10; // average rental duration
+	var lossPerRental = price * (extraMinutes / avgDuration);
+	var monthlyLoss = Math.round(lossPerRental * rentals * 30);
+	document.getElementById('calc-value').textContent = 'R$ ' + monthlyLoss.toLocaleString('pt-BR');
+}
+
+// Billing toggle (monthly/annual)
+var isAnnual = false;
+function toggleBilling() {
+	isAnnual = !isAnnual;
+	var dot = document.getElementById('billing-dot');
+	var toggle = document.getElementById('billing-toggle');
+	var labelM = document.getElementById('label-monthly');
+	var labelA = document.getElementById('label-annual');
+	if (isAnnual) {
+		dot.style.transform = 'translateX(28px)';
+		toggle.style.background = '#388E3C';
+		labelM.className = 'font-body text-sm text-sk-muted';
+		labelA.className = 'font-body text-sm font-medium text-sk-text';
+	} else {
+		dot.style.transform = 'translateX(0)';
+		toggle.style.background = '';
+		labelM.className = 'font-body text-sm font-medium text-sk-text';
+		labelA.className = 'font-body text-sm text-sk-muted';
+	}
+	// Update price displays
+	document.querySelectorAll('[data-price-monthly]').forEach(function(el) {
+		var monthly = el.getAttribute('data-price-monthly');
+		var annual = el.getAttribute('data-price-annual');
+		el.textContent = isAnnual ? annual : monthly;
+	});
+	document.querySelectorAll('[data-period]').forEach(function(el) {
+		el.textContent = isAnnual ? '/ano' : '/mês';
+	});
+	// Update savings badge visibility
+	document.querySelectorAll('[data-savings]').forEach(function(el) {
+		el.style.display = isAnnual ? 'block' : 'none';
+	});
+}
+
+// Override choosePlan to include billing cycle
+var _origChoosePlan = choosePlan;
+choosePlan = function(plan) {
+	var fullPlan = isAnnual ? plan + '-annual' : plan;
+	selectedPlan = fullPlan;
+	document.getElementById('selected-plan').value = fullPlan;
+	var suffix = isAnnual ? ' (Anual)' : '';
+	var label = document.getElementById('plan-label');
+	if (label) label.textContent = 'Plano selecionado: ' + planLabels[plan] + suffix;
+	document.querySelector('#cadastro').scrollIntoView({ behavior: 'smooth' });
+};
+
 // Reset balloon animation on click outside
 document.addEventListener('click', function(e) {
 	if (!e.target.closest('.feature-card-wrap')) {
@@ -359,12 +416,11 @@ document.addEventListener('click', function(e) {
 						<div class="animate-fade-up">
 							<img src="/logo-girokids.png" alt="Giro Kids" class="h-24 mx-auto mb-6" />
 							<h1 class="font-display font-bold text-4xl md:text-5xl lg:text-6xl text-sk-text mb-4 leading-tight">
-								Gerencie seu parque infantil<br />
-								<span class="text-sk-orange">com inteligência</span>
+								Pare de perder dinheiro<br />
+								<span class="text-sk-orange">com tempo extra não cobrado</span>
 							</h1>
 							<p class="font-body text-lg md:text-xl text-sk-muted mb-8 max-w-2xl mx-auto leading-relaxed">
-								Controle locações, caixa, estoque e clientes em uma única plataforma.
-								Pronto em minutos, sem instalação.
+								O Giro Kids controla seus brinquedos, cobra automaticamente o tempo extra e mostra exatamente quanto você fatura. Teste grátis por 30 dias.
 							</p>
 						</div>
 						<div class="animate-fade-up flex flex-col sm:flex-row gap-3 justify-center" style="animation-delay: 0.2s">
@@ -379,8 +435,117 @@ document.addEventListener('click', function(e) {
 					</div>
 				</header>
 
+				{/* ── Pain Points ── */}
+				<section class="py-16 md:py-20">
+					<div class="max-w-4xl mx-auto px-4">
+						<div class="text-center mb-10">
+							<h2 class="font-display font-bold text-3xl md:text-4xl text-sk-text mb-3">
+								Você se identifica?
+							</h2>
+						</div>
+						<div class="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+							{[
+								"Uso o cronômetro do celular pra controlar o tempo e sempre perco a conta",
+								"Não sei qual brinquedo dá mais lucro e qual só dá manutenção",
+								"Meus funcionários dão tempo extra de graça e eu não tenho como controlar",
+								"As baterias acabam no meio do giro e as crianças ficam chorando",
+								"Não faço ideia de quanto faturo por dia, só vejo no final do mês",
+								"Já tentei planilha, caderninho e WhatsApp — nada funciona direito",
+							].map((pain, i) => (
+								<div class="flex items-start gap-3 bg-sk-surface rounded-sk p-4 shadow-sk-sm border border-sk-border/50 animate-fade-up" style={`animation-delay: ${0.08 * i}s`}>
+									<span class="text-sk-danger text-lg flex-shrink-0 mt-0.5">✕</span>
+									<p class="font-body text-sm text-sk-text leading-relaxed">{pain}</p>
+								</div>
+							))}
+						</div>
+						<div class="text-center mt-10">
+							<p class="font-display font-bold text-xl text-sk-orange">O Giro Kids resolve todos esses problemas.</p>
+						</div>
+					</div>
+				</section>
+
+				{/* ── Revenue Calculator ── */}
+				<section class="bg-sk-orange-light py-16 md:py-20">
+					<div class="max-w-2xl mx-auto px-4">
+						<div class="text-center mb-8">
+							<h2 class="font-display font-bold text-3xl md:text-4xl text-sk-text mb-3">
+								Quanto você perde por mês?
+							</h2>
+							<p class="font-body text-sk-muted text-lg">Descubra a receita que está escapando do seu parque</p>
+						</div>
+						<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg p-6 md:p-8 border-2 border-sk-border/50">
+							<div class="space-y-5">
+								<div>
+									<label class="block text-sm font-display font-medium text-sk-text mb-1">Quantos brinquedos você tem?</label>
+									<input id="calc-toys" type="number" min="1" value="10" oninput="calcRevenue()" class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body text-base focus:ring-2 focus:ring-sk-orange/30 focus:border-sk-orange outline-none" />
+								</div>
+								<div>
+									<label class="block text-sm font-display font-medium text-sk-text mb-1">Preço por locação (R$)</label>
+									<input id="calc-price" type="number" min="1" value="20" oninput="calcRevenue()" class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body text-base focus:ring-2 focus:ring-sk-orange/30 focus:border-sk-orange outline-none" />
+								</div>
+								<div>
+									<label class="block text-sm font-display font-medium text-sk-text mb-1">Locações por dia (média)</label>
+									<input id="calc-rentals" type="number" min="1" value="30" oninput="calcRevenue()" class="w-full px-4 py-3 border-2 border-sk-border rounded-sk font-body text-base focus:ring-2 focus:ring-sk-orange/30 focus:border-sk-orange outline-none" />
+								</div>
+							</div>
+							<div id="calc-result" class="mt-6 bg-sk-danger-light border border-sk-danger/30 rounded-sk-lg p-5 text-center">
+								<p class="font-body text-sm text-sk-text mb-1">Receita perdida estimada por mês:</p>
+								<p class="font-display font-bold text-4xl text-sk-danger" id="calc-value">R$ 5.400</p>
+								<p class="font-body text-xs text-sk-muted mt-2">Baseado em 3 minutos extras por locação não cobrados (média do mercado)</p>
+							</div>
+							<a href="#cadastro" class="btn-touch btn-bounce block w-full mt-5 py-4 bg-sk-orange hover:bg-sk-orange-dark text-white text-center rounded-sk-lg font-display font-bold text-lg shadow-sk-md">
+								Quero recuperar essa receita
+							</a>
+						</div>
+					</div>
+				</section>
+
+				{/* ── Video Demo ── */}
+				<section class="py-16 md:py-20">
+					<div class="max-w-4xl mx-auto px-4 text-center">
+						<h2 class="font-display font-bold text-3xl md:text-4xl text-sk-text mb-3">
+							Veja o sistema funcionando
+						</h2>
+						<p class="font-body text-sk-muted text-lg mb-8">2 minutos para entender como o Giro Kids transforma seu parque</p>
+						<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg border-2 border-sk-border/50 overflow-hidden aspect-video flex items-center justify-center">
+							<div class="text-center p-8">
+								<span class="text-6xl mb-4 block">🎬</span>
+								<p class="font-display font-bold text-xl text-sk-text mb-2">Video demo em breve</p>
+								<p class="font-body text-sm text-sk-muted">Enquanto isso, teste o sistema gratuitamente por 30 dias</p>
+								<a href="#cadastro" class="btn-touch btn-bounce inline-block mt-4 px-6 py-3 bg-sk-orange hover:bg-sk-orange-dark text-white rounded-sk font-display font-bold text-sm shadow-sk-sm">
+									Experimentar grátis
+								</a>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				{/* ── Social Proof ── */}
+				<section class="bg-sk-orange-light py-12">
+					<div class="max-w-4xl mx-auto px-4">
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+							<div>
+								<p class="font-display font-bold text-3xl text-sk-orange">100%</p>
+								<p class="font-body text-sm text-sk-muted">Na nuvem</p>
+							</div>
+							<div>
+								<p class="font-display font-bold text-3xl text-sk-orange">30 dias</p>
+								<p class="font-body text-sm text-sk-muted">Grátis para testar</p>
+							</div>
+							<div>
+								<p class="font-display font-bold text-3xl text-sk-orange">5 min</p>
+								<p class="font-body text-sm text-sk-muted">Para configurar</p>
+							</div>
+							<div>
+								<p class="font-display font-bold text-3xl text-sk-orange">12+</p>
+								<p class="font-body text-sm text-sk-muted">Tipos de relatório</p>
+							</div>
+						</div>
+					</div>
+				</section>
+
 				{/* ── Features ── */}
-				<section id="funcionalidades" class="bg-sk-orange-light py-16 md:py-20">
+				<section id="funcionalidades" class="py-16 md:py-20">
 					<div class="max-w-6xl mx-auto px-4">
 						<div class="text-center mb-12">
 							<h2 class="font-display font-bold text-3xl md:text-4xl text-sk-text mb-3">
@@ -454,7 +619,20 @@ document.addEventListener('click', function(e) {
 							<h2 class="font-display font-bold text-3xl md:text-4xl text-sk-text mb-3">
 								Escolha seu plano
 							</h2>
-							<p class="font-body text-sk-muted text-lg">Comece pequeno, cresça sem limites</p>
+							<p class="font-body text-sk-muted text-lg mb-6">Comece pequeno, cresça sem limites</p>
+							{/* Billing toggle */}
+							<div class="flex items-center justify-center gap-3">
+								<span id="label-monthly" class="font-body text-sm font-medium text-sk-text">Mensal</span>
+								<button
+									id="billing-toggle"
+									onclick="toggleBilling()"
+									class="relative w-14 h-7 bg-sk-border rounded-full transition-colors"
+									aria-label="Alternar cobrança mensal/anual"
+								>
+									<span id="billing-dot" class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform"></span>
+								</button>
+								<span id="label-annual" class="font-body text-sm text-sk-muted">Anual <span class="text-sk-green font-display font-bold text-xs">2 meses grátis</span></span>
+							</div>
 						</div>
 						<div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto items-start">
 							{(() => {
@@ -484,12 +662,15 @@ document.addEventListener('click', function(e) {
 									const cfg = plans[key];
 									const meta = planMeta[key];
 									if (!cfg || !meta) return null;
-									const reais = Math.floor(cfg.priceCents / 100);
-								const centavos = cfg.priceCents % 100;
-								const reaisFormatted = reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-								const priceStr = centavos > 0
-									? `R$ ${reaisFormatted},${centavos.toString().padStart(2, "0")}`
-									: `R$ ${reaisFormatted}`;
+									const fmtPrice = (cents: number) => {
+										const r = Math.floor(cents / 100);
+										const c = cents % 100;
+										const rf = r.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+										return c > 0 ? `R$ ${rf},${c.toString().padStart(2, "0")}` : `R$ ${rf}`;
+									};
+									const annualPrices: Record<string, number> = { starter: 97000, pro: 197000, enterprise: 297000 };
+									const priceStr = fmtPrice(cfg.priceCents);
+									const annualStr = fmtPrice(annualPrices[key] ?? cfg.priceCents * 10);
 									const borderClass = meta.highlight
 										? "shadow-sk-md border-2 ring-2 ring-sk-orange border-sk-orange relative"
 										: "shadow-sk-sm border-2 border-sk-border";
@@ -507,8 +688,9 @@ document.addEventListener('click', function(e) {
 												<p class="font-body text-sk-muted text-sm">{meta.subtitle}</p>
 											</div>
 											<div class="text-center mb-6">
-												<span class={`font-display font-bold text-4xl ${priceColor}`}>{priceStr}</span>
-												<span class="font-body text-sk-muted text-sm">/mês</span>
+												<span class={`font-display font-bold text-4xl ${priceColor}`} data-price-monthly={priceStr} data-price-annual={annualStr}>{priceStr}</span>
+												<span class="font-body text-sk-muted text-sm" data-period>/mês</span>
+												<div class="text-sk-green font-display font-bold text-xs mt-1" data-savings style="display:none">Economia de 2 meses!</div>
 											</div>
 											<ul class="space-y-3 font-body text-sm text-sk-text mb-6">
 												{meta.features(cfg).map((f) => (

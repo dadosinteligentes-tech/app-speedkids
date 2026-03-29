@@ -12,6 +12,9 @@ export type Bindings = {
 	STRIPE_PRICE_STARTER: string;
 	STRIPE_PRICE_PRO: string;
 	STRIPE_PRICE_ENTERPRISE: string;
+	STRIPE_PRICE_STARTER_ANNUAL: string;
+	STRIPE_PRICE_PRO_ANNUAL: string;
+	STRIPE_PRICE_ENTERPRISE_ANNUAL: string;
 	PLATFORM_ADMIN_EMAILS: string; // comma-separated emails with SaaS admin access
 	RESEND_API_KEY: string; // Resend.com API key for transactional emails
 };
