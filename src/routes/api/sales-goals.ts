@@ -64,6 +64,7 @@ salesGoalRoutes.post("/manage", async (c) => {
 		user_id: body.user_id ?? null,
 		start_date: body.start_date,
 		end_date: body.end_date,
+		celebration_message: body.celebration_message ?? null,
 		created_by: user.id,
 	});
 
@@ -87,6 +88,7 @@ salesGoalRoutes.put("/manage/:id", async (c) => {
 	if (body.active !== undefined) updates.active = body.active ? 1 : 0;
 	if (body.start_date !== undefined) updates.start_date = body.start_date;
 	if (body.end_date !== undefined) updates.end_date = body.end_date;
+	if (body.celebration_message !== undefined) updates.celebration_message = body.celebration_message;
 
 	const goal = await updateSalesGoal(c.env.DB, id, tenantId, updates);
 	if (!goal) return c.json({ error: "Meta nao encontrada" }, 404);

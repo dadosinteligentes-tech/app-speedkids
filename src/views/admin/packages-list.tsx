@@ -28,6 +28,7 @@ function showPackageForm(pkg) {
 		document.getElementById('pf-ot-block').value = pkg.overtime_block_minutes || 5;
 		document.getElementById('pf-ot-price').value = ((pkg.overtime_block_price_cents || 0) / 100).toFixed(2);
 		document.getElementById('pf-grace').value = pkg.grace_period_minutes || 5;
+		document.getElementById('pf-extension').checked = !!pkg.is_extension;
 	} else {
 		titleEl.textContent = 'Novo Pacote';
 		delete form.dataset.id;
@@ -35,6 +36,7 @@ function showPackageForm(pkg) {
 		document.getElementById('pf-ot-block').value = 5;
 		document.getElementById('pf-ot-price').value = '5.00';
 		document.getElementById('pf-grace').value = 5;
+		document.getElementById('pf-extension').checked = false;
 	}
 	modal.classList.remove('hidden');
 }
@@ -54,7 +56,8 @@ document.getElementById('pkg-form').addEventListener('submit', function(e) {
 		sort_order: Number(document.getElementById('pf-order').value) || 0,
 		overtime_block_minutes: Number(document.getElementById('pf-ot-block').value) || 5,
 		overtime_block_price_cents: Math.round(parseFloat(document.getElementById('pf-ot-price').value || '0') * 100),
-		grace_period_minutes: Number(document.getElementById('pf-grace').value) || 5
+		grace_period_minutes: Number(document.getElementById('pf-grace').value) || 5,
+		is_extension: document.getElementById('pf-extension').checked ? 1 : 0
 	};
 
 	var method = id ? 'PUT' : 'POST';
@@ -102,7 +105,10 @@ function togglePackage(id) {
 					<tbody class="divide-y divide-gray-100">
 						{packages.map((pkg) => (
 							<tr class={`hover:bg-sk-yellow-light ${!pkg.active ? "opacity-50" : ""}`}>
-								<td class="px-4 py-3 font-medium">{pkg.name}</td>
+								<td class="px-4 py-3 font-medium">
+									{pkg.name}
+									{pkg.is_extension ? <span class="ml-2 px-2 py-0.5 rounded text-xs bg-sk-purple-light text-sk-purple font-display font-medium">Prorrogação</span> : null}
+								</td>
 								<td class="px-4 py-3 text-sk-muted">{pkg.duration_minutes} min</td>
 								<td class="px-4 py-3 text-sk-muted">R$ {(pkg.price_cents / 100).toFixed(2).replace(".", ",")}</td>
 								<td class="px-4 py-3 text-sk-muted text-xs">
@@ -121,7 +127,7 @@ function togglePackage(id) {
 								<td class="px-4 py-3">
 									<div class="flex gap-2">
 										<button
-											onclick={`showPackageForm(${JSON.stringify({ id: pkg.id, name: pkg.name, duration_minutes: pkg.duration_minutes, price_cents: pkg.price_cents, sort_order: pkg.sort_order, overtime_block_minutes: pkg.overtime_block_minutes, overtime_block_price_cents: pkg.overtime_block_price_cents, grace_period_minutes: pkg.grace_period_minutes })})`}
+											onclick={`showPackageForm(${JSON.stringify({ id: pkg.id, name: pkg.name, duration_minutes: pkg.duration_minutes, price_cents: pkg.price_cents, sort_order: pkg.sort_order, overtime_block_minutes: pkg.overtime_block_minutes, overtime_block_price_cents: pkg.overtime_block_price_cents, grace_period_minutes: pkg.grace_period_minutes, is_extension: pkg.is_extension })})`}
 											class="btn-bounce text-sk-blue-dark hover:underline text-xs"
 										>
 											Editar
@@ -164,10 +170,17 @@ function togglePackage(id) {
 								<input id="pf-price" type="number" required min="0" step="0.01" class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body focus:ring-sk-blue/30 focus:border-sk-blue" placeholder="25.00" />
 							</div>
 						</div>
-						<div>
-							<label class="block text-sm font-medium text-sk-text mb-1 font-body">Ordem de exibição</label>
-							<input id="pf-order" type="number" min="0" class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body focus:ring-sk-blue/30 focus:border-sk-blue" value="0" />
+						<div class="grid grid-cols-2 gap-3">
+							<div>
+								<label class="block text-sm font-medium text-sk-text mb-1 font-body">Ordem de exibição</label>
+								<input id="pf-order" type="number" min="0" class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body focus:ring-sk-blue/30 focus:border-sk-blue" value="0" />
+							</div>
+							<div class="flex items-end pb-2 gap-2">
+								<input id="pf-extension" type="checkbox" class="w-4 h-4 rounded accent-sk-purple" />
+								<label class="text-sm font-medium text-sk-text font-body">Pacote de prorrogação</label>
+							</div>
 						</div>
+						<p class="text-xs text-sk-muted font-body -mt-2">Pacotes de prorrogação aparecem apenas na opção "Estender" durante uma locação ativa.</p>
 						<div class="border-t border-sk-border pt-3 mt-1">
 							<p class="text-sm font-display font-medium text-sk-text mb-2">Cobranca por excedente</p>
 							<div class="grid grid-cols-3 gap-2">

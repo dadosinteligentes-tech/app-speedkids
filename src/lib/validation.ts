@@ -192,6 +192,7 @@ export const salesGoalSchema = z.object({
 	user_id: z.number().int().positive().optional().nullable(),
 	start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 	end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	celebration_message: z.string().max(200).optional().nullable(),
 });
 
 export const salesGoalUpdateSchema = z.object({
@@ -200,6 +201,7 @@ export const salesGoalUpdateSchema = z.object({
 	active: z.boolean().optional(),
 	start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 	end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+	celebration_message: z.string().max(200).optional().nullable(),
 });
 
 // ── Helper: parse with nice error ──

@@ -17,8 +17,8 @@ export async function createSalesGoal(
 ): Promise<SalesGoal> {
 	const { results } = await db
 		.prepare(
-			`INSERT INTO sales_goals (tenant_id, title, goal_type, period_type, target_value, user_id, start_date, end_date, created_by)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`INSERT INTO sales_goals (tenant_id, title, goal_type, period_type, target_value, user_id, start_date, end_date, celebration_message, created_by)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			 RETURNING *`,
 		)
 		.bind(
@@ -30,6 +30,7 @@ export async function createSalesGoal(
 			goal.user_id,
 			goal.start_date,
 			goal.end_date,
+			goal.celebration_message ?? null,
 			goal.created_by,
 		)
 		.all<SalesGoal>();
@@ -40,7 +41,7 @@ export async function updateSalesGoal(
 	db: D1Database,
 	id: number,
 	tenantId: number,
-	updates: { title?: string; target_value?: number; active?: number; start_date?: string; end_date?: string },
+	updates: { title?: string; target_value?: number; active?: number; start_date?: string; end_date?: string; celebration_message?: string | null },
 ): Promise<SalesGoal | null> {
 	const sets: string[] = [];
 	const vals: unknown[] = [];
@@ -49,6 +50,7 @@ export async function updateSalesGoal(
 	if (updates.active !== undefined) { sets.push("active = ?"); vals.push(updates.active); }
 	if (updates.start_date !== undefined) { sets.push("start_date = ?"); vals.push(updates.start_date); }
 	if (updates.end_date !== undefined) { sets.push("end_date = ?"); vals.push(updates.end_date); }
+	if (updates.celebration_message !== undefined) { sets.push("celebration_message = ?"); vals.push(updates.celebration_message); }
 	if (sets.length === 0) return getSalesGoalById(db, id, tenantId);
 
 	sets.push("updated_at = datetime('now')");
@@ -352,10 +354,10 @@ export async function getRecentAchievements(
 	db: D1Database,
 	tenantId: number,
 	userId: number,
-): Promise<Array<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string }>> {
+): Promise<Array<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string; celebration_message: string | null }>> {
 	const { results } = await db
 		.prepare(
-			`SELECT sg.id AS goal_id, sg.title, sg.target_value, ga.achieved_value AS current_value, sg.goal_type
+			`SELECT sg.id AS goal_id, sg.title, sg.target_value, ga.achieved_value AS current_value, sg.goal_type, sg.celebration_message
 			 FROM goal_achievements ga
 			 JOIN sales_goals sg ON sg.id = ga.goal_id
 			 WHERE sg.tenant_id = ? AND ga.user_id = ?
@@ -363,7 +365,7 @@ export async function getRecentAchievements(
 			 ORDER BY ga.achieved_at DESC`,
 		)
 		.bind(tenantId, userId)
-		.all<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string }>();
+		.all<{ goal_id: number; title: string; target_value: number; current_value: number; goal_type: string; celebration_message: string | null }>();
 
 	return results;
 }

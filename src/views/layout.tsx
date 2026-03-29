@@ -367,7 +367,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, children, he
 						.then(function(data) {
 							if (data && data.achievements && data.achievements.length > 0) {
 								data.achievements.forEach(function(a, idx) {
-									setTimeout(function() { celebrateGoal(a.title); }, idx * 4500);
+									setTimeout(function() { celebrateGoal(a.celebration_message || a.title); }, idx * 4500);
 								});
 							}
 						})

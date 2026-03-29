@@ -173,6 +173,27 @@ function retireAsset(id, name) {
 	});
 }
 
+var __DELETE_ASSET_ID__ = null;
+function showDeleteModal(id, name) {
+	__DELETE_ASSET_ID__ = id;
+	document.getElementById('delete-asset-name').textContent = name;
+	document.getElementById('delete-modal').classList.remove('hidden');
+}
+function closeDeleteModal() {
+	document.getElementById('delete-modal').classList.add('hidden');
+	__DELETE_ASSET_ID__ = null;
+}
+function confirmDeleteAsset() {
+	if (!__DELETE_ASSET_ID__) return;
+	var btn = document.getElementById('delete-confirm-btn');
+	btn.disabled = true;
+	btn.textContent = 'Excluindo...';
+	fetch('/api/assets/' + __DELETE_ASSET_ID__ + '/permanent', { method: 'DELETE' }).then(function(r) {
+		if (r.ok) { showToast('Ativo excluído'); setTimeout(function() { location.reload(); }, 600); }
+		else r.json().then(function(d) { showToast(d.error || 'Erro ao excluir', 'error'); btn.disabled = false; btn.textContent = 'Excluir Permanentemente'; });
+	});
+}
+
 // ── Asset Types CRUD ──
 
 function showTypeForm(type) {
@@ -278,11 +299,17 @@ function deleteType(id, label) {
 										{asset.status !== "retired" && (
 											<button
 												onclick={`retireAsset(${asset.id},'${asset.name.replace(/'/g, "\\'")}')`}
-												class="text-sk-danger hover:underline text-xs font-body"
+												class="text-sk-yellow-dark hover:underline text-xs font-body"
 											>
 												Aposentar
 											</button>
 										)}
+										<button
+											onclick={`showDeleteModal(${asset.id},'${asset.name.replace(/'/g, "\\'")}')`}
+											class="text-sk-danger hover:underline text-xs font-body"
+										>
+											Excluir
+										</button>
 									</div>
 								</td>
 							</tr>
@@ -441,6 +468,28 @@ function deleteType(id, label) {
 							<button type="button" onclick="closeTypeForm()" class="btn-touch flex-1 py-2 bg-gray-200 text-sk-text rounded-sk font-body font-medium active:bg-gray-300">Cancelar</button>
 						</div>
 					</form>
+				</div>
+			</div>
+			{/* Delete Confirmation Modal */}
+			<div id="delete-modal" class="hidden fixed inset-0 bg-black/50 overlay-fade flex items-center justify-center z-50 p-4">
+				<div class="bg-sk-surface rounded-sk-xl shadow-sk-xl w-full max-w-sm p-6 modal-slide-up text-center">
+					<div class="text-4xl mb-3">⚠️</div>
+					<h3 class="text-lg font-display font-bold text-sk-text mb-2">Excluir Ativo</h3>
+					<p class="text-sm text-sk-muted font-body mb-1">
+						Tem certeza que deseja excluir permanentemente o ativo:
+					</p>
+					<p id="delete-asset-name" class="font-display font-bold text-sk-text mb-4"></p>
+					<p class="text-xs text-sk-danger font-body mb-4">
+						Esta ação não pode ser desfeita. Ativos com histórico de locações não podem ser excluídos.
+					</p>
+					<div class="flex gap-2">
+						<button id="delete-confirm-btn" onclick="confirmDeleteAsset()" class="btn-touch flex-1 py-2.5 bg-sk-danger text-white rounded-sk font-display font-bold text-sm active:bg-red-700">
+							Excluir Permanentemente
+						</button>
+						<button onclick="closeDeleteModal()" class="btn-touch flex-1 py-2.5 bg-gray-200 text-sk-text rounded-sk font-display font-medium text-sm active:bg-gray-300">
+							Cancelar
+						</button>
+					</div>
 				</div>
 			</div>
 		</AdminLayout>

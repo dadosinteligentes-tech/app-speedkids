@@ -31,12 +31,13 @@ export async function createPackage(
 		overtime_block_minutes?: number;
 		overtime_block_price_cents?: number;
 		grace_period_minutes?: number;
+		is_extension?: number;
 	},
 ): Promise<Package | null> {
 	return db
 		.prepare(`
-			INSERT INTO packages (tenant_id, name, duration_minutes, price_cents, sort_order, overtime_block_minutes, overtime_block_price_cents, grace_period_minutes)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO packages (tenant_id, name, duration_minutes, price_cents, sort_order, overtime_block_minutes, overtime_block_price_cents, grace_period_minutes, is_extension)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			RETURNING *
 		`)
 		.bind(
@@ -48,6 +49,7 @@ export async function createPackage(
 			params.overtime_block_minutes ?? 5,
 			params.overtime_block_price_cents ?? 0,
 			params.grace_period_minutes ?? 5,
+			params.is_extension ?? 0,
 		)
 		.first<Package>();
 }
@@ -64,6 +66,7 @@ export async function updatePackage(
 		overtime_block_minutes?: number;
 		overtime_block_price_cents?: number;
 		grace_period_minutes?: number;
+		is_extension?: number;
 	},
 ): Promise<void> {
 	const sets: string[] = [];
@@ -76,6 +79,7 @@ export async function updatePackage(
 	if (params.overtime_block_minutes !== undefined) { sets.push("overtime_block_minutes = ?"); values.push(params.overtime_block_minutes); }
 	if (params.overtime_block_price_cents !== undefined) { sets.push("overtime_block_price_cents = ?"); values.push(params.overtime_block_price_cents); }
 	if (params.grace_period_minutes !== undefined) { sets.push("grace_period_minutes = ?"); values.push(params.grace_period_minutes); }
+	if (params.is_extension !== undefined) { sets.push("is_extension = ?"); values.push(params.is_extension); }
 
 	if (sets.length === 0) return;
 

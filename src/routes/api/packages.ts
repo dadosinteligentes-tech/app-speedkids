@@ -25,6 +25,7 @@ packageRoutes.post("/", requirePermission("packages.manage"), async (c) => {
 	const body = await c.req.json<{
 		name: string; duration_minutes: number; price_cents: number; sort_order?: number;
 		overtime_block_minutes?: number; overtime_block_price_cents?: number; grace_period_minutes?: number;
+		is_extension?: number;
 	}>();
 	if (!body.name || !body.duration_minutes || body.price_cents == null) {
 		return c.json({ error: "Nome, duração e preço são obrigatórios" }, 400);
@@ -43,6 +44,7 @@ packageRoutes.put("/:id", requirePermission("packages.manage"), async (c) => {
 	const body = await c.req.json<{
 		name?: string; duration_minutes?: number; price_cents?: number; sort_order?: number;
 		overtime_block_minutes?: number; overtime_block_price_cents?: number; grace_period_minutes?: number;
+		is_extension?: number;
 	}>();
 	await updatePackage(c.env.DB, tenantId, id, body);
 	await auditLog(c, "package.update", "package", id, body);

@@ -74,7 +74,7 @@ ${raw(dashboardControllerScript)}
 				))}
 			</div>
 
-			<PackageSelector packages={packages} />
+			<PackageSelector packages={packages.filter(p => !p.is_extension)} />
 			<IdentificationForm />
 			<PaymentModal />
 
@@ -157,7 +157,7 @@ ${raw(dashboardControllerScript)}
 				</div>
 			</div>
 
-			{(user?.role === "manager" || user?.role === "owner") && <ExtendModal packages={packages} />}
+			{(user?.role === "manager" || user?.role === "owner") && <ExtendModal packages={packages.some(p => p.is_extension) ? packages.filter(p => p.is_extension) : packages} />}
 		</Layout>
 	);
 };

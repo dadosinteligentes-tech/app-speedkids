@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../../types";
-import { getAssets, getAssetById, createAsset, updateAsset, retireAsset } from "../../db/queries/assets";
+import { getAssets, getAssetById, createAsset, updateAsset, retireAsset, hardDeleteAsset } from "../../db/queries/assets";
 import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
 import { getLimitsForPlan, getTenantUsage, checkLimit } from "../../lib/plan-limits";
@@ -87,6 +87,25 @@ assetRoutes.delete("/:id", requirePermission("assets.manage"), async (c) => {
 	await retireAsset(c.env.DB, tenantId, id);
 	await auditLog(c, "asset.retire", "asset", id, { name: existing.name });
 	return c.json({ ok: true });
+});
+
+// Hard delete asset (only if no rental history)
+assetRoutes.delete("/:id/permanent", requirePermission("assets.manage"), async (c) => {
+	const tenantId = c.get('tenant_id');
+	const id = Number(c.req.param("id"));
+	const existing = await getAssetById(c.env.DB, tenantId, id);
+	if (!existing) return c.json({ error: "Ativo não encontrado" }, 404);
+
+	try {
+		await hardDeleteAsset(c.env.DB, tenantId, id);
+		await auditLog(c, "asset.delete", "asset", id, { name: existing.name });
+		return c.json({ ok: true });
+	} catch (e: any) {
+		if (e.message === "ASSET_HAS_SESSIONS") {
+			return c.json({ error: "Este ativo possui histórico de locações e não pode ser excluído. Use 'Aposentar' para desativá-lo." }, 400);
+		}
+		throw e;
+	}
 });
 
 // Upload asset photo to R2

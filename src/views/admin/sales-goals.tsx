@@ -57,6 +57,7 @@ function showGoalForm(goal) {
 		document.getElementById('gf-user').value = goal.user_id || '';
 		document.getElementById('gf-start').value = goal.start_date;
 		document.getElementById('gf-end').value = goal.end_date;
+		document.getElementById('gf-celebration').value = goal.celebration_message || '';
 		updateTargetLabel();
 	} else {
 		titleEl.textContent = 'Nova Meta';
@@ -128,7 +129,8 @@ document.getElementById('goal-form').addEventListener('submit', function(e) {
 		target_value: targetValue,
 		user_id: document.getElementById('gf-user').value ? Number(document.getElementById('gf-user').value) : null,
 		start_date: document.getElementById('gf-start').value,
-		end_date: document.getElementById('gf-end').value
+		end_date: document.getElementById('gf-end').value,
+		celebration_message: document.getElementById('gf-celebration').value.trim() || null
 	};
 
 	if (!body.title) { alert('Titulo e obrigatorio'); return; }
@@ -216,7 +218,7 @@ function deleteGoal(id, title) {
 								</div>
 								<div class="flex gap-1">
 									<button
-										onclick={`showGoalForm(${JSON.stringify({ id: g.id, title: g.title, goal_type: g.goal_type, period_type: g.period_type, target_value: g.target_value, user_id: g.user_id, start_date: g.start_date, end_date: g.end_date })})`}
+										onclick={`showGoalForm(${JSON.stringify({ id: g.id, title: g.title, goal_type: g.goal_type, period_type: g.period_type, target_value: g.target_value, user_id: g.user_id, start_date: g.start_date, end_date: g.end_date, celebration_message: g.celebration_message })})`}
 										class="px-2 py-1 text-xs bg-sk-blue-light text-sk-blue-dark rounded font-body hover:bg-sk-blue/20"
 									>
 										Editar
@@ -375,6 +377,13 @@ function deleteGoal(id, title) {
 								<input id="gf-end" type="date" required
 									class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body" />
 							</div>
+						</div>
+						<div>
+							<label class="block text-xs font-medium text-sk-muted font-body mb-1">Mensagem de celebração</label>
+							<input id="gf-celebration" type="text" maxlength={200}
+								class="w-full px-3 py-2 border border-sk-border rounded-sk text-sm font-body focus:ring-2 focus:ring-sk-blue/30"
+								placeholder="Ex: Parabéns equipe! Meta batida! 🎉" />
+							<p class="text-xs text-sk-muted font-body mt-1">Aparece na animação quando a meta é alcançada. Se vazio, exibe o título da meta.</p>
 						</div>
 						<button type="submit"
 							class="btn-touch btn-bounce w-full py-3 bg-sk-orange text-white rounded-sk font-display font-bold text-lg active:bg-sk-orange-dark shadow-sk-sm mt-2">

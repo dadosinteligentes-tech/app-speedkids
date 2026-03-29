@@ -89,3 +89,20 @@ export async function retireAsset(db: D1Database, tenantId: number, id: number):
 		.bind(id, tenantId)
 		.run();
 }
+
+export async function hardDeleteAsset(db: D1Database, tenantId: number, id: number): Promise<void> {
+	// Check if asset has any rental sessions (prevent delete if has history)
+	const sessions = await db
+		.prepare("SELECT COUNT(*) as cnt FROM rental_sessions WHERE asset_id = ? AND tenant_id = ?")
+		.bind(id, tenantId)
+		.first<{ cnt: number }>();
+
+	if (sessions && sessions.cnt > 0) {
+		throw new Error("ASSET_HAS_SESSIONS");
+	}
+
+	await db
+		.prepare("DELETE FROM assets WHERE id = ? AND tenant_id = ?")
+		.bind(id, tenantId)
+		.run();
+}

@@ -25,6 +25,7 @@ export interface Package {
 	overtime_block_price_cents: number;
 	grace_period_minutes: number;
 	active: number;
+	is_extension: number;
 	sort_order: number;
 	created_at: string;
 	updated_at: string;
@@ -349,6 +350,7 @@ export interface SalesGoal {
 	start_date: string;
 	end_date: string;
 	active: number;
+	celebration_message: string | null;
 	created_by: number;
 	created_at: string;
 	updated_at: string;
