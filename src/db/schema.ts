@@ -456,3 +456,20 @@ export interface RentalSignedDocument {
 	printed_at: string;
 	printed_by: number | null;
 }
+
+export interface BlogPost {
+	id: number;
+	slug: string;
+	title: string;
+	description: string;
+	icon: string;
+	cover_image_url: string | null;
+	reading_time: string;
+	sections: string; // JSON stringified array of { heading, content }
+	cta_text: string | null;
+	cta_href: string | null;
+	published: number;
+	published_at: string | null;
+	created_at: string;
+	updated_at: string;
+}

@@ -17,6 +17,7 @@ export type Bindings = {
 	STRIPE_PRICE_ENTERPRISE_ANNUAL: string;
 	PLATFORM_ADMIN_EMAILS: string; // comma-separated emails with SaaS admin access
 	RESEND_API_KEY: string; // Resend.com API key for transactional emails
+	BLOG_API_KEY: string; // API key for external blog management (workflows)
 };
 
 export type AppVariables = {

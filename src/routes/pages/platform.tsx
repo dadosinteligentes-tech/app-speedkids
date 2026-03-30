@@ -23,6 +23,8 @@ import { getAllTickets } from "../../db/queries/support-tickets";
 import { CrmPage } from "../../views/platform/crm";
 import { listLeads, getCrmStats, getLeadsByStatus, getOverdueLeads, getTodayAgenda, getFunnelVelocity } from "../../db/queries/crm-leads";
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
+import { PlatformBlog } from "../../views/platform/blog";
+import { getAllPosts } from "../../db/queries/blog";
 
 export const platformPages = new Hono<AppEnv>();
 
@@ -162,4 +164,11 @@ platformPages.get("/crm", async (c) => {
 	const user = c.get("user");
 	return c.html(<CrmPage leads={leadResult.leads} stats={stats} kanbanData={kanbanData} overdueLeads={overdueLeadsList}
 		agenda={agenda} funnelVelocity={funnelVelocity} user={user} />);
+});
+
+// Blog management
+platformPages.get("/blog", async (c) => {
+	const posts = await getAllPosts(c.env.DB);
+	const user = c.get("user");
+	return c.html(<PlatformBlog posts={posts} user={user} />);
 });

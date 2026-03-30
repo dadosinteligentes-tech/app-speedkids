@@ -823,3 +823,97 @@ platformApiRoutes.get("/crm/check-duplicate", async (c) => {
 	const duplicates = await findDuplicateLeads(c.env.DB, name, email || undefined);
 	return c.json(duplicates);
 });
+
+// --- Blog management ---
+
+import {
+	getAllPosts, getPostById, createPost, updatePost, deletePost,
+} from "../../db/queries/blog";
+
+const BLOG_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const BLOG_MAX_SIZE = 2 * 1024 * 1024;
+const BLOG_EXT_MAP: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+platformApiRoutes.get("/blog", async (c) => {
+	const posts = await getAllPosts(c.env.DB);
+	return c.json(posts);
+});
+
+platformApiRoutes.post("/blog", async (c) => {
+	const body = await c.req.json<{
+		slug: string; title: string; description: string;
+		icon?: string; reading_time?: string;
+		sections: { heading: string; content: string }[];
+		cta_text?: string | null; cta_href?: string | null;
+		published?: boolean;
+	}>();
+	if (!body.slug || !body.title || !body.description || !body.sections) {
+		return c.json({ error: "slug, title, description e sections são obrigatórios" }, 400);
+	}
+	if (!/^[a-z0-9-]+$/.test(body.slug)) {
+		return c.json({ error: "Slug deve conter apenas letras minúsculas, números e hífens" }, 400);
+	}
+	const post = await createPost(c.env.DB, body);
+	return c.json(post, 201);
+});
+
+platformApiRoutes.put("/blog/:id", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const existing = await getPostById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Post não encontrado" }, 404);
+	const body = await c.req.json();
+	if (body.slug && !/^[a-z0-9-]+$/.test(body.slug)) {
+		return c.json({ error: "Slug deve conter apenas letras minúsculas, números e hífens" }, 400);
+	}
+	await updatePost(c.env.DB, id, body);
+	return c.json({ ok: true });
+});
+
+platformApiRoutes.delete("/blog/:id", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const existing = await getPostById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Post não encontrado" }, 404);
+	if (existing.cover_image_url) {
+		const key = existing.cover_image_url.replace("/api/blog/images/", "");
+		if (key) await c.env.B_BUCKET_SPEEDKIDS.delete(key);
+	}
+	await deletePost(c.env.DB, id);
+	return c.json({ ok: true });
+});
+
+// Upload cover image for blog post
+platformApiRoutes.post("/blog/:id/image", async (c) => {
+	const id = parseInt(c.req.param("id"), 10);
+	const existing = await getPostById(c.env.DB, id);
+	if (!existing) return c.json({ error: "Post não encontrado" }, 404);
+
+	const formData = await c.req.formData();
+	const file = formData.get("image");
+	if (!file || !(file instanceof File)) {
+		return c.json({ error: "Arquivo de imagem obrigatório" }, 400);
+	}
+	if (!BLOG_ALLOWED_TYPES.includes(file.type)) {
+		return c.json({ error: "Tipo inválido. Use JPEG, PNG ou WebP" }, 400);
+	}
+	if (file.size > BLOG_MAX_SIZE) {
+		return c.json({ error: "Arquivo muito grande. Máximo 2MB" }, 400);
+	}
+
+	// Delete old image
+	if (existing.cover_image_url) {
+		const oldKey = existing.cover_image_url.replace("/api/blog/images/", "");
+		if (oldKey) await c.env.B_BUCKET_SPEEDKIDS.delete(oldKey);
+	}
+
+	const ext = BLOG_EXT_MAP[file.type] ?? "jpg";
+	const key = `blog/${id}/${Date.now()}.${ext}`;
+
+	await c.env.B_BUCKET_SPEEDKIDS.put(key, file.stream(), {
+		httpMetadata: { contentType: file.type },
+	});
+
+	const imageUrl = `/api/blog/images/${key}`;
+	await updatePost(c.env.DB, id, { cover_image_url: imageUrl });
+
+	return c.json({ cover_image_url: imageUrl });
+});

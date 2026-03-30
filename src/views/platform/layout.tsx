@@ -120,6 +120,7 @@ export const PlatformLayout: FC<PropsWithChildren<PlatformLayoutProps>> = ({
 						<a href="/platform/crm" class="text-white/80 hover:text-white transition-colors">CRM</a>
 						<a href="/platform/superadmins" class="text-white/80 hover:text-white transition-colors">Admins</a>
 						<a href="/platform/plans" class="text-white/80 hover:text-white transition-colors">Planos</a>
+						<a href="/platform/blog" class="text-white/80 hover:text-white transition-colors">Blog</a>
 						<span class="text-white/30">|</span>
 						<span class="text-white/60">{user?.email}</span>
 						<button onclick="fetch('/api/auth/logout',{method:'POST'}).then(function(){location.href='/platform/login'})" class="text-white/60 hover:text-white transition-colors underline">Sair</button>

@@ -49,6 +49,10 @@ registerMiddleware(app);
 app.route("/api/signup", signupRoutes);
 app.route("/api/stripe/webhook", stripeWebhookRoutes);
 
+// Blog API (public reads + workflow writes via Bearer token)
+import { blogApiRoutes } from "./routes/api/blog";
+app.route("/api/blog", blogApiRoutes);
+
 // Setup routes
 app.route("/api/setup", setupRoutes);
 
@@ -84,6 +88,10 @@ app.route("/landing", landingPages);
 // Legal pages (public)
 import { legalPages } from "./routes/pages/legal";
 app.route("/legal", legalPages);
+
+// Blog pages (public)
+import { blogPages } from "./routes/pages/blog";
+app.route("/blog", blogPages);
 
 // Platform admin pages
 app.route("/platform", platformPages);

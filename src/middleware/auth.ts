@@ -3,7 +3,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../types";
 import { getAuthSession } from "../db/queries/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/platform-login", "/api/signup", "/api/stripe/webhook", "/landing", "/signup", "/platform/login", "/legal"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/platform-login", "/api/signup", "/api/stripe/webhook", "/api/blog", "/landing", "/signup", "/platform/login", "/legal", "/blog"];
 
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 	const path = new URL(c.req.url).pathname;

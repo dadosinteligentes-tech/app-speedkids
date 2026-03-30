@@ -394,6 +394,7 @@ document.addEventListener('click', function(e) {
 						<div class="flex items-center gap-4">
 							<a href="#funcionalidades" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Funcionalidades</a>
 							<a href="#planos" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Planos</a>
+							<a href="/blog" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Blog</a>
 							<a href="/apresentacao.html" target="_blank" class="hidden md:inline text-sm font-body text-white/90 hover:text-white">Apresentação</a>
 							<a href="#cadastro" class="btn-touch btn-bounce bg-white/20 hover:bg-white/30 px-5 py-2 rounded-sk text-sm font-display font-bold flex items-center">
 								Começar agora
@@ -772,6 +773,7 @@ document.addEventListener('click', function(e) {
 						</p>
 						<div class="flex items-center justify-center gap-4 mb-4 text-xs font-body">
 							<a href="/apresentacao.html" target="_blank" class="text-white/70 hover:text-white underline">Apresentação</a>
+							<a href="/blog" class="text-white/70 hover:text-white underline">Blog</a>
 							<a href="/legal/terms" class="text-white/70 hover:text-white underline">Termos de Uso</a>
 							<a href="/legal/privacy" class="text-white/70 hover:text-white underline">Privacidade</a>
 							<a href="/legal/lgpd" class="text-white/70 hover:text-white underline">LGPD</a>
