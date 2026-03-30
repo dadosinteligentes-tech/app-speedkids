@@ -1913,6 +1913,32 @@ const dashboardControllerScript = `
 		var igEl = document.getElementById('id-instagram');
 		if (igEl && customer.instagram) igEl.value = '@' + customer.instagram;
 
+		// Populate email if available and expand advanced fields to show it
+		var emailEl = document.getElementById('id-email');
+		if (emailEl && customer.email) {
+			emailEl.value = customer.email;
+			var advFields = document.getElementById('id-advanced-fields');
+			if (advFields) advFields.classList.remove('hidden');
+			var advArrow = document.getElementById('id-advanced-arrow');
+			if (advArrow) advArrow.innerHTML = '&#9662;';
+		}
+
+		// Show loyalty status
+		var loyaltySection = document.getElementById('id-loyalty-section');
+		loyaltySection.classList.remove('hidden');
+		document.getElementById('id-loyalty-active').classList.add('hidden');
+		document.getElementById('id-loyalty-pending').classList.add('hidden');
+		document.getElementById('id-loyalty-invite').classList.add('hidden');
+
+		if (customer.email_verified) {
+			document.getElementById('id-loyalty-active').classList.remove('hidden');
+			document.getElementById('id-loyalty-points').textContent = (customer.loyalty_points || 0).toLocaleString('pt-BR');
+		} else if (customer.email) {
+			document.getElementById('id-loyalty-pending').classList.remove('hidden');
+		} else {
+			document.getElementById('id-loyalty-invite').classList.remove('hidden');
+		}
+
 		if (children.length > 0) {
 			var listEl = document.getElementById('id-children-list');
 			listEl.innerHTML = children.map(function(child) {
@@ -1945,6 +1971,15 @@ const dashboardControllerScript = `
 		if (knownEl) knownEl.classList.add('hidden');
 		var newEl = document.getElementById('id-new-child');
 		if (newEl) newEl.classList.remove('hidden');
+
+		// Show loyalty invite for new customers
+		var loyaltySection = document.getElementById('id-loyalty-section');
+		if (loyaltySection) {
+			loyaltySection.classList.remove('hidden');
+			document.getElementById('id-loyalty-active').classList.add('hidden');
+			document.getElementById('id-loyalty-pending').classList.add('hidden');
+			document.getElementById('id-loyalty-invite').classList.remove('hidden');
+		}
 	}
 
 	window.selectExistingChild = function(childId) {
@@ -1969,6 +2004,21 @@ const dashboardControllerScript = `
 		if (raw.length > 6) masked += '.' + raw.substring(6, 9);
 		if (raw.length > 9) masked += '-' + raw.substring(9, 11);
 		el.value = masked;
+	};
+
+	window.sendLoyaltyVerification = function() {
+		if (!__idState.customerId) { alert('Salve o cliente primeiro'); return; }
+		api('POST', '/loyalty/send-verification', { customer_id: __idState.customerId })
+			.then(function(d) {
+				if (d.ok) {
+					showToast('Email de verificacao enviado!');
+					document.getElementById('id-loyalty-pending').classList.add('hidden');
+					var active = document.getElementById('id-loyalty-active');
+					active.classList.remove('hidden');
+					document.getElementById('id-loyalty-points').textContent = '0';
+				}
+			})
+			.catch(function(err) { alert(err.message || 'Erro ao enviar verificacao'); });
 	};
 
 	window.toggleAdvancedFields = function() {
@@ -2003,6 +2053,10 @@ const dashboardControllerScript = `
 		document.getElementById('id-known-children').classList.add('hidden');
 		document.getElementById('id-children-list').innerHTML = '';
 		document.getElementById('id-new-child').classList.remove('hidden');
+		var emailEl = document.getElementById('id-email');
+		if (emailEl) emailEl.value = '';
+		var loyaltySection = document.getElementById('id-loyalty-section');
+		if (loyaltySection) loyaltySection.classList.add('hidden');
 		document.getElementById('identification-modal').classList.remove('hidden');
 		setTimeout(function() { document.getElementById('id-phone').focus(); }, 100);
 	}
@@ -2017,6 +2071,8 @@ const dashboardControllerScript = `
 		var cpfRaw = document.getElementById('id-cpf').value.replace(/\\D/g, '');
 		var igEl = document.getElementById('id-instagram');
 		var instagram = igEl ? igEl.value.replace(/^@/, '').trim() : '';
+		var emailEl = document.getElementById('id-email');
+		var email = emailEl ? emailEl.value.trim() : '';
 
 		if (!phone || phone.length < 10) { alert('Telefone do responsavel e obrigatorio'); return; }
 		if (!guardianName) { alert('Nome do responsavel e obrigatorio'); return; }
@@ -2093,11 +2149,24 @@ const dashboardControllerScript = `
 
 		var customerPromise;
 		if (__idState.customerId) {
-			customerPromise = Promise.resolve(__idState.customerId);
+			// Update returning customer with any new/changed fields (email, cpf, instagram)
+			var updateData = {};
+			if (email) updateData.email = email;
+			if (cpfRaw) updateData.cpf = cpfRaw;
+			if (instagram) updateData.instagram = instagram;
+			if (Object.keys(updateData).length > 0) {
+				updateData.name = guardianName;
+				customerPromise = api('PUT', '/customers/quick/' + __idState.customerId, updateData)
+					.then(function() { return __idState.customerId; })
+					.catch(function() { return __idState.customerId; }); // non-critical
+			} else {
+				customerPromise = Promise.resolve(__idState.customerId);
+			}
 		} else {
 			var quickData = { name: guardianName, phone: phone };
 			if (cpfRaw) quickData.cpf = cpfRaw;
 			if (instagram) quickData.instagram = instagram;
+			if (email) quickData.email = email;
 			customerPromise = api('POST', '/customers/quick', quickData)
 				.then(function(c) { return c.id; });
 		}

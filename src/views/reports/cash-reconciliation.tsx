@@ -13,6 +13,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 function discrepancyClass(cents: number | null): string {
@@ -31,7 +32,7 @@ export const CashReconciliationView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const perPage = 20;
 	const totalPages = Math.ceil(total / perPage);
@@ -49,7 +50,7 @@ export const CashReconciliationView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

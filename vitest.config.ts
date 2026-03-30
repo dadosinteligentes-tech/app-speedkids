@@ -27,6 +27,7 @@ export default defineWorkersConfig({
 						PLATFORM_ADMIN_EMAILS: "admin@test.com",
 						RESEND_API_KEY: "",
 						BLOG_API_KEY: "test-blog-api-key-123",
+						LOYALTY_HMAC_SECRET: "test-hmac-secret-for-loyalty-verification",
 					},
 				},
 			},

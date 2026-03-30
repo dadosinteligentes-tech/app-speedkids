@@ -25,6 +25,7 @@ import { listLeads, getCrmStats, getLeadsByStatus, getOverdueLeads, getTodayAgen
 import { daysAgoBrazilISO, todayBrazilISO } from "../../lib/timezone";
 import { PlatformBlog } from "../../views/platform/blog";
 import { getAllPosts } from "../../db/queries/blog";
+import { PlatformLoyalty } from "../../views/platform/loyalty";
 
 export const platformPages = new Hono<AppEnv>();
 
@@ -164,6 +165,44 @@ platformPages.get("/crm", async (c) => {
 	const user = c.get("user");
 	return c.html(<CrmPage leads={leadResult.leads} stats={stats} kanbanData={kanbanData} overdueLeads={overdueLeadsList}
 		agenda={agenda} funnelVelocity={funnelVelocity} user={user} />);
+});
+
+// Loyalty program adoption
+platformPages.get("/loyalty", async (c) => {
+	const db = c.env.DB;
+	const user = c.get("user");
+
+	// Cross-tenant loyalty stats
+	const [tenantsWithLoyalty, totalVerified, totalIssued, totalRedeemed] = await Promise.all([
+		db.prepare("SELECT COUNT(*) as cnt FROM loyalty_config WHERE enabled = 1").first<{ cnt: number }>(),
+		db.prepare("SELECT COUNT(*) as cnt FROM customers WHERE email_verified = 1").first<{ cnt: number }>(),
+		db.prepare("SELECT COALESCE(SUM(points), 0) as total FROM loyalty_transactions WHERE type = 'earned'").first<{ total: number }>(),
+		db.prepare("SELECT COALESCE(SUM(ABS(points)), 0) as total FROM loyalty_transactions WHERE type = 'redeemed'").first<{ total: number }>(),
+	]);
+
+	// Per-tenant breakdown
+	const { results: tenants } = await db.prepare(`
+		SELECT t.id, t.name, t.slug, t.plan,
+			COALESCE(lc.enabled, 0) as loyalty_enabled,
+			(SELECT COUNT(*) FROM customers c WHERE c.tenant_id = t.id AND c.email_verified = 1) as verified_customers,
+			COALESCE((SELECT SUM(lt.points) FROM loyalty_transactions lt WHERE lt.tenant_id = t.id AND lt.type = 'earned'), 0) as points_issued,
+			COALESCE((SELECT SUM(ABS(lt.points)) FROM loyalty_transactions lt WHERE lt.tenant_id = t.id AND lt.type = 'redeemed'), 0) as points_redeemed
+		FROM tenants t
+		LEFT JOIN loyalty_config lc ON lc.tenant_id = t.id
+		WHERE t.slug != '_platform' AND t.status = 'active'
+		ORDER BY verified_customers DESC
+	`).all();
+
+	return c.html(<PlatformLoyalty
+		stats={{
+			tenantsWithLoyalty: tenantsWithLoyalty?.cnt ?? 0,
+			totalVerifiedCustomers: totalVerified?.cnt ?? 0,
+			totalPointsIssued: totalIssued?.total ?? 0,
+			totalPointsRedeemed: totalRedeemed?.total ?? 0,
+		}}
+		tenants={tenants as any[]}
+		user={user}
+	/>);
 });
 
 // Blog management

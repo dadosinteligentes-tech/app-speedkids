@@ -11,6 +11,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 export const PackageRevenueView: FC<Props> = ({
@@ -19,7 +20,7 @@ export const PackageRevenueView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const totalRevenue = packages.reduce((s, p) => s + p.revenue_cents, 0);
 	const totalRentals = packages.reduce((s, p) => s + p.rental_count, 0);
@@ -32,7 +33,7 @@ export const PackageRevenueView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

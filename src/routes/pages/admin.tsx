@@ -24,6 +24,8 @@ import { getLimitsForPlan, getTenantUsage } from "../../lib/plan-limits";
 import { getPlanDefinitions } from "../../db/queries/platform";
 import { getPromotionUsageStats } from "../../db/queries/promotions";
 import { PromotionsList } from "../../views/admin/promotions-list";
+import { getLoyaltyConfig, getLoyaltyStats, getLoyaltyRanking, getRecentTransactions } from "../../db/queries/loyalty";
+import { LoyaltyPage } from "../../views/admin/loyalty";
 import { listTemplates } from "../../db/queries/document-templates";
 import { DocumentTemplatesPage } from "../../views/admin/document-templates";
 
@@ -32,6 +34,17 @@ export const adminPages = new Hono<AppEnv>();
 // All admin pages require manager+ role
 adminPages.use("*", requireRole("manager", "owner"));
 
+// Load plan features for nav visibility
+adminPages.use("*", async (c, next) => {
+	const tenant = c.get("tenant");
+	if (tenant) {
+		const plans = await getPlanDefinitions(c.env.DB);
+		const cfg = plans[tenant.plan];
+		c.set("_planFeatures", { hasLoyalty: cfg?.hasLoyalty ?? false, hasTickets: cfg?.hasTickets ?? false });
+	}
+	return next();
+});
+
 // Redirect /admin to /admin/assets
 adminPages.get("/", (c) => c.redirect("/admin/assets"));
 
@@ -39,56 +52,61 @@ adminPages.get("/assets", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const [assets, assetTypes] = await Promise.all([
 		getAllAssets(c.env.DB, tenantId),
 		getAssetTypes(c.env.DB, tenantId),
 	]);
 	const user = c.get("user");
-	return c.html(<AssetsList assets={assets} assetTypes={assetTypes} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<AssetsList assets={assets} assetTypes={assetTypes} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 adminPages.get("/packages", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const packages = await getAllPackages(c.env.DB, tenantId);
 	const user = c.get("user");
-	return c.html(<PackagesList packages={packages} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<PackagesList packages={packages} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 adminPages.get("/logs", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const page = Number(c.req.query("page")) || 1;
 	const entityType = c.req.query("entity_type") || undefined;
 	const perPage = 50;
 	const { logs, total } = await getLogs(c.env.DB, tenantId, { entity_type: entityType, limit: perPage, offset: (page - 1) * perPage });
 	const user = c.get("user");
-	return c.html(<OperationLogs logs={logs} total={total} page={page} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<OperationLogs logs={logs} total={total} page={page} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 adminPages.get("/customers", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const page = Number(c.req.query("page") ?? "1");
 	const { customers, total } = await getCustomers(c.env.DB, tenantId, 50, (page - 1) * 50);
 	const user = c.get("user");
-	return c.html(<CustomerList customers={customers} total={total} page={page} user={user ?? null} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<CustomerList customers={customers} total={total} page={page} user={user ?? null} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 adminPages.get("/batteries", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const [batteries, assets] = await Promise.all([
 		getBatteries(c.env.DB, tenantId),
 		getAllAssets(c.env.DB, tenantId),
 	]);
 	const user = c.get("user");
 	const batteryAssets = assets.filter((a) => a.uses_battery && a.status !== "retired");
-	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<BatteriesList batteries={batteries} assets={batteryAssets} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 // Users page requires users.manage permission
@@ -96,22 +114,24 @@ adminPages.get("/users", requirePermission("users.manage"), async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const users = await listUsers(c.env.DB, tenantId);
 	const user = c.get("user");
 	const safeUsers = users.map(({ password_hash, salt, ...rest }) => rest);
-	return c.html(<UsersList users={safeUsers} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<UsersList users={safeUsers} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 // Permissions matrix requires owner role (hardcoded to prevent lock-out)
 adminPages.get("/permissions", requireRole("owner"), async (c) => {
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const [permissions, rolePermissions] = await Promise.all([
 		getAllPermissions(c.env.DB),
 		getAllRolePermissions(c.env.DB),
 	]);
 	const user = c.get("user");
-	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<PermissionsMatrix permissions={permissions} rolePermissions={rolePermissions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 // Promotions management
@@ -119,9 +139,10 @@ adminPages.get("/promotions", requirePermission("promotions.manage"), async (c) 
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const promotions = await getPromotionUsageStats(c.env.DB, tenantId);
 	const user = c.get("user");
-	return c.html(<PromotionsList promotions={promotions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<PromotionsList promotions={promotions} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 // Document templates
@@ -129,9 +150,10 @@ adminPages.get("/documents", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const user = c.get("user");
 	const templates = await listTemplates(c.env.DB, tenantId);
-	return c.html(<DocumentTemplatesPage templates={templates} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<DocumentTemplatesPage templates={templates} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });
 
 // My plan page
@@ -139,6 +161,7 @@ adminPages.get("/plan", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const limits = getLimitsForPlan(tenant?.plan || "starter");
 	const [usage, plans, subscription] = await Promise.all([
 		getTenantUsage(c.env.DB, tenantId),
@@ -148,8 +171,32 @@ adminPages.get("/plan", async (c) => {
 	]);
 	const user = c.get("user");
 	const domain = c.env.APP_DOMAIN || "giro-kids.com";
-	return c.html(<MyPlan tenant={tenant} limits={limits} usage={usage} user={user} isPlatformAdmin={isPlatformAdmin}
+	return c.html(<MyPlan tenant={tenant} limits={limits} usage={usage} user={user} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		plans={plans} hasStripeSubscription={!!subscription?.stripe_customer_id} domain={domain} />);
+});
+
+// Loyalty program management
+adminPages.get("/loyalty", requirePermission("loyalty.view"), async (c) => {
+	const tenantId = c.get("tenant_id");
+	const tenant = c.get("tenant");
+	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
+	const limits = getLimitsForPlan(tenant?.plan || "starter");
+
+	if (!planFeatures?.hasLoyalty) {
+		return c.redirect("/admin/plan");
+	}
+
+	const [config, stats, ranking, transactions] = await Promise.all([
+		getLoyaltyConfig(c.env.DB, tenantId),
+		getLoyaltyStats(c.env.DB, tenantId),
+		getLoyaltyRanking(c.env.DB, tenantId),
+		getRecentTransactions(c.env.DB, tenantId, 50),
+	]);
+
+	const user = c.get("user");
+	return c.html(<LoyaltyPage config={config} stats={stats} ranking={ranking} transactions={transactions}
+		user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} canConfigure={limits.loyalty.configurable} />);
 });
 
 // Business settings requires settings.manage permission
@@ -157,7 +204,8 @@ adminPages.get("/settings", requirePermission("settings.manage"), async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const config = await getBusinessConfig(c.env.DB, tenantId);
 	const user = c.get("user");
-	return c.html(<BusinessSettings config={config} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} />);
+	return c.html(<BusinessSettings config={config} user={user} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures} />);
 });

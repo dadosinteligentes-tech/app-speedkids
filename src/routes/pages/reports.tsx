@@ -38,6 +38,17 @@ export const reportPages = new Hono<AppEnv>();
 
 reportPages.use("*", requirePermission("reports.view"));
 
+reportPages.use("*", async (c, next) => {
+	const tenant = c.get("tenant");
+	if (tenant) {
+		const { getPlanDefinitions } = await import("../../db/queries/platform");
+		const plans = await getPlanDefinitions(c.env.DB);
+		const cfg = plans[tenant.plan];
+		c.set("_planFeatures", { hasLoyalty: cfg?.hasLoyalty ?? false, hasTickets: cfg?.hasTickets ?? false });
+	}
+	return next();
+});
+
 function getDateRange(c: { req: { query: (k: string) => string | undefined } }): {
 	from: string;
 	to: string;
@@ -57,6 +68,7 @@ reportPages.get("/financial", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const [summary, trend, productSales] = await Promise.all([
 		getFinancialSummary(c.env.DB, tenantId, from, to),
@@ -72,7 +84,7 @@ reportPages.get("/financial", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -81,6 +93,7 @@ reportPages.get("/packages", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const packages = await getPackageRevenue(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -90,7 +103,7 @@ reportPages.get("/packages", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -99,6 +112,7 @@ reportPages.get("/assets", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const assets = await getAssetUtilization(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -108,7 +122,7 @@ reportPages.get("/assets", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -117,6 +131,7 @@ reportPages.get("/peak-hours", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const data = await getPeakHours(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -127,7 +142,7 @@ reportPages.get("/peak-hours", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -137,6 +152,7 @@ reportPages.get("/operators", requirePermission("reports.operators"), async (c) 
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const operators = await getOperatorPerformance(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -146,7 +162,7 @@ reportPages.get("/operators", requirePermission("reports.operators"), async (c) 
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -155,6 +171,7 @@ reportPages.get("/cash", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const page = Number(c.req.query("page")) || 1;
 	const perPage = 20;
@@ -175,7 +192,7 @@ reportPages.get("/cash", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -184,6 +201,7 @@ reportPages.get("/customers", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const data = await getCustomerAnalysis(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -193,7 +211,7 @@ reportPages.get("/customers", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -202,6 +220,7 @@ reportPages.get("/unpaid", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const sessions = await getUnpaidSessions(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -211,7 +230,7 @@ reportPages.get("/unpaid", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -220,6 +239,7 @@ reportPages.get("/cancelled", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const sessions = await getCancelledSessions(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -229,7 +249,7 @@ reportPages.get("/cancelled", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -238,6 +258,7 @@ reportPages.get("/shifts", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const shifts = await getShiftReport(c.env.DB, tenantId, from, to);
 	return c.html(
@@ -247,7 +268,7 @@ reportPages.get("/shifts", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -256,6 +277,7 @@ reportPages.get("/products", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const [summary, products] = await Promise.all([
 		getProductSalesSummary(c.env.DB, tenantId, from, to),
@@ -269,7 +291,7 @@ reportPages.get("/products", async (c) => {
 			to={to}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -278,6 +300,7 @@ reportPages.get("/product-detail", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const productId = c.req.query("product_id") ? Number(c.req.query("product_id")) : undefined;
 	const page = Number(c.req.query("page")) || 1;
@@ -304,7 +327,7 @@ reportPages.get("/product-detail", async (c) => {
 			productName={productName}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });
@@ -325,6 +348,7 @@ reportPages.get("/detail", async (c) => {
 	const tenantId = c.get("tenant_id");
 	const tenant = c.get("tenant");
 	const isPlatformAdmin = c.get("isPlatformAdmin");
+	const planFeatures = c.get("_planFeatures");
 	const { from, to } = getDateRange(c);
 	const filterType = c.req.query("filter") ?? "all";
 	const id = c.req.query("id");
@@ -390,7 +414,7 @@ reportPages.get("/detail", async (c) => {
 			backUrl={BACK_URL_MAP[filterType] ?? "/admin/reports/financial"}
 			user={c.get("user")}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		/>,
 	);
 });

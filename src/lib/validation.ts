@@ -47,6 +47,7 @@ export const rentalPaySchema = z.object({
 	payment_denominations: denomMapSchema,
 	change_denominations: denomMapSchema,
 	payments: z.array(paymentItemSchema).min(2).optional(),
+	loyalty_points_redeem: z.number().int().positive().optional(),
 });
 
 export const rentalExtendSchema = z.object({
@@ -101,6 +102,7 @@ export const productSaleSchema = z.object({
 	payment_denominations: denomMapSchema,
 	change_denominations: denomMapSchema,
 	payments: z.array(paymentItemSchema).min(2).optional(),
+	loyalty_points_redeem: z.number().int().positive().optional(),
 });
 
 // ── Users ──

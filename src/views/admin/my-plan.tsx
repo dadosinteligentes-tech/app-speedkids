@@ -11,6 +11,7 @@ interface MyPlanProps {
 	usage: TenantUsage;
 	user: { name: string; role: string } | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 	plans: Record<string, PlanConfig>;
 	hasStripeSubscription: boolean;
 	domain: string;

@@ -332,3 +332,53 @@ export function buildPresentationEmail(params: {
 </html>`,
 	};
 }
+
+export function buildEmailVerificationEmail(params: {
+	customerName: string;
+	businessName: string;
+	verificationUrl: string;
+}): EmailParams {
+	return {
+		to: "",
+		subject: `Confirme seu email — Programa de Fidelidade ${params.businessName}`,
+		html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px;">
+  <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <div style="background: linear-gradient(135deg, #F97316, #EA580C); padding: 30px; text-align: center; color: white;">
+      <h1 style="margin: 0; font-size: 22px;">Programa de Fidelidade</h1>
+      <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">${params.businessName}</p>
+    </div>
+    <div style="padding: 30px;">
+      <p style="color: #333; font-size: 14px; line-height: 1.6;">
+        Olá, <strong>${params.customerName}</strong>!
+      </p>
+      <p style="color: #333; font-size: 14px; line-height: 1.6;">
+        Confirme seu email para ativar o programa de fidelidade e começar a acumular pontos
+        a cada visita ao <strong>${params.businessName}</strong>.
+      </p>
+      <div style="background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold; color: #9A3412;">Como funciona:</p>
+        <table style="width: 100%; font-size: 13px; color: #78350F;">
+          <tr><td style="padding: 4px 0;">⭐ Ganhe pontos a cada pagamento</td></tr>
+          <tr><td style="padding: 4px 0;">🎁 Troque pontos por descontos</td></tr>
+          <tr><td style="padding: 4px 0;">📈 Suba de nível e ganhe mais</td></tr>
+        </table>
+      </div>
+      <a href="${params.verificationUrl}" style="display: block; background: #F97316; color: white; text-align: center; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+        Confirmar meu email
+      </a>
+      <p style="color: #999; font-size: 11px; margin-top: 16px; text-align: center;">
+        Este link expira em 72 horas. Se você não solicitou, ignore este email.
+      </p>
+    </div>
+    <div style="padding: 20px; text-align: center; border-top: 1px solid #eee;">
+      <p style="margin: 0; font-size: 11px; color: #9CA3AF;">Giro Kids — DADOS INTELIGENTES LTDA</p>
+    </div>
+  </div>
+</body>
+</html>`,
+	};
+}

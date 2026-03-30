@@ -2,16 +2,23 @@
  * Plan limits configuration and enforcement.
  */
 
+export interface LoyaltyLimits {
+	enabled: boolean;
+	configurable: boolean;
+	customBranding: boolean;
+}
+
 export interface PlanLimits {
 	maxUsers: number;
 	maxAssets: number;
 	label: string;
+	loyalty: LoyaltyLimits;
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
-	starter: { maxUsers: 3, maxAssets: 15, label: "Starter" },
-	pro: { maxUsers: 10, maxAssets: 50, label: "Pro" },
-	enterprise: { maxUsers: 999, maxAssets: 999, label: "Enterprise" },
+	starter: { maxUsers: 3, maxAssets: 15, label: "Starter", loyalty: { enabled: true, configurable: false, customBranding: false } },
+	pro: { maxUsers: 10, maxAssets: 50, label: "Pro", loyalty: { enabled: true, configurable: true, customBranding: false } },
+	enterprise: { maxUsers: 999, maxAssets: 999, label: "Enterprise", loyalty: { enabled: true, configurable: true, customBranding: true } },
 };
 
 export function getLimitsForPlan(plan: string): PlanLimits {

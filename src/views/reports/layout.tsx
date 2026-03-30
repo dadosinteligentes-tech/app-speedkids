@@ -11,6 +11,7 @@ interface ReportLayoutProps {
 	to: string;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const REPORT_NAV = [
@@ -38,8 +39,9 @@ export const ReportLayout: FC<PropsWithChildren<ReportLayoutProps>> = ({
 	children,
 	tenant,
 	isPlatformAdmin,
+	planFeatures,
 }) => (
-	<AdminLayout title={`Relatorio — ${title}`} user={user} activeTab="/admin/reports" tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+	<AdminLayout title={`Relatorio — ${title}`} user={user} activeTab="/admin/reports" tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 		{/* Report sub-navigation */}
 		<div class="flex flex-wrap gap-1 mb-4 bg-sk-surface rounded-sk p-2 shadow-sk-sm">
 			{REPORT_NAV.filter((r) => user && r.roles.includes(user.role)).map((r) => (

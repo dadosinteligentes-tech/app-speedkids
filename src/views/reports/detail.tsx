@@ -18,6 +18,7 @@ interface ReportDetailProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 function formatCurrency(cents: number): string {
@@ -40,14 +41,14 @@ const PAYMENT_LABELS: Record<string, string> = {
 const PER_PAGE = 50;
 
 export const ReportDetailView: FC<ReportDetailProps> = ({
-	sessions, total, totalRevenueCents, context, page, from, to, filter, filterParams, backUrl, user, tenant, isPlatformAdmin,
+	sessions, total, totalRevenueCents, context, page, from, to, filter, filterParams, backUrl, user, tenant, isPlatformAdmin, planFeatures,
 }) => {
 	const totalPages = Math.ceil(total / PER_PAGE);
 
 	const baseQs = `filter=${filter}${filterParams}&from=${from}&to=${to}`;
 
 	return (
-		<ReportLayout title={context.label} user={user} activeReport={backUrl} from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<ReportLayout title={context.label} user={user} activeReport={backUrl} from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			{filter !== "all" && (
 				<div class="mb-4">
 					<a href={`${backUrl}?from=${from}&to=${to}`} class="text-sk-orange font-body text-sm hover:underline">

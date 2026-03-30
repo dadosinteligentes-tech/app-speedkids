@@ -11,9 +11,10 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const ShiftReportView: FC<Props> = ({ shifts, from, to, user, tenant, isPlatformAdmin }) => {
+export const ShiftReportView: FC<Props> = ({ shifts, from, to, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const totalShifts = shifts.length;
 	const totalRentals = shifts.reduce((s, r) => s + r.rental_count, 0);
 	const totalRevenue = shifts.reduce((s, r) => s + r.revenue_cents, 0);
@@ -23,7 +24,7 @@ export const ShiftReportView: FC<Props> = ({ shifts, from, to, user, tenant, isP
 			title="Turnos"
 			user={user}
 			activeReport="/admin/reports/shifts"
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 			from={from}
 			to={to}
 			tenant={tenant}

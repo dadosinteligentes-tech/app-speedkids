@@ -9,6 +9,7 @@ interface PermissionsMatrixProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -19,7 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLES = ["operator", "manager", "owner"];
 
-export const PermissionsMatrix: FC<PermissionsMatrixProps> = ({ permissions, rolePermissions, user, tenant, isPlatformAdmin }) => {
+export const PermissionsMatrix: FC<PermissionsMatrixProps> = ({ permissions, rolePermissions, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const activeSet = new Set(rolePermissions.map((rp) => rp.role + ":" + rp.permission_key));
 
 	const categories: Record<string, Permission[]> = {};
@@ -106,7 +107,7 @@ function savePermissions() {
 </script>`;
 
 	return (
-		<AdminLayout title="Permissoes" user={user} activeTab="/admin/permissions" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Permissoes" user={user} activeTab="/admin/permissions" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<div>
 					<h2 class="text-xl font-display font-bold text-sk-text">Permissoes por Perfil</h2>

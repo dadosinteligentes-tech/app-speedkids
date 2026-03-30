@@ -53,11 +53,19 @@ app.route("/api/stripe/webhook", stripeWebhookRoutes);
 import { blogApiRoutes } from "./routes/api/blog";
 app.route("/api/blog", blogApiRoutes);
 
+// Loyalty verification page (public)
+import { loyaltyPages } from "./routes/pages/loyalty";
+app.route("/loyalty", loyaltyPages);
+
 // Setup routes
 app.route("/api/setup", setupRoutes);
 
 // Platform admin routes (auth required + platform admin check)
 app.route("/api/platform", platformApiRoutes);
+
+// Loyalty API (tenant-authenticated)
+import { loyaltyRoutes } from "./routes/api/loyalty";
+app.route("/api/loyalty", loyaltyRoutes);
 
 // API routes
 app.route("/api/auth", authRoutes);

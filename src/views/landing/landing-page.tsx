@@ -637,25 +637,41 @@ document.addEventListener('click', function(e) {
 						</div>
 						<div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto items-start">
 							{(() => {
-								const planMeta: Record<string, { icon: string; subtitle: string; highlight: boolean; btnClass: string; features: (cfg: { maxUsers: number; maxAssets: number }) => string[] }> = {
+								const planMeta: Record<string, { icon: string; subtitle: string; highlight: boolean; btnClass: string; features: (cfg: { maxUsers: number; maxAssets: number; hasTickets?: boolean; hasLoyalty?: boolean }) => string[] }> = {
 									starter: {
 										icon: "🌱", subtitle: "Para quem está começando", highlight: false,
 										btnClass: "bg-sk-yellow hover:bg-sk-yellow-dark text-sk-text",
-										features: (c) => [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Locações e caixa", "Relatórios básicos"],
+										features: (c) => {
+											const f = [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Locações e caixa", "Relatórios básicos", "Metas de vendas"];
+											if (c.hasLoyalty) f.push("Programa de fidelidade");
+											return f;
+										},
 									},
 									pro: {
 										icon: "🚀", subtitle: "Para parques em crescimento", highlight: true,
 										btnClass: "bg-sk-orange hover:bg-sk-orange-dark text-white",
-										features: (c) => [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Todos os relatórios", "Logo e cores personalizadas", "Suporte por chat"],
+										features: (c) => {
+											const f = [`${c.maxUsers} usuários`, `${c.maxAssets} brinquedos`, "Todos os relatórios"];
+											if (c.hasLoyalty) f.push("Programa de fidelidade");
+											f.push("Logo e cores personalizadas");
+											if (c.hasTickets) f.push("Suporte por chat");
+											return f;
+										},
 									},
 									enterprise: {
 										icon: "🏢", subtitle: "Para grandes operações", highlight: false,
 										btnClass: "bg-sk-blue hover:bg-sk-blue-dark text-white",
-										features: (c) => [
-											c.maxUsers >= 999 ? "Usuários ilimitados" : `${c.maxUsers} usuários`,
-											c.maxAssets >= 999 ? "Brinquedos ilimitados" : `${c.maxAssets} brinquedos`,
-											"Relatórios + exportação", "Suporte prioritário", "Backup sob demanda",
-										],
+										features: (c) => {
+											const f = [
+												c.maxUsers >= 999 ? "Usuários ilimitados" : `${c.maxUsers} usuários`,
+												c.maxAssets >= 999 ? "Brinquedos ilimitados" : `${c.maxAssets} brinquedos`,
+												"Relatórios + exportação",
+											];
+											if (c.hasLoyalty) f.push("Programa de fidelidade");
+											if (c.hasTickets) f.push("Suporte prioritário");
+											f.push("Backup sob demanda");
+											return f;
+										},
 									},
 								};
 								const order = ["starter", "pro", "enterprise"];

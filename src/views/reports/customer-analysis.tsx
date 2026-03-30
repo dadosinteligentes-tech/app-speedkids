@@ -18,6 +18,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const AGE_COLORS: Record<string, string> = {
@@ -38,7 +39,7 @@ export const CustomerAnalysisView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const maxAgeCount = Math.max(...ageGroups.map((a) => a.count), 1);
 
@@ -50,7 +51,7 @@ export const CustomerAnalysisView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

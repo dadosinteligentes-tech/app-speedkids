@@ -11,9 +11,10 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin }) => {
+export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const courtesies = sessions.filter((s) => s.payment_method === "courtesy");
 	const pending = sessions.filter((s) => s.payment_method !== "courtesy");
 	const lostValue = courtesies.reduce((s, c) => s + c.amount_cents, 0);
@@ -23,7 +24,7 @@ export const UnpaidReportView: FC<Props> = ({ sessions, from, to, user, tenant, 
 			title="Não Pagos / Cortesias"
 			user={user}
 			activeReport="/admin/reports/unpaid"
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 			from={from}
 			to={to}
 			tenant={tenant}

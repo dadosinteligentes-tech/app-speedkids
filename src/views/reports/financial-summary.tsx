@@ -17,6 +17,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 export const FinancialSummaryView: FC<Props> = ({
@@ -27,7 +28,7 @@ export const FinancialSummaryView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const maxDayRevenue = Math.max(...trend.map((d) => d.revenue_cents), 1);
 	const paymentTotal =
@@ -46,7 +47,7 @@ export const FinancialSummaryView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* KPI Row */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

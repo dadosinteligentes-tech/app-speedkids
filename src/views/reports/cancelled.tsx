@@ -11,9 +11,10 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const CancelledReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin }) => {
+export const CancelledReportView: FC<Props> = ({ sessions, from, to, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const totalCancelled = sessions.length;
 	const totalValue = sessions.reduce((s, c) => s + c.amount_cents, 0);
 
@@ -22,7 +23,7 @@ export const CancelledReportView: FC<Props> = ({ sessions, from, to, user, tenan
 			title="Cancelados"
 			user={user}
 			activeReport="/admin/reports/cancelled"
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 			from={from}
 			to={to}
 			tenant={tenant}

@@ -15,6 +15,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 function formatCurrency(cents: number): string {
@@ -32,7 +33,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 const PER_PAGE = 50;
 
 export const ProductSaleDetailView: FC<Props> = ({
-	sales, total, page, from, to, productId, productName, user, tenant, isPlatformAdmin,
+	sales, total, page, from, to, productId, productName, user, tenant, isPlatformAdmin, planFeatures,
 }) => {
 	const totalPages = Math.ceil(total / PER_PAGE);
 	const totalRevenue = sales.reduce((s, r) => s + r.total_cents, 0);
@@ -40,7 +41,7 @@ export const ProductSaleDetailView: FC<Props> = ({
 	const baseQs = `from=${from}&to=${to}${productId ? `&product_id=${productId}` : ""}`;
 
 	return (
-		<ReportLayout title={label} user={user} activeReport="/admin/reports/products" from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<ReportLayout title={label} user={user} activeReport="/admin/reports/products" from={from} to={to} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="mb-4">
 				<a href={`/admin/reports/products?from=${from}&to=${to}`} class="text-sk-orange font-body text-sm hover:underline">
 					&larr; Voltar ao relatorio de produtos

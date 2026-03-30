@@ -12,6 +12,7 @@ interface OperationLogsProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -38,7 +39,7 @@ function formatDate(iso: string): string {
 	return toBrazilDateTime(iso);
 }
 
-export const OperationLogs: FC<OperationLogsProps> = ({ logs, total, page, user, tenant, isPlatformAdmin }) => {
+export const OperationLogs: FC<OperationLogsProps> = ({ logs, total, page, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const perPage = 50;
 	const totalPages = Math.ceil(total / perPage);
 
@@ -56,7 +57,7 @@ function filterLogs() {
 </script>`;
 
 	return (
-		<AdminLayout title="Logs de Operação" user={user} activeTab="/admin/logs" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Logs de Operação" user={user} activeTab="/admin/logs" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Logs de Operação</h2>
 				<div class="flex items-center gap-2">

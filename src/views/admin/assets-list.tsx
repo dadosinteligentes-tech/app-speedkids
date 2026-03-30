@@ -9,6 +9,7 @@ interface AssetsListProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 	retired: "bg-gray-100 text-gray-600",
 };
 
-export const AssetsList: FC<AssetsListProps> = ({ assets, assetTypes, user, tenant, isPlatformAdmin }) => {
+export const AssetsList: FC<AssetsListProps> = ({ assets, assetTypes, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const typeMap = Object.fromEntries(assetTypes.map((t) => [t.name, t.label]));
 	const isOwner = user?.role === "owner";
 
@@ -254,7 +255,7 @@ function deleteType(id, label) {
 </script>`;
 
 	return (
-		<AdminLayout title="Ativos" user={user} activeTab="/admin/assets" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Ativos" user={user} activeTab="/admin/assets" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Ativos / Brinquedos</h2>
 				<button onclick="showAssetForm(null)" class="btn-touch px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm btn-bounce active:bg-sk-orange-dark">

@@ -51,12 +51,58 @@ export const IdentificationForm: FC = () => (
 				</button>
 				<div id="id-advanced-fields" class="hidden mt-2 space-y-2">
 					<input
+						id="id-email"
+						type="email"
+						placeholder="Email (para programa de fidelidade)"
+						class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20"
+						autocomplete="off"
+					/>
+					<input
 						id="id-instagram"
 						type="text"
 						placeholder="Instagram @usuario"
 						class="w-full border-2 border-sk-border rounded-sk px-4 py-3 text-lg font-body focus:border-sk-blue focus:outline-none focus:ring-2 focus:ring-sk-blue/20"
 						autocomplete="off"
 					/>
+				</div>
+			</div>
+
+			{/* ====== LOYALTY STATUS (returning customer) ====== */}
+			<div id="id-loyalty-section" class="hidden mb-4">
+				<div id="id-loyalty-active" class="hidden bg-sk-green-light border border-sk-green/30 rounded-sk p-3">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span class="text-lg">⭐</span>
+							<div>
+								<p class="font-display font-bold text-sk-green-dark text-sm">Programa de Fidelidade</p>
+								<p class="text-xs font-body text-sk-green-dark"><span id="id-loyalty-points">0</span> pontos</p>
+							</div>
+						</div>
+						<a href="/admin/loyalty" class="text-xs text-sk-green-dark font-display font-medium hover:underline">Ver programa</a>
+					</div>
+				</div>
+				<div id="id-loyalty-pending" class="hidden bg-sk-yellow-light border border-sk-yellow/30 rounded-sk p-3">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span class="text-lg">⭐</span>
+							<div>
+								<p class="font-display font-bold text-sk-yellow-dark text-sm">Fidelidade</p>
+								<p class="text-xs font-body text-sk-yellow-dark">Email nao verificado</p>
+							</div>
+						</div>
+						<button onclick="sendLoyaltyVerification()" class="text-xs bg-sk-yellow text-white px-3 py-1.5 rounded-sk font-display font-medium hover:bg-sk-yellow-dark transition-colors">
+							Enviar verificacao
+						</button>
+					</div>
+				</div>
+				<div id="id-loyalty-invite" class="hidden bg-sk-orange-light border border-sk-orange/30 rounded-sk p-3">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span class="text-lg">⭐</span>
+							<p class="font-display font-bold text-sk-orange-dark text-sm">Quer participar do programa de fidelidade?</p>
+						</div>
+					</div>
+					<p class="text-xs font-body text-sk-orange-dark mt-1">Cadastre o email nos campos avancados acima</p>
 				</div>
 			</div>
 

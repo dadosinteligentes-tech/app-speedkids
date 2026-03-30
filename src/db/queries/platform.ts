@@ -468,6 +468,7 @@ export interface PlanConfig {
 	maxAssets: number;
 	priceCents: number;
 	hasTickets?: boolean;
+	hasLoyalty?: boolean;
 }
 
 export async function getPlanDefinitions(db: D1Database): Promise<Record<string, PlanConfig>> {
@@ -479,9 +480,9 @@ export async function getPlanDefinitions(db: D1Database): Promise<Record<string,
 
 	// Hardcoded defaults
 	return {
-		starter: { label: "Starter", maxUsers: 3, maxAssets: 10, priceCents: 9700, hasTickets: false },
-		pro: { label: "Pro", maxUsers: 10, maxAssets: 50, priceCents: 19700, hasTickets: true },
-		enterprise: { label: "Enterprise", maxUsers: 50, maxAssets: 200, priceCents: 39700, hasTickets: true },
+		starter: { label: "Starter", maxUsers: 3, maxAssets: 10, priceCents: 9700, hasTickets: false, hasLoyalty: false },
+		pro: { label: "Pro", maxUsers: 10, maxAssets: 50, priceCents: 19700, hasTickets: true, hasLoyalty: true },
+		enterprise: { label: "Enterprise", maxUsers: 50, maxAssets: 200, priceCents: 39700, hasTickets: true, hasLoyalty: true },
 	};
 }
 

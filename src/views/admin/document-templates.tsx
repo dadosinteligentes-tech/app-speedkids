@@ -8,6 +8,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const VARIABLES = [
@@ -30,7 +31,7 @@ const VARIABLES = [
 	["hora_atual", "Hora atual"],
 ];
 
-export const DocumentTemplatesPage: FC<Props> = ({ templates, user, tenant, isPlatformAdmin }) => {
+export const DocumentTemplatesPage: FC<Props> = ({ templates, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const script = html`<script>
 ${raw(`
 function openTemplateModal(mode, id) {

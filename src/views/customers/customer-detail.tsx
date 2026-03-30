@@ -10,6 +10,7 @@ interface CustomerDetailProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,8 +20,8 @@ const STATUS_LABELS: Record<string, string> = {
 	cancelled: "Cancelado",
 };
 
-export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, totalSessions, user, tenant, isPlatformAdmin }) => (
-	<AdminLayout title={`Cliente: ${customer.name}`} user={user} activeTab="/admin/customers" tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, totalSessions, user, tenant, isPlatformAdmin, planFeatures }) => (
+	<AdminLayout title={`Cliente: ${customer.name}`} user={user} activeTab="/admin/customers" tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 		<div class="mb-4">
 			<a href="/admin/customers" class="text-sk-orange font-body text-sm hover:underline">&larr; Voltar para Clientes</a>
 		</div>
@@ -48,6 +49,30 @@ export const CustomerDetail: FC<CustomerDetailProps> = ({ customer, sessions, to
 					R$ {(customer.total_spent_cents / 100).toFixed(2).replace(".", ",")}
 				</div>
 				<div class="text-sm text-sk-muted font-body mt-1">Total Gasto</div>
+			</div>
+		</div>
+
+		{/* Loyalty card */}
+		<div class="bg-sk-surface rounded-sk shadow-sk-sm p-4 mb-6">
+			<div class="flex items-center justify-between mb-2">
+				<h3 class="font-display font-bold text-sk-text">Programa de Fidelidade</h3>
+				{customer.email_verified ? (
+					<span class="px-2 py-0.5 rounded text-xs font-medium font-display bg-sk-green-light text-sk-green-dark">Email verificado</span>
+				) : (
+					<span class="px-2 py-0.5 rounded text-xs font-medium font-display bg-sk-yellow-light text-sk-yellow-dark">Email não verificado</span>
+				)}
+			</div>
+			<div class="flex items-center gap-6">
+				<div>
+					<span class="text-2xl font-display font-bold text-sk-orange">{customer.loyalty_points.toLocaleString("pt-BR")}</span>
+					<span class="text-sm text-sk-muted font-body ml-1">pontos</span>
+				</div>
+				{!customer.email_verified && customer.email && (
+					<button onclick={`fetch('/api/loyalty/send-verification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:${customer.id}})}).then(function(r){return r.json()}).then(function(d){if(d.ok)alert('Email de verificação enviado!');else alert(d.error||'Erro')})`}
+						class="text-sk-blue text-xs font-display font-medium hover:underline">
+						Enviar verificação
+					</button>
+				)}
 			</div>
 		</div>
 

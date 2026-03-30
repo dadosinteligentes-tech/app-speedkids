@@ -11,6 +11,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const TYPE_BADGE = "bg-sk-blue-light text-sk-blue-dark";
@@ -27,7 +28,7 @@ export const AssetUtilizationView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const totalRevenue = assets.reduce((s, a) => s + a.revenue_cents, 0);
 	const totalRentals = assets.reduce((s, a) => s + a.rental_count, 0);
@@ -40,7 +41,7 @@ export const AssetUtilizationView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

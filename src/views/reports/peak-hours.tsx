@@ -12,6 +12,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
@@ -23,7 +24,7 @@ export const PeakHoursView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const maxHourCount = Math.max(...byHour.map((h) => h.rental_count), 1);
 	const maxDayCount = Math.max(...byDay.map((d) => d.rental_count), 1);
@@ -54,7 +55,7 @@ export const PeakHoursView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{!hasData && (
 				<div class="bg-sk-surface rounded-sk shadow-sk-sm p-8 text-center">

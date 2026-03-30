@@ -55,20 +55,28 @@ export async function updateCustomer(
 	const current = await getCustomerById(db, tenantId, id);
 	if (!current) return null;
 
+	const newEmail = params.email ?? current.email;
+	const emailChanged = newEmail !== current.email && params.email !== undefined;
+
 	return db
 		.prepare(`
 			UPDATE customers
-			SET name = ?, phone = ?, email = ?, cpf = ?, instagram = ?, notes = ?, updated_at = datetime('now')
+			SET name = ?, phone = ?, email = ?, cpf = ?, instagram = ?, notes = ?,
+			    email_verified = CASE WHEN ? THEN 0 ELSE email_verified END,
+			    email_verified_at = CASE WHEN ? THEN NULL ELSE email_verified_at END,
+			    updated_at = datetime('now')
 			WHERE id = ? AND tenant_id = ?
 			RETURNING *
 		`)
 		.bind(
 			params.name ?? current.name,
 			params.phone ?? current.phone,
-			params.email ?? current.email,
+			newEmail,
 			params.cpf ?? current.cpf,
 			params.instagram ?? current.instagram,
 			params.notes ?? current.notes,
+			emailChanged ? 1 : 0,
+			emailChanged ? 1 : 0,
 			id,
 			tenantId,
 		)

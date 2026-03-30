@@ -10,6 +10,7 @@ import { denomTotal } from "../lib/denominations";
 import { addTransaction, saveDenominations } from "../db/queries/cash-registers";
 import { updateCustomerStats } from "../db/queries/customers";
 import { checkGoalAchievements } from "../db/queries/sales-goals";
+import { awardLoyaltyPoints } from "./loyalty";
 
 // ── Types ──
 
@@ -40,6 +41,8 @@ export interface RecordPaymentParams {
 	payments?: PaymentItem[];
 	/** Customer to update stats for */
 	customerId?: number | null;
+	/** Tenant plan for loyalty feature gating */
+	tenantPlan?: string;
 }
 
 // ── Helpers ──
@@ -119,6 +122,7 @@ export async function recordPayment(params: RecordPaymentParams): Promise<Paymen
 		changeDenominations,
 		payments,
 		customerId,
+		tenantPlan,
 	} = params;
 
 	if (amountCents <= 0) {
@@ -186,6 +190,14 @@ export async function recordPayment(params: RecordPaymentParams): Promise<Paymen
 	// Update customer stats
 	if (customerId) {
 		await updateCustomerStats(db, tenantId, customerId, amountCents);
+	}
+
+	// Award loyalty points (non-critical — never block a payment)
+	if (customerId && amountCents > 0) {
+		try {
+			const refId = rentalSessionId ?? (productSaleId ? String(productSaleId) : null);
+			await awardLoyaltyPoints(db, tenantId, customerId, amountCents, transactionType, refId, tenantPlan);
+		} catch { /* loyalty is non-critical */ }
 	}
 
 	// Check goal achievements after every payment

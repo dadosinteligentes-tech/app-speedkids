@@ -39,6 +39,7 @@ function toggleEdit(key) {
 		document.getElementById('users-' + key).value = plansData[key].maxUsers;
 		document.getElementById('assets-' + key).value = plansData[key].maxAssets;
 		document.getElementById('tickets-' + key).checked = !!plansData[key].hasTickets;
+		document.getElementById('loyalty-' + key).checked = !!plansData[key].hasLoyalty;
 		view.classList.add('hidden');
 		edit.classList.remove('hidden');
 	}
@@ -58,6 +59,7 @@ function savePlan(key) {
 	plansData[key].maxUsers = maxUsers;
 	plansData[key].maxAssets = maxAssets;
 	plansData[key].hasTickets = document.getElementById('tickets-' + key).checked;
+	plansData[key].hasLoyalty = document.getElementById('loyalty-' + key).checked;
 
 	var btn = document.getElementById('save-btn-' + key);
 	btn.disabled = true;
@@ -121,6 +123,12 @@ function savePlan(key) {
 											{plan.hasTickets ? "✓ Incluído" : "✗ Não incluído"}
 										</span>
 									</div>
+									<div class="flex items-center justify-between text-sm">
+										<span class="text-sk-muted font-body">Programa de fidelidade</span>
+										<span class={`font-medium font-body ${plan.hasLoyalty ? "text-sk-green-dark" : "text-sk-muted"}`}>
+											{plan.hasLoyalty ? "✓ Incluído" : "✗ Não incluído"}
+										</span>
+									</div>
 								</div>
 								<button onclick={`toggleEdit('${key}')`} class="mt-5 w-full py-2.5 bg-sk-bg hover:bg-sk-border/30 text-sk-text rounded-sk font-medium font-display text-sm transition-colors">
 									Editar
@@ -145,6 +153,10 @@ function savePlan(key) {
 									<div class="flex items-center gap-3 pt-1">
 										<input id={`tickets-${key}`} type="checkbox" checked={!!plan.hasTickets} class="w-4 h-4 rounded accent-sk-blue" />
 										<label class="text-sm font-medium text-sk-text font-display">Tickets de suporte</label>
+									</div>
+									<div class="flex items-center gap-3 pt-1">
+										<input id={`loyalty-${key}`} type="checkbox" checked={!!plan.hasLoyalty} class="w-4 h-4 rounded accent-sk-blue" />
+										<label class="text-sm font-medium text-sk-text font-display">Programa de fidelidade</label>
 									</div>
 								</div>
 								<div class="flex gap-2 mt-4">

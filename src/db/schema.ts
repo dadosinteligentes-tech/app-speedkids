@@ -72,6 +72,8 @@ export interface Customer {
 	total_rentals: number;
 	total_spent_cents: number;
 	loyalty_points: number;
+	email_verified: number;
+	email_verified_at: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -109,6 +111,8 @@ export interface RentalSession {
 	paid: number;
 	promotion_id: number | null;
 	discount_cents: number;
+	loyalty_discount_cents: number;
+	loyalty_points_redeemed: number;
 	notes: string | null;
 	created_at: string;
 	updated_at: string;
@@ -231,6 +235,8 @@ export interface ProductSale {
 	promotion_id: number | null;
 	payment_method: "cash" | "credit" | "debit" | "pix" | "mixed" | null;
 	paid: number;
+	loyalty_discount_cents: number;
+	loyalty_points_redeemed: number;
 	notes: string | null;
 	created_at: string;
 }
@@ -455,6 +461,51 @@ export interface RentalSignedDocument {
 	tenant_id: number;
 	printed_at: string;
 	printed_by: number | null;
+}
+
+export interface LoyaltyConfig {
+	id: number;
+	tenant_id: number;
+	enabled: number;
+	points_per_real: number;
+	min_redemption_points: number;
+	points_value_cents: number;
+	tiers_json: string | null;
+	expiry_months: number | null;
+	bonus_first_purchase: number;
+	bonus_birthday: number;
+	bonus_referral: number;
+	double_points_weekends: number;
+	redemption_options_json: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface LoyaltyTier {
+	name: string;
+	min_points: number;
+}
+
+export interface LoyaltyRedemptionOption {
+	type: "discount" | "extra_time" | "gift" | "cashback";
+	label: string;
+	points_cost: number;
+	value: string;
+	active: boolean;
+}
+
+export interface LoyaltyTransaction {
+	id: number;
+	tenant_id: number;
+	customer_id: number;
+	type: "earned" | "redeemed" | "adjusted" | "expired";
+	points: number;
+	balance_after: number;
+	reference_type: string | null;
+	reference_id: string | null;
+	description: string | null;
+	recorded_by: number | null;
+	created_at: string;
 }
 
 export interface BlogPost {

@@ -18,6 +18,7 @@ export type Bindings = {
 	PLATFORM_ADMIN_EMAILS: string; // comma-separated emails with SaaS admin access
 	RESEND_API_KEY: string; // Resend.com API key for transactional emails
 	BLOG_API_KEY: string; // API key for external blog management (workflows)
+	LOYALTY_HMAC_SECRET: string; // HMAC secret for email verification tokens
 };
 
 export type AppVariables = {
@@ -27,6 +28,7 @@ export type AppVariables = {
 	posId: number | null;
 	isPlatformAdmin: boolean;
 	_rolePermissions?: string[];
+	_planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 };
 
 export type AppEnv = {

@@ -11,6 +11,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const GOAL_TYPE_LABELS: Record<string, string> = {
@@ -37,7 +38,7 @@ function progressColor(pct: number): string {
 	return "bg-sk-orange";
 }
 
-export const SalesGoalsManage: FC<Props> = ({ goals, users, user, tenant, isPlatformAdmin }) => {
+export const SalesGoalsManage: FC<Props> = ({ goals, users, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const script = html`<script>
 ${raw(`
 var USERS = ${JSON.stringify(users)};
@@ -174,7 +175,7 @@ function deleteGoal(id, title) {
 	const inactive = goals.filter((g) => !g.active);
 
 	return (
-		<AdminLayout title="Metas de Vendas" user={user} activeTab="/admin/goals" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Metas de Vendas" user={user} activeTab="/admin/goals" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<div>
 					<h2 class="text-xl font-display font-bold text-sk-text">Metas de Vendas</h2>

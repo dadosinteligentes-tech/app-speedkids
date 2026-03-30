@@ -8,9 +8,10 @@ interface BusinessSettingsProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const BusinessSettings: FC<BusinessSettingsProps> = ({ config, user, tenant, isPlatformAdmin }) => {
+export const BusinessSettings: FC<BusinessSettingsProps> = ({ config, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const script = html`<script>
 ${raw(`
 function saveConfig() {
@@ -143,7 +144,7 @@ function onLogoSelected() {
 </script>`;
 
 	return (
-		<AdminLayout title="Configuracoes" user={user} activeTab="/admin/settings" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Configuracoes" user={user} activeTab="/admin/settings" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			{/* Branding Section */}
 			<h2 class="text-xl font-display font-bold text-sk-text mb-4">Identidade Visual</h2>
 			<p class="text-sm text-sk-muted font-body mb-6">

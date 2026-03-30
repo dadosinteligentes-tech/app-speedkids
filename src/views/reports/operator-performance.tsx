@@ -11,6 +11,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -37,7 +38,7 @@ export const OperatorPerformanceView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const totalRevenue = operators.reduce((s, o) => s + o.revenue_cents, 0);
 	const totalRentals = operators.reduce((s, o) => s + o.rentals_started, 0);
@@ -50,7 +51,7 @@ export const OperatorPerformanceView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			<div class="bg-sk-purple-light rounded-sk p-3 mb-4 text-xs font-body text-sk-purple">
 				Este relatorio e exclusivo para socios. Os dados sao confidenciais.

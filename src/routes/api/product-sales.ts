@@ -62,6 +62,24 @@ productSaleRoutes.post("/", async (c) => {
 	const discountCents = Math.min(Math.max(body.discount_cents ?? 0, 0), subtotalCents);
 	totalCents = subtotalCents - discountCents;
 
+	// Loyalty points redemption
+	let loyaltyDiscountCents = 0;
+	let loyaltyPointsRedeemed = 0;
+	if (body.loyalty_points_redeem && body.loyalty_points_redeem > 0 && body.customer_id) {
+		try {
+			const { redeemLoyaltyPoints } = await import("../../services/loyalty");
+			const redemption = await redeemLoyaltyPoints(
+				c.env.DB, tenantId, body.customer_id,
+				body.loyalty_points_redeem, "product_sale", null, user.id,
+			);
+			loyaltyDiscountCents = Math.min(redemption.discountCents, totalCents);
+			loyaltyPointsRedeemed = redemption.pointsRedeemed;
+			totalCents = Math.max(0, totalCents - loyaltyDiscountCents);
+		} catch (err: any) {
+			return c.json({ error: err.message || "Erro ao resgatar pontos" }, 400);
+		}
+	}
+
 	const isMixed = body.payments && body.payments.length >= 2;
 	const paymentMethod = isMixed ? "mixed" : body.payment_method;
 
@@ -89,6 +107,12 @@ productSaleRoutes.post("/", async (c) => {
 
 	await createSaleItems(c.env.DB, sale.id, resolvedItems);
 
+	// Store loyalty redemption on the sale
+	if (loyaltyPointsRedeemed > 0) {
+		await c.env.DB.prepare("UPDATE product_sales SET loyalty_discount_cents = ?, loyalty_points_redeemed = ? WHERE id = ?")
+			.bind(loyaltyDiscountCents, loyaltyPointsRedeemed, sale.id).run();
+	}
+
 	// Record payment (handles single, split, zero-amount, and customer stats)
 	const payResult = await recordPayment({
 		db: c.env.DB,
@@ -103,6 +127,7 @@ productSaleRoutes.post("/", async (c) => {
 		changeDenominations: body.change_denominations,
 		payments: body.payments,
 		customerId: body.customer_id,
+		tenantPlan: c.get("tenant")?.plan,
 	});
 
 	await auditLog(c, "product_sale.create", "product_sale", sale.id, {

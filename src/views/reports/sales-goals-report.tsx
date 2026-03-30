@@ -12,6 +12,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 const GOAL_TYPE_LABELS: Record<string, string> = {
@@ -51,7 +52,7 @@ export const SalesGoalsReportView: FC<Props> = ({
 	to,
 	user,
 	tenant,
-	isPlatformAdmin,
+	isPlatformAdmin, planFeatures,
 }) => {
 	const achieved = goals.filter((g) => g.achieved).length;
 	const total = goals.length;
@@ -65,7 +66,7 @@ export const SalesGoalsReportView: FC<Props> = ({
 			from={from}
 			to={to}
 			tenant={tenant}
-			isPlatformAdmin={isPlatformAdmin}
+			isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}
 		>
 			{/* Summary KPIs */}
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

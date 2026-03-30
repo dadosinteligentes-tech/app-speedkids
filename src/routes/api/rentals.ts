@@ -111,6 +111,7 @@ rentalRoutes.post("/start", async (c) => {
 				changeDenominations: body.change_denominations,
 				payments: body.payments,
 				customerId: body.customer_id,
+				tenantPlan: c.get("tenant")?.plan,
 			});
 		}
 		if (payResult.achievements.length > 0) {
@@ -190,14 +191,32 @@ rentalRoutes.post("/:id/pay", async (c) => {
 
 	const originalAmount = session.amount_cents;
 	const discount = Math.min(body.discount_cents ?? 0, originalAmount);
-	const finalAmount = Math.max(0, originalAmount - discount);
+	let finalAmount = Math.max(0, originalAmount - discount);
 	const user = c.get("user");
 	const register = await getOpenRegister(c.env.DB, tenantId);
+
+	// Loyalty points redemption
+	let loyaltyDiscountCents = 0;
+	let loyaltyPointsRedeemed = 0;
+	if (body.loyalty_points_redeem && body.loyalty_points_redeem > 0 && session.customer_id) {
+		try {
+			const { redeemLoyaltyPoints } = await import("../../services/loyalty");
+			const redemption = await redeemLoyaltyPoints(
+				c.env.DB, tenantId, session.customer_id,
+				body.loyalty_points_redeem, "rental", id, user?.id ?? null,
+			);
+			loyaltyDiscountCents = Math.min(redemption.discountCents, finalAmount);
+			loyaltyPointsRedeemed = redemption.pointsRedeemed;
+			finalAmount = Math.max(0, finalAmount - loyaltyDiscountCents);
+		} catch (err: any) {
+			return c.json({ error: err.message || "Erro ao resgatar pontos" }, 400);
+		}
+	}
 
 	// For prepaid sessions with overtime, only overtime is due now
 	const isOvertimeOnly = session.paid === 1 && session.overtime_cents > 0;
 	const amountDue = isOvertimeOnly
-		? Math.max(0, session.overtime_cents - discount)
+		? Math.max(0, session.overtime_cents - discount - loyaltyDiscountCents)
 		: finalAmount;
 
 	const isSplit = body.payments && body.payments.length >= 2;
@@ -212,6 +231,12 @@ rentalRoutes.post("/:id/pay", async (c) => {
 
 	const method = isSplit ? "mixed" : body.payment_method;
 	await paySession(c.env.DB, id, method, finalAmount, body.notes ?? null, tenantId, discount, body.promotion_id);
+
+	// Store loyalty redemption on the session
+	if (loyaltyPointsRedeemed > 0) {
+		await c.env.DB.prepare("UPDATE rental_sessions SET loyalty_discount_cents = ?, loyalty_points_redeemed = ? WHERE id = ? AND tenant_id = ?")
+			.bind(loyaltyDiscountCents, loyaltyPointsRedeemed, id, tenantId).run();
+	}
 
 	let achievements: any[] = [];
 	if (register && amountDue > 0) {
@@ -228,6 +253,7 @@ rentalRoutes.post("/:id/pay", async (c) => {
 			changeDenominations: body.change_denominations,
 			payments: body.payments,
 			customerId: session.customer_id,
+			tenantPlan: c.get("tenant")?.plan,
 		});
 		achievements = payResult.achievements;
 	} else if (session.customer_id) {

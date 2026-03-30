@@ -8,9 +8,10 @@ interface PackagesListProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const PackagesList: FC<PackagesListProps> = ({ packages, user, tenant, isPlatformAdmin }) => {
+export const PackagesList: FC<PackagesListProps> = ({ packages, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const script = html`<script>
 ${raw(`
 function showPackageForm(pkg) {
@@ -82,7 +83,7 @@ function togglePackage(id) {
 </script>`;
 
 	return (
-		<AdminLayout title="Pacotes" user={user} activeTab="/admin/packages" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Pacotes" user={user} activeTab="/admin/packages" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Pacotes</h2>
 				<button onclick="showPackageForm(null)" class="btn-touch btn-bounce px-4 py-2 bg-sk-orange text-white rounded-sk font-display font-medium text-sm active:bg-sk-orange-dark">

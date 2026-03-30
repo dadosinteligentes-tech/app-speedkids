@@ -75,18 +75,40 @@ customerRoutes.put("/:id", requirePermission("customers.view"), async (c) => {
 	return c.json(customer);
 });
 
+// Quick-update from dashboard (all operators — only email, cpf, instagram)
+customerRoutes.put("/quick/:id", async (c) => {
+	const tenantId = c.get('tenant_id');
+	const id = Number(c.req.param("id"));
+	const body = await c.req.json<{ name?: string; email?: string; cpf?: string; instagram?: string }>();
+
+	const cpf = body.cpf?.replace(/\D/g, "") || undefined;
+	const instagram = body.instagram?.replace(/^@/, "").trim() || undefined;
+	const email = body.email?.trim() || undefined;
+
+	if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+		return c.json({ error: "Formato de email inválido" }, 400);
+	}
+
+	const customer = await updateCustomer(c.env.DB, tenantId, id, {
+		name: body.name, email, cpf, instagram,
+	});
+	if (!customer) return c.json({ error: "Customer not found" }, 404);
+	return c.json(customer);
+});
+
 // Quick-create from dashboard (all operators can do this)
 customerRoutes.post("/quick", async (c) => {
 	const tenantId = c.get('tenant_id');
-	const body = await c.req.json<{ name: string; phone?: string; cpf?: string; instagram?: string }>();
+	const body = await c.req.json<{ name: string; phone?: string; cpf?: string; instagram?: string; email?: string }>();
 	if (!body.name?.trim()) return c.json({ error: "Nome é obrigatório" }, 400);
 
 	// Strip mask characters from phone, store raw digits only
 	const phone = body.phone?.replace(/\D/g, "") || undefined;
 	const cpf = body.cpf?.replace(/\D/g, "") || undefined;
 	const instagram = body.instagram?.replace(/^@/, "").trim() || undefined;
+	const email = body.email?.trim() || undefined;
 
-	const customer = await createCustomer(c.env.DB, { name: body.name, phone, cpf, instagram, tenant_id: tenantId });
+	const customer = await createCustomer(c.env.DB, { name: body.name, phone, cpf, instagram, email, tenant_id: tenantId });
 	await auditLog(c, "customer.create", "customer", customer?.id, { name: body.name });
 	return c.json(customer, 201);
 });

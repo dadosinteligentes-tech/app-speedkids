@@ -10,6 +10,7 @@ interface Props {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
 function fmtDiscount(type: string, value: number): string {
@@ -21,7 +22,7 @@ function fmtBRL(cents: number): string {
 	return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 }
 
-export const PromotionsList: FC<Props> = ({ promotions, user, tenant, isPlatformAdmin }) => {
+export const PromotionsList: FC<Props> = ({ promotions, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const script = html`<script>
 ${raw(`
 function showModal() {

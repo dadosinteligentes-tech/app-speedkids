@@ -4,17 +4,23 @@ import { getLimitsForPlan, checkLimit, PLAN_LIMITS } from "../../src/lib/plan-li
 describe("getLimitsForPlan", () => {
 	it("returns correct limits for starter", () => {
 		const limits = getLimitsForPlan("starter");
-		expect(limits).toEqual({ maxUsers: 3, maxAssets: 15, label: "Starter" });
+		expect(limits.maxUsers).toBe(3);
+		expect(limits.maxAssets).toBe(15);
+		expect(limits.label).toBe("Starter");
 	});
 
 	it("returns correct limits for pro", () => {
 		const limits = getLimitsForPlan("pro");
-		expect(limits).toEqual({ maxUsers: 10, maxAssets: 50, label: "Pro" });
+		expect(limits.maxUsers).toBe(10);
+		expect(limits.maxAssets).toBe(50);
+		expect(limits.label).toBe("Pro");
 	});
 
 	it("returns correct limits for enterprise", () => {
 		const limits = getLimitsForPlan("enterprise");
-		expect(limits).toEqual({ maxUsers: 999, maxAssets: 999, label: "Enterprise" });
+		expect(limits.maxUsers).toBe(999);
+		expect(limits.maxAssets).toBe(999);
+		expect(limits.label).toBe("Enterprise");
 	});
 
 	it("returns starter defaults for unknown plan", () => {

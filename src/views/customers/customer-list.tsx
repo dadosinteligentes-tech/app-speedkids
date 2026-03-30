@@ -10,9 +10,10 @@ interface CustomerListProps {
 	user: { name: string; role: string } | null;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	planFeatures?: { hasLoyalty?: boolean; hasTickets?: boolean };
 }
 
-export const CustomerList: FC<CustomerListProps> = ({ customers, total, page, user, tenant, isPlatformAdmin }) => {
+export const CustomerList: FC<CustomerListProps> = ({ customers, total, page, user, tenant, isPlatformAdmin, planFeatures }) => {
 	const totalPages = Math.ceil(total / 50);
 
 	const script = html`<script>
@@ -56,7 +57,7 @@ function saveCustomer() {
 </script>`;
 
 	return (
-		<AdminLayout title="Clientes" user={user} activeTab="/admin/customers" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin}>
+		<AdminLayout title="Clientes" user={user} activeTab="/admin/customers" bodyScripts={script} tenant={tenant} isPlatformAdmin={isPlatformAdmin} planFeatures={planFeatures}>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-xl font-display font-bold text-sk-text">Clientes ({total})</h2>
 				<button
@@ -76,6 +77,7 @@ function saveCustomer() {
 							<th class="px-4 py-3 text-left hidden md:table-cell">Email</th>
 							<th class="px-4 py-3 text-right">Locações</th>
 							<th class="px-4 py-3 text-right hidden md:table-cell">Total Gasto</th>
+							<th class="px-4 py-3 text-right hidden md:table-cell">Pontos</th>
 							<th class="px-4 py-3 text-center">Ações</th>
 						</tr>
 					</thead>
@@ -89,6 +91,13 @@ function saveCustomer() {
 								<td class="px-4 py-3 text-sk-muted hidden md:table-cell">{c.email ?? "-"}</td>
 								<td class="px-4 py-3 text-right">{c.total_rentals}</td>
 								<td class="px-4 py-3 text-right hidden md:table-cell">R$ {(c.total_spent_cents / 100).toFixed(2).replace(".", ",")}</td>
+								<td class="px-4 py-3 text-right hidden md:table-cell">
+									{c.loyalty_points > 0 ? (
+										<span class="font-display font-bold text-sk-orange">{c.loyalty_points.toLocaleString("pt-BR")}</span>
+									) : (
+										<span class="text-sk-muted">0</span>
+									)}
+								</td>
 								<td class="px-4 py-3 text-center">
 									<button
 										onclick={`openCustomerModal(${JSON.stringify({ id: c.id, name: c.name, phone: c.phone, cpf: c.cpf, email: c.email, instagram: c.instagram, notes: c.notes })})`}
@@ -100,7 +109,7 @@ function saveCustomer() {
 							</tr>
 						))}
 						{customers.length === 0 && (
-							<tr><td colspan={6} class="px-4 py-8 text-center text-sk-muted font-body">Nenhum cliente cadastrado</td></tr>
+							<tr><td colspan={7} class="px-4 py-8 text-center text-sk-muted font-body">Nenhum cliente cadastrado</td></tr>
 						)}
 					</tbody>
 				</table>
