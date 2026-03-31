@@ -53,6 +53,18 @@ app.route("/api/stripe/webhook", stripeWebhookRoutes);
 import { blogApiRoutes } from "./routes/api/blog";
 app.route("/api/blog", blogApiRoutes);
 
+// Public media from R2 (videos, etc.)
+app.get("/api/media/*", async (c) => {
+	const key = c.req.path.replace("/api/media/", "");
+	if (!key) return c.json({ error: "Key obrigatória" }, 400);
+	const object = await c.env.B_BUCKET_SPEEDKIDS.get(key);
+	if (!object) return c.json({ error: "Não encontrado" }, 404);
+	const headers = new Headers();
+	headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
+	headers.set("Cache-Control", "public, max-age=86400");
+	return new Response(object.body, { headers });
+});
+
 // Loyalty verification page (public)
 import { loyaltyPages } from "./routes/pages/loyalty";
 app.route("/loyalty", loyaltyPages);

@@ -508,15 +508,17 @@ document.addEventListener('click', function(e) {
 							Veja o sistema funcionando
 						</h2>
 						<p class="font-body text-sk-muted text-lg mb-8">2 minutos para entender como o Giro Kids transforma seu parque</p>
-						<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg border-2 border-sk-border/50 overflow-hidden aspect-video flex items-center justify-center">
-							<div class="text-center p-8">
-								<span class="text-6xl mb-4 block">🎬</span>
-								<p class="font-display font-bold text-xl text-sk-text mb-2">Video demo em breve</p>
-								<p class="font-body text-sm text-sk-muted">Enquanto isso, teste o sistema gratuitamente por 30 dias</p>
-								<a href="#cadastro" class="btn-touch btn-bounce inline-block mt-4 px-6 py-3 bg-sk-orange hover:bg-sk-orange-dark text-white rounded-sk font-display font-bold text-sm shadow-sk-sm">
-									Experimentar grátis
-								</a>
-							</div>
+						<div class="bg-sk-surface rounded-sk-xl shadow-sk-lg border-2 border-sk-border/50 overflow-hidden">
+							<video
+								controls
+								preload="metadata"
+								poster=""
+								class="w-full aspect-video"
+								playsinline
+							>
+								<source src="/api/media/video/giro-kids.mp4" type="video/mp4" />
+								Seu navegador não suporta vídeos HTML5.
+							</video>
 						</div>
 					</div>
 				</section>
