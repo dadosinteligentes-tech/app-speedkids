@@ -21,9 +21,10 @@ interface DashboardProps {
 	receiptEnabled?: boolean;
 	tenant?: Tenant | null;
 	isPlatformAdmin?: boolean;
+	userPermissions?: string[];
 }
 
-export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle, receiptEnabled, tenant, isPlatformAdmin }) => {
+export const Dashboard: FC<DashboardProps> = ({ assets, packages, sessions, user, cashStatus, batteries, pageTitle, receiptEnabled, tenant, isPlatformAdmin, userPermissions }) => {
 	const sessionMap = new Map(sessions.map((s) => [s.asset_id, s]));
 	const batteryMap = new Map((batteries ?? []).map((b) => [b.asset_id!, b]));
 
@@ -34,7 +35,8 @@ window.__SK_DATA__ = {
 	sessions: ${raw(JSON.stringify(sessions))},
 	batteries: ${raw(JSON.stringify(batteries ?? []))},
 	userRole: ${raw(JSON.stringify(user?.role ?? "operator"))},
-	receiptEnabled: ${raw(JSON.stringify(!!receiptEnabled))}
+	receiptEnabled: ${raw(JSON.stringify(!!receiptEnabled))},
+	userPermissions: ${raw(JSON.stringify(userPermissions ?? []))}
 };
 </script>`;
 
@@ -529,6 +531,13 @@ const dashboardControllerScript = `
 		var discRemove = document.getElementById('discount-remove-btn');
 		if (discRemove) discRemove.classList.add('hidden');
 
+		// Hide discount section if user lacks permission
+		var discountSection = document.getElementById('discount-section');
+		if (discountSection) {
+			var perms = window.__SK_DATA__.userPermissions || [];
+			discountSection.style.display = perms.indexOf('rentals.discount') >= 0 ? '' : 'none';
+		}
+
 		// Hide no-register warning (we check on start)
 		var noRegEl = document.getElementById('payment-no-register');
 		if (noRegEl) noRegEl.classList.add('hidden');
@@ -704,6 +713,13 @@ const dashboardControllerScript = `
 		if (discountValue) discountValue.value = '';
 		var removeBtn = document.getElementById('discount-remove-btn');
 		if (removeBtn) removeBtn.classList.add('hidden');
+
+		// Hide discount section if user lacks permission
+		var discountSection = document.getElementById('discount-section');
+		if (discountSection) {
+			var perms = window.__SK_DATA__.userPermissions || [];
+			discountSection.style.display = perms.indexOf('rentals.discount') >= 0 ? '' : 'none';
+		}
 
 		// Reset waive
 		var waiveReason = document.getElementById('waive-reason');

@@ -88,8 +88,8 @@ export const PaymentModal: FC = () => (
 					Nenhum caixa aberto! O pagamento nao sera registrado no caixa.
 				</div>
 
-				{/* Desconto / Promoção */}
-				<div class="mb-3">
+				{/* Desconto / Promoção (hidden if user lacks rentals.discount permission) */}
+				<div id="discount-section" class="mb-3">
 					<div class="flex items-center gap-2">
 						<button
 							onclick="toggleDiscount()"

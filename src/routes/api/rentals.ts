@@ -13,6 +13,7 @@ import {
 	extendSession,
 } from "../../db/queries/rentals";
 import { getPackageById } from "../../db/queries/packages";
+import { getPermissionsForRole } from "../../db/queries/permissions";
 import { getAssetById, updateAssetStatus } from "../../db/queries/assets";
 import { requirePermission } from "../../middleware/require-permission";
 import { auditLog } from "../../lib/logger";
@@ -88,6 +89,13 @@ rentalRoutes.post("/start", async (c) => {
 
 	// Handle prepaid payment
 	if (body.paid) {
+		// Check discount permission
+		if ((body.discount_cents ?? 0) > 0 && user) {
+			const perms = await getPermissionsForRole(c.env.DB, user.role);
+			if (!perms.includes("rentals.discount")) {
+				return c.json({ error: "Sem permissão para aplicar desconto" }, 403);
+			}
+		}
 		const prepaidDiscount = Math.min(body.discount_cents ?? 0, pkg.price_cents);
 		const isSplit = body.payments && body.payments.length >= 2;
 		const isCourtesy = body.payment_method === "courtesy";
@@ -190,9 +198,18 @@ rentalRoutes.post("/:id/pay", async (c) => {
 	if (!session) return c.json({ error: "Session not found" }, 404);
 
 	const originalAmount = session.amount_cents;
+	const user = c.get("user");
+
+	// Check discount permission
+	if ((body.discount_cents ?? 0) > 0 && user) {
+		const perms = await getPermissionsForRole(c.env.DB, user.role);
+		if (!perms.includes("rentals.discount")) {
+			return c.json({ error: "Sem permissão para aplicar desconto" }, 403);
+		}
+	}
+
 	const discount = Math.min(body.discount_cents ?? 0, originalAmount);
 	let finalAmount = Math.max(0, originalAmount - discount);
-	const user = c.get("user");
 	const register = await getOpenRegister(c.env.DB, tenantId);
 
 	// Loyalty points redemption

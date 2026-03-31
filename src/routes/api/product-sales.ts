@@ -7,6 +7,7 @@ import { auditLog } from "../../lib/logger";
 import { recordPayment } from "../../services/payment";
 import { validateJson } from "../../lib/request";
 import { productSaleSchema } from "../../lib/validation";
+import { getPermissionsForRole } from "../../db/queries/permissions";
 
 export const productSaleRoutes = new Hono<AppEnv>();
 
@@ -55,6 +56,14 @@ productSaleRoutes.post("/", async (c) => {
 
 	if (totalCents <= 0) {
 		return c.json({ error: "Valor total deve ser maior que zero" }, 400);
+	}
+
+	// Check discount permission
+	if ((body.discount_cents ?? 0) > 0 && user) {
+		const perms = await getPermissionsForRole(c.env.DB, user.role);
+		if (!perms.includes("rentals.discount")) {
+			return c.json({ error: "Sem permissão para aplicar desconto" }, 403);
+		}
 	}
 
 	// Apply discount
