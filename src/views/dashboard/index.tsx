@@ -523,7 +523,7 @@ const dashboardControllerScript = `
 		var otEl = document.getElementById('payment-overtime-breakdown');
 		if (otEl) otEl.classList.add('hidden');
 
-		// Reset discount fields (keep visible for prepaid)
+		// Reset discount fields
 		var discFields = document.getElementById('discount-fields');
 		if (discFields) discFields.classList.add('hidden');
 		var discValue = document.getElementById('discount-value');
@@ -531,12 +531,8 @@ const dashboardControllerScript = `
 		var discRemove = document.getElementById('discount-remove-btn');
 		if (discRemove) discRemove.classList.add('hidden');
 
-		// Hide discount section if user lacks permission
-		var discountSection = document.getElementById('discount-section');
-		if (discountSection) {
-			var perms = window.__SK_DATA__.userPermissions || [];
-			discountSection.style.display = perms.indexOf('rentals.discount') >= 0 ? '' : 'none';
-		}
+		// Apply discount permission visibility
+		applyDiscountPermissions();
 
 		// Hide no-register warning (we check on start)
 		var noRegEl = document.getElementById('payment-no-register');
@@ -714,12 +710,8 @@ const dashboardControllerScript = `
 		var removeBtn = document.getElementById('discount-remove-btn');
 		if (removeBtn) removeBtn.classList.add('hidden');
 
-		// Hide discount section if user lacks permission
-		var discountSection = document.getElementById('discount-section');
-		if (discountSection) {
-			var perms = window.__SK_DATA__.userPermissions || [];
-			discountSection.style.display = perms.indexOf('rentals.discount') >= 0 ? '' : 'none';
-		}
+		// Apply discount permission visibility
+		applyDiscountPermissions();
 
 		// Reset waive
 		var waiveReason = document.getElementById('waive-reason');
@@ -923,20 +915,34 @@ const dashboardControllerScript = `
 		});
 	}
 
+	function applyDiscountPermissions() {
+		var perms = window.__SK_DATA__.userPermissions || [];
+		var hasPromo = perms.indexOf('rentals.apply_promotion') >= 0;
+		var hasManual = perms.indexOf('rentals.discount') >= 0;
+		var section = document.getElementById('discount-section');
+		var promoSection = document.getElementById('discount-promo-section');
+		var manualSection = document.getElementById('discount-manual');
+		if (section) section.style.display = (hasPromo || hasManual) ? '' : 'none';
+		if (promoSection) promoSection.style.display = hasPromo ? '' : 'none';
+		if (manualSection) manualSection.style.display = hasManual ? '' : 'none';
+	}
+
 	window.toggleDiscount = function() {
 		var fields = document.getElementById('discount-fields');
-		fields.classList.toggle('hidden');
-		if (!fields.classList.contains('hidden')) {
+		if (fields.classList.contains('hidden')) {
+			fields.classList.remove('hidden');
+			applyDiscountPermissions();
 			populatePromoSelect('discount-promo');
-			document.getElementById('discount-value').focus();
+			var valEl = document.getElementById('discount-value');
+			if (valEl && valEl.offsetParent) valEl.focus();
+		} else {
+			fields.classList.add('hidden');
 		}
 	};
 
 	window.selectPromotion = function(promoId) {
-		var manual = document.getElementById('discount-manual');
 		if (!promoId) {
 			window.__SK_PROMOTION_ID__ = null;
-			manual.classList.remove('hidden');
 			return;
 		}
 		var promo = (window.__SK_PROMOTIONS__ || []).find(function(p) { return p.id == promoId; });

@@ -88,7 +88,7 @@ export const PaymentModal: FC = () => (
 					Nenhum caixa aberto! O pagamento nao sera registrado no caixa.
 				</div>
 
-				{/* Desconto / Promoção (hidden if user lacks rentals.discount permission) */}
+				{/* Desconto / Promoção */}
 				<div id="discount-section" class="mb-3">
 					<div class="flex items-center gap-2">
 						<button
@@ -106,35 +106,42 @@ export const PaymentModal: FC = () => (
 						</button>
 					</div>
 					<div id="discount-fields" class="hidden mt-2 space-y-2">
-						<select
-							id="discount-promo"
-							onchange="selectPromotion(this.value)"
-							class="w-full px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
-						>
-							<option value="">Desconto manual</option>
-						</select>
-						<div id="discount-manual" class="flex gap-2 items-end">
+						{/* Promoções cadastradas (rentals.apply_promotion) */}
+						<div id="discount-promo-section">
 							<select
-								id="discount-type"
-								class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body"
+								id="discount-promo"
+								onchange="selectPromotion(this.value)"
+								class="w-full px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
 							>
-								<option value="pct">%</option>
-								<option value="fixed">R$</option>
+								<option value="">Selecione uma promoção...</option>
 							</select>
-							<input
-								id="discount-value"
-								type="number"
-								min="0"
-								step="0.01"
-								placeholder="Valor"
-								class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
-							/>
-							<button
-								onclick="applyDiscount()"
-								class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark"
-							>
-								Aplicar
-							</button>
+						</div>
+						{/* Desconto manual (rentals.discount) */}
+						<div id="discount-manual">
+							<p class="text-xs font-body text-sk-muted mb-1">Desconto manual</p>
+							<div class="flex gap-2 items-end">
+								<select
+									id="discount-type"
+									class="px-2 py-1.5 border border-sk-border rounded-sk text-sm font-body"
+								>
+									<option value="pct">%</option>
+									<option value="fixed">R$</option>
+								</select>
+								<input
+									id="discount-value"
+									type="number"
+									min="0"
+									step="0.01"
+									placeholder="Valor"
+									class="w-24 px-3 py-1.5 border border-sk-border rounded-sk text-sm font-body focus:border-sk-blue focus:ring-2 focus:ring-sk-blue/20"
+								/>
+								<button
+									onclick="applyDiscount()"
+									class="px-3 py-1.5 bg-sk-blue text-white rounded-sk text-sm font-body btn-bounce active:bg-sk-blue-dark"
+								>
+									Aplicar
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
