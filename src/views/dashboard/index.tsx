@@ -915,16 +915,19 @@ const dashboardControllerScript = `
 		});
 	}
 
+	function hasPermission(key) {
+		return (window.__SK_DATA__.userPermissions || []).indexOf(key) >= 0;
+	}
+
 	function applyDiscountPermissions() {
-		var perms = window.__SK_DATA__.userPermissions || [];
-		var hasPromo = perms.indexOf('rentals.apply_promotion') >= 0;
-		var hasManual = perms.indexOf('rentals.discount') >= 0;
+		var canPromo = hasPermission('rentals.apply_promotion');
+		var canManual = hasPermission('rentals.discount');
 		var section = document.getElementById('discount-section');
 		var promoSection = document.getElementById('discount-promo-section');
 		var manualSection = document.getElementById('discount-manual');
-		if (section) section.style.display = (hasPromo || hasManual) ? '' : 'none';
-		if (promoSection) promoSection.style.display = hasPromo ? '' : 'none';
-		if (manualSection) manualSection.style.display = hasManual ? '' : 'none';
+		if (section) section.style.display = (canPromo || canManual) ? '' : 'none';
+		if (promoSection) promoSection.style.display = canPromo ? '' : 'none';
+		if (manualSection) manualSection.style.display = canManual ? '' : 'none';
 	}
 
 	window.toggleDiscount = function() {
@@ -933,22 +936,28 @@ const dashboardControllerScript = `
 			fields.classList.remove('hidden');
 			applyDiscountPermissions();
 			populatePromoSelect('discount-promo');
-			var valEl = document.getElementById('discount-value');
-			if (valEl && valEl.offsetParent) valEl.focus();
+			// Reset promo select
+			var promoSelect = document.getElementById('discount-promo');
+			if (promoSelect) promoSelect.value = '';
+			window.__SK_PROMOTION_ID__ = null;
 		} else {
 			fields.classList.add('hidden');
 		}
 	};
 
 	window.selectPromotion = function(promoId) {
+		var manualSection = document.getElementById('discount-manual');
 		if (!promoId) {
 			window.__SK_PROMOTION_ID__ = null;
+			// Show manual section again (if user has permission)
+			if (manualSection && hasPermission('rentals.discount')) manualSection.style.display = '';
 			return;
 		}
 		var promo = (window.__SK_PROMOTIONS__ || []).find(function(p) { return p.id == promoId; });
 		if (!promo) return;
 		window.__SK_PROMOTION_ID__ = promo.id;
-		manual.classList.add('hidden');
+		// Hide manual section when a promotion is selected
+		if (manualSection) manualSection.style.display = 'none';
 
 		var session = window.__SK_PAYING_SESSION__;
 		if (!session) return;
