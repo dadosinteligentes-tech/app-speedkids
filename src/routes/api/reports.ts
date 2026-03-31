@@ -424,3 +424,50 @@ reportApiRoutes.get("/goals/export", async (c) => {
 
 	return csvResponse(c, `metas-${from}-a-${to}.csv`, csv);
 });
+
+reportApiRoutes.get("/products/export", async (c) => {
+	const tenantId = c.get('tenant_id');
+	const { from, to } = getDateRange(c);
+	const { getProductRevenue } = await import("../../db/queries/reports");
+	const products = await getProductRevenue(c.env.DB, tenantId, from, to);
+
+	const csv = toCSV(
+		["Produto", "Categoria", "Preco Unit.", "Qtd Vendida", "Receita", "% Receita"],
+		products.map((p) => [
+			p.product_name,
+			p.category ?? "",
+			fmtMoney(p.price_cents),
+			p.quantity_sold,
+			fmtMoney(p.revenue_cents),
+			fmtPct(p.revenue_pct) + "%",
+		]),
+	);
+
+	return csvResponse(c, `produtos-${from}-a-${to}.csv`, csv);
+});
+
+reportApiRoutes.get("/detail/export", async (c) => {
+	const tenantId = c.get('tenant_id');
+	const { from, to } = getDateRange(c);
+	const { getDetailSessions } = await import("../../db/queries/reports");
+	const { sessions } = await getDetailSessions(c.env.DB, tenantId, { type: "all" }, from, to, 10000, 0);
+
+	const csv = toCSV(
+		["Data/Hora", "Ativo", "Pacote", "Operador", "Cliente", "Crianca", "Duracao (min)", "Valor", "Overtime", "Pagamento", "Status"],
+		sessions.map((s) => [
+			fmtDateTime(s.start_time),
+			s.asset_name,
+			s.package_name,
+			s.attendant_name ?? "",
+			s.customer_name ?? "",
+			s.child_name ?? "",
+			s.duration_minutes,
+			fmtMoney(s.amount_cents),
+			s.overtime_cents > 0 ? fmtMoney(s.overtime_cents) : "",
+			s.payment_method ?? "",
+			s.paid ? "Pago" : "Pendente",
+		]),
+	);
+
+	return csvResponse(c, `detalhamento-${from}-a-${to}.csv`, csv);
+});
