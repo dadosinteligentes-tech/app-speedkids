@@ -59,6 +59,12 @@ export function toBrazilDateTime(iso: string): string {
 
 /** Format UTC ISO string → "14/03/2026" in tenant time */
 export function toBrazilDate(iso: string): string {
+	// If date-only string (YYYY-MM-DD), it's already in local time (from SQL BZ offset).
+	// Parse manually to avoid JS interpreting it as midnight UTC and shifting back a day.
+	if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+		const [y, m, d] = iso.split("-");
+		return `${d}/${m}/${y}`;
+	}
 	return getFormatter("date", {
 		day: "2-digit", month: "2-digit", year: "numeric",
 	}).format(new Date(iso));
