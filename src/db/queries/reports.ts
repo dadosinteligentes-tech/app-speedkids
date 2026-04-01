@@ -8,6 +8,11 @@ const BZ = "-3 hours";
  * from='2026-03-22' BRT → '2026-03-22 03:00:00' UTC
  * to  ='2026-03-22' BRT → '2026-03-23 03:00:00' UTC (exclusive upper bound)
  */
+/**
+ * Note: start_time is stored as ISO 8601 with 'T' separator (e.g. '2026-04-01T00:24:32.123Z')
+ * while datetime() returns 'YYYY-MM-DD HH:MM:SS'. We wrap start_time in datetime() to
+ * normalize both sides to the same format for correct comparison.
+ */
 const DT_FROM = "datetime(?, '+3 hours')";
 const DT_TO = "datetime(date(?, '+1 day'), '+3 hours')";
 
@@ -207,7 +212,7 @@ export async function getFinancialSummary(
 				COALESCE(SUM(CASE WHEN status = 'completed' THEN duration_minutes ELSE 0 END), 0) AS total_minutes
 			FROM rental_sessions
 			WHERE tenant_id = ?
-				AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}`,
+				AND datetime(start_time) >= ${DT_FROM} AND datetime(start_time) < ${DT_TO}`,
 		)
 		.bind(tenantId, from, to)
 		.first<FinancialSummary>();
@@ -229,7 +234,7 @@ export async function getDailyRevenueTrend(
 				COUNT(*) AS rental_count
 			FROM rental_sessions
 			WHERE tenant_id = ?
-				AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
+				AND datetime(start_time) >= ${DT_FROM} AND datetime(start_time) < ${DT_TO}
 				AND status = 'completed'
 			GROUP BY date(start_time, '${BZ}')
 			ORDER BY day ASC`,
@@ -258,8 +263,8 @@ export async function getPackageRevenue(
 			LEFT JOIN rental_sessions rs
 				ON rs.package_id = p.id
 				AND rs.status = 'completed'
-				AND rs.start_time >= ${DT_FROM}
-				AND rs.start_time < ${DT_TO}
+				AND datetime(rs.start_time) >= ${DT_FROM}
+				AND datetime(rs.start_time) < ${DT_TO}
 			WHERE p.tenant_id = ?
 			GROUP BY p.id, p.name, p.duration_minutes, p.price_cents
 			ORDER BY revenue_cents DESC`,
@@ -293,8 +298,8 @@ export async function getAssetUtilization(
 			LEFT JOIN rental_sessions rs
 				ON rs.asset_id = a.id
 				AND rs.status = 'completed'
-				AND rs.start_time >= ${DT_FROM}
-				AND rs.start_time < ${DT_TO}
+				AND datetime(rs.start_time) >= ${DT_FROM}
+				AND datetime(rs.start_time) < ${DT_TO}
 			WHERE a.status != 'retired'
 				AND a.tenant_id = ?
 			GROUP BY a.id, a.name, a.asset_type
@@ -336,7 +341,7 @@ export async function getPeakHours(
 				FROM rental_sessions
 				WHERE status = 'completed'
 					AND tenant_id = ?
-					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
+					AND datetime(start_time) >= ${DT_FROM} AND datetime(start_time) < ${DT_TO}
 				GROUP BY hour
 				ORDER BY hour ASC`,
 			)
@@ -352,7 +357,7 @@ export async function getPeakHours(
 				FROM rental_sessions
 				WHERE status = 'completed'
 					AND tenant_id = ?
-					AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
+					AND datetime(start_time) >= ${DT_FROM} AND datetime(start_time) < ${DT_TO}
 				GROUP BY dow
 				ORDER BY dow ASC`,
 			)
@@ -381,8 +386,8 @@ export async function getOperatorPerformance(
 			LEFT JOIN rental_sessions rs
 				ON rs.attendant_id = u.id
 				AND rs.status = 'completed'
-				AND rs.start_time >= ${DT_FROM}
-				AND rs.start_time < ${DT_TO}
+				AND datetime(rs.start_time) >= ${DT_FROM}
+				AND datetime(rs.start_time) < ${DT_TO}
 			WHERE u.active = 1
 				AND u.tenant_id = ?
 			GROUP BY u.id, u.name, u.role
@@ -535,8 +540,8 @@ export async function getCustomerAnalysis(
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
 						AND rs.tenant_id = ?
-						AND rs.start_time >= ${DT_FROM}
-						AND rs.start_time < ${DT_TO}
+						AND datetime(rs.start_time) >= ${DT_FROM}
+						AND datetime(rs.start_time) < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY revenue_cents DESC
 					LIMIT 10`,
@@ -556,8 +561,8 @@ export async function getCustomerAnalysis(
 					JOIN rental_sessions rs ON rs.customer_id = c.id
 					WHERE rs.status = 'completed'
 						AND rs.tenant_id = ?
-						AND rs.start_time >= ${DT_FROM}
-						AND rs.start_time < ${DT_TO}
+						AND datetime(rs.start_time) >= ${DT_FROM}
+						AND datetime(rs.start_time) < ${DT_TO}
 					GROUP BY c.id, c.name, c.phone
 					ORDER BY rental_count DESC
 					LIMIT 10`,
@@ -581,8 +586,8 @@ export async function getCustomerAnalysis(
 					JOIN children ch ON rs.child_id = ch.id
 					WHERE rs.status = 'completed'
 						AND rs.tenant_id = ?
-						AND rs.start_time >= ${DT_FROM}
-						AND rs.start_time < ${DT_TO}
+						AND datetime(rs.start_time) >= ${DT_FROM}
+						AND datetime(rs.start_time) < ${DT_TO}
 					GROUP BY age_group
 					ORDER BY age_group ASC`,
 				)
@@ -600,7 +605,7 @@ export async function getCustomerAnalysis(
 						FROM rental_sessions
 						WHERE status = 'completed'
 							AND tenant_id = ?
-							AND start_time >= ${DT_FROM} AND start_time < ${DT_TO}
+							AND datetime(start_time) >= ${DT_FROM} AND datetime(start_time) < ${DT_TO}
 							AND customer_id IS NOT NULL
 						GROUP BY customer_id
 					)`,
@@ -739,7 +744,7 @@ export async function getUnpaidSessions(
 			WHERE rs.status = 'completed'
 				AND (rs.paid = 0 OR rs.payment_method = 'courtesy')
 				AND rs.tenant_id = ?
-				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
+				AND datetime(rs.start_time) >= ${DT_FROM} AND datetime(rs.start_time) < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
 		.bind(tenantId, from, to)
@@ -767,7 +772,7 @@ export async function getCancelledSessions(
 			LEFT JOIN users u ON rs.attendant_id = u.id
 			WHERE rs.status = 'cancelled'
 				AND rs.tenant_id = ?
-				AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO}
+				AND datetime(rs.start_time) >= ${DT_FROM} AND datetime(rs.start_time) < ${DT_TO}
 			ORDER BY rs.start_time DESC`,
 		)
 		.bind(tenantId, from, to)
@@ -816,7 +821,7 @@ export async function getProductSalesSummary(
 			FROM product_sales
 			WHERE paid = 1
 				AND tenant_id = ?
-				AND created_at >= ${DT_FROM} AND created_at < ${DT_TO}`,
+				AND datetime(created_at) >= ${DT_FROM} AND datetime(created_at) < ${DT_TO}`,
 		)
 		.bind(tenantId, from, to)
 		.first<ProductSalesSummary>();
@@ -856,8 +861,8 @@ export async function getProductRevenue(
 				JOIN product_sales ps ON ps.id = psi.product_sale_id
 					AND ps.paid = 1
 					AND ps.tenant_id = ?
-					AND ps.created_at >= ${DT_FROM}
-					AND ps.created_at < ${DT_TO}
+					AND datetime(ps.created_at) >= ${DT_FROM}
+					AND datetime(ps.created_at) < ${DT_TO}
 			) filtered ON filtered.product_id = p.id
 			WHERE p.tenant_id = ?
 			GROUP BY p.id, p.name, p.category, p.price_cents
@@ -905,7 +910,7 @@ export async function getProductSaleDetail(
 			`SELECT COUNT(*) AS total FROM product_sales ps
 			WHERE ps.paid = 1
 				AND ps.tenant_id = ?
-				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
+				AND datetime(ps.created_at) >= ${DT_FROM} AND datetime(ps.created_at) < ${DT_TO}
 				${extraWhere}`,
 		)
 		.bind(...bindings)
@@ -928,7 +933,7 @@ export async function getProductSaleDetail(
 			LEFT JOIN product_sale_items psi ON psi.product_sale_id = ps.id
 			WHERE ps.paid = 1
 				AND ps.tenant_id = ?
-				AND ps.created_at >= ${DT_FROM} AND ps.created_at < ${DT_TO}
+				AND datetime(ps.created_at) >= ${DT_FROM} AND datetime(ps.created_at) < ${DT_TO}
 				${extraWhere}
 			GROUP BY ps.id
 			ORDER BY ps.created_at DESC
@@ -987,7 +992,7 @@ export async function getDetailSessions(
 	limit = 50,
 	offset = 0,
 ): Promise<{ sessions: DetailSession[]; total: number; total_revenue_cents: number; context: DetailContext }> {
-	const baseWhere = `rs.tenant_id = ? AND rs.start_time >= ${DT_FROM} AND rs.start_time < ${DT_TO} AND rs.status = 'completed'`;
+	const baseWhere = `rs.tenant_id = ? AND datetime(rs.start_time) >= ${DT_FROM} AND datetime(rs.start_time) < ${DT_TO} AND rs.status = 'completed'`;
 	let extraWhere = "";
 	let bindings: (string | number)[] = [tenantId, from, to];
 	const context: DetailContext = { label: "", subLabel: "" };
